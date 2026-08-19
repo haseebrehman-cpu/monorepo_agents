@@ -1,0 +1,13 @@
+@import "tailwindcss";
+@import "@rdx/ui/styles.css";
+@source "./**/*.{ts,tsx}";
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+}
