@@ -1,44 +1,44 @@
-import {
-  Button,
-  ChatBubbleIcon,
-  CrossCircleIcon,
-  FullScreenIcon,
-  PlusIcon,
-} from "@rdx/ui";
-import { STORE_NAME } from "./constants";
+import { Button, CrossCircleIcon, PlusIcon } from "@rdx/ui";
+import { CHATBOT_ICON_SRC, STORE_NAME } from "./constants";
 
 interface ChatHeaderProps {
   isTyping: boolean;
   onNewChat: () => void;
   onClose: () => void;
-  onFullScreen: () => void;
 }
 
 export default function ChatHeader({
   isTyping,
   onNewChat,
   onClose,
-  onFullScreen,
 }: ChatHeaderProps) {
   return (
-    <div className="flex items-center gap-3 bg-indigo-600 px-4 py-3.5 text-white">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15">
-        <ChatBubbleIcon className="h-5 w-5" />
-      </div>
+    <div className="relative flex items-center gap-3 bg-rdx-black px-4 py-3.5 text-white">
+      <img
+        src={CHATBOT_ICON_SRC}
+        alt=""
+        width={80}
+        height={80}
+        decoding="sync"
+        draggable={false}
+        className="h-11 w-11 shrink-0 rounded-full bg-[#e7e7e9] object-contain ring-1 ring-white/20"
+      />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold">{STORE_NAME} Assistant</p>
-        <p className="flex items-center gap-1.5 text-xs text-indigo-100">
+        <p className="truncate font-display text-sm font-semibold tracking-[0.14em] uppercase">
+          {STORE_NAME}
+        </p>
+        <p className="flex items-center gap-1.5 text-xs text-neutral-300">
           <span
-            className="h-1.5 w-1.5 rounded-full bg-emerald-400"
+            className="h-1.5 w-1.5 rounded-full bg-rdx-red"
             aria-hidden="true"
           />
-          Online — we typically reply instantly
+          Online — gear advice, instantly
         </p>
       </div>
       <Button
         size="sm"
         variant="ghost"
-        className="text-white hover:bg-white/15"
+        className="text-white hover:bg-white/10 hover:text-white"
         onClick={onNewChat}
         disabled={isTyping}
         aria-label="Start a new chat"
@@ -48,22 +48,17 @@ export default function ChatHeader({
       <Button
         size="sm"
         variant="ghost"
-        className="text-white hover:bg-white/15"
+        className="text-white hover:bg-white/10 hover:text-white"
         onClick={onClose}
         disabled={isTyping}
         aria-label="Close chat"
       >
         <CrossCircleIcon className="h-4 w-4" />
       </Button>
-      <Button
-        variant="ghost"
-        className="text-white hover:bg-white/15"
-        onClick={onFullScreen}
-        disabled={isTyping}
-        aria-label="Open chat in full screen"
-      >
-        <FullScreenIcon className="h-4 w-4" />
-      </Button>
+      <div
+        className="absolute inset-x-0 bottom-0 h-0.5 bg-rdx-red"
+        aria-hidden="true"
+      />
     </div>
   );
 }

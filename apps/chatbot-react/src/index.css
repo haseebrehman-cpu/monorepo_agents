@@ -1,6 +1,16 @@
+@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap");
 @import "tailwindcss";
 @import "@rdx/ui/styles.css";
 @source "./**/*.{ts,tsx}";
+
+@theme {
+  --color-rdx-red: #e10600;
+  --color-rdx-red-hover: #c10500;
+  --color-rdx-black: #0a0a0a;
+  --color-rdx-panel: #111111;
+  --font-display:
+    "Oswald", "Barlow Condensed", "Impact", "Arial Narrow", sans-serif;
+}
 
 html,
 body,
@@ -10,4 +20,18 @@ body,
 
 body {
   margin: 0;
+}
+
+@keyframes rdx-launcher-pulse {
+  0%,
+  100% {
+    box-shadow: 0 8px 24px rgb(225 6 0 / 0.35), 0 0 0 0 rgb(225 6 0 / 0.4);
+  }
+  70% {
+    box-shadow: 0 8px 24px rgb(225 6 0 / 0.2), 0 0 0 14px rgb(225 6 0 / 0);
+  }
+}
+
+.rdx-launcher-pulse {
+  animation: rdx-launcher-pulse 2.4s ease-out infinite;
 }

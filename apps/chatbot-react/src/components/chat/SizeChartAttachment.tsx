@@ -35,7 +35,7 @@ export default function SizeChartAttachment({
           href={attachment.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[12px] font-medium text-indigo-600 underline underline-offset-2 hover:text-indigo-500"
+          className="text-[12px] font-medium text-rdx-red underline underline-offset-2 hover:text-rdx-red-hover"
         >
           Open full size chart
         </a>

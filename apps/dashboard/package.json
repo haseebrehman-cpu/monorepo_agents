@@ -13,11 +13,14 @@
     "test": "node -e \"process.exit(0)\""
   },
   "dependencies": {
+    "@rdx/api-client": "*",
+    "@rdx/chat-contract": "*",
     "@rdx/ui": "*",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@rdx/tsconfig": "*",
     "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.1.12",
     "@types/node": "^24.13.3",

@@ -53,7 +53,7 @@ export default function MessageContent({ content }: { content: string }) {
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-medium text-indigo-600 underline underline-offset-2 hover:text-indigo-500"
+                className="font-medium text-rdx-red underline underline-offset-2 hover:text-rdx-red-hover"
               >
                 {children}
               </a>

@@ -23,7 +23,7 @@ export default function ChatComposer({
         e.preventDefault();
         onSubmit();
       }}
-      className="flex items-center gap-2 border-t border-slate-200 bg-white px-3 py-3"
+      className="flex items-center gap-2 border-t border-neutral-200 bg-neutral-50 px-3 py-3"
     >
       <label htmlFor="chat-widget-input" className="sr-only">
         Message
@@ -33,16 +33,16 @@ export default function ChatComposer({
         ref={inputRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Ask about our products… or M for menu"
+        placeholder="Ask about gloves, sizes, gear… or M for menu"
         disabled={isTyping}
         maxLength={MAX_INPUT_CHARS}
-        className="flex-1 rounded-full border border-slate-300 bg-slate-50 px-4 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none disabled:opacity-60"
+        className="flex-1 rounded-full border border-neutral-300 bg-white px-4 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-rdx-red focus:ring-1 focus:ring-rdx-red focus:outline-none disabled:opacity-60"
       />
       <button
         type="submit"
         disabled={isTyping || !value.trim()}
         aria-label="Send message"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white transition hover:bg-indigo-500 disabled:opacity-40"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rdx-red text-white transition hover:bg-rdx-red-hover disabled:opacity-40"
       >
         <SendIcon />
       </button>

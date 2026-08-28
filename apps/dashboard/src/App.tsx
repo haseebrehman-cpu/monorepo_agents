@@ -1,12 +1,24 @@
-import { Button } from "@rdx/ui";
+import ConversationsPage from "@/app/features/conversations/ConversationsPage";
+import OverviewPage from "@/app/features/overview/OverviewPage";
+import PlaceholderPage from "@/app/features/placeholder/PlaceholderPage";
+import DashboardLayout from "@/app/layouts/DashboardLayout";
+import { NAV_ITEMS, type NavId } from "@/app/lib/nav";
+import { useState } from "react";
 
 export default function App() {
+  const [activeId, setActiveId] = useState<NavId>("overview");
+  const activeLabel =
+    NAV_ITEMS.find((item) => item.id === activeId)?.label ?? "Dashboard";
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-linear-to-b from-slate-50 to-slate-100 px-6 text-center">
-      <h1 className="text-4xl font-bold tracking-tight text-slate-900">
-        Dashboard
-      </h1>
-      <Button>Click me</Button>
-    </main>
+    <DashboardLayout activeId={activeId} onNavigate={setActiveId}>
+      {activeId === "overview" ? (
+        <OverviewPage />
+      ) : activeId === "conversations" ? (
+        <ConversationsPage />
+      ) : (
+        <PlaceholderPage title={activeLabel} />
+      )}
+    </DashboardLayout>
   );
 }

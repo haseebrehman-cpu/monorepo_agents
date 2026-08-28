@@ -14,12 +14,12 @@ interface MessageListProps {
 function TypingIndicator() {
   return (
     <div
-      className="mr-auto flex w-fit items-center gap-1 rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-3 shadow-sm"
+      className="mr-auto flex w-fit items-center gap-1 rounded-2xl rounded-bl-md border border-neutral-200 bg-white px-4 py-3 shadow-sm"
       aria-label="Assistant is typing"
     >
-      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:0ms]" />
-      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:150ms]" />
-      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:300ms]" />
+      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-rdx-red [animation-delay:0ms]" />
+      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-rdx-red [animation-delay:150ms]" />
+      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-rdx-red [animation-delay:300ms]" />
     </div>
   );
 }
@@ -54,14 +54,19 @@ export default function MessageList({
   return (
     <div
       ref={scrollRef}
-      className="flex-1 space-y-3 overflow-y-auto bg-slate-50 px-4 py-4"
+      className="flex-1 space-y-3 overflow-y-auto bg-neutral-100 px-4 py-4"
       aria-live="polite"
       aria-busy={isTyping}
     >
       {messages.length === 0 && !isTyping && (
-        <h1 className="flex min-h-[500px] items-center justify-center text-center text-slate-900">
-          Chat Goes Here
-        </h1>
+        <div className="flex min-h-48 flex-col items-center justify-center gap-2 px-4 text-center">
+          <p className="text-sm font-medium text-neutral-700">
+            Start a conversation
+          </p>
+          <p className="text-xs text-neutral-500">
+            Ask about gloves, sizes, or training gear.
+          </p>
+        </div>
       )}
 
       {messages.map((message) => {
@@ -72,8 +77,8 @@ export default function MessageList({
             <div
               className={
                 message.role === "user"
-                  ? "ml-auto w-fit max-w-[88%] rounded-2xl rounded-br-md bg-indigo-600 px-3.5 py-2.5 text-left text-sm leading-relaxed text-white"
-                  : "mr-auto w-full max-w-[95%] rounded-2xl rounded-bl-md border border-slate-200 bg-white px-3.5 py-3 text-left shadow-sm"
+                  ? "ml-auto w-fit max-w-[88%] rounded-2xl rounded-br-md bg-rdx-red px-3.5 py-2.5 text-left text-sm leading-relaxed text-white"
+                  : "mr-auto w-full max-w-[95%] rounded-2xl rounded-bl-md border border-neutral-200 bg-white px-3.5 py-3 text-left shadow-sm"
               }
             >
               {message.role === "assistant" ? (
@@ -100,9 +105,9 @@ export default function MessageList({
               )}
 
             {isLatestAssistant && !message.showMenu && showMenuHint && (
-              <p className="mt-1.5 px-1 text-left text-[11px] text-slate-400">
+              <p className="mt-1.5 px-1 text-left text-[11px] text-neutral-400">
                 Reply with{" "}
-                <span className="font-semibold text-slate-500">M</span> for the
+                <span className="font-semibold text-neutral-600">M</span> for the
                 main menu
               </p>
             )}

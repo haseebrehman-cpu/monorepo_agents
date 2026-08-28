@@ -13,6 +13,7 @@
     "packages/*"
   ],
   "scripts": {
+    "dev:api": "npm run dev --workspace=@rdx/api",
     "dev:dashboard": "npm run dev --workspace=@rdx/dashboard",
     "dev:chatbot": "npm run dev --workspace=@rdx/chatbot",
     "lint": "turbo run lint",

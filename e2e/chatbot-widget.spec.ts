@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("home page renders the shopping assistant", async ({ page }) => {
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: /RDX Shopping Assistant/i }),
+    page.getByRole("heading", { name: /RDX Sports/i }),
   ).toBeVisible();
 });
 
@@ -18,8 +18,9 @@ test("opens and closes the chat widget", async ({ page }) => {
 
   await expect(launcher).toHaveAttribute("aria-expanded", "true");
   await expect(page.getByRole("dialog", { name: /assistant/i })).toBeVisible();
-  await expect(page.getByText("Chat Goes Here")).toBeVisible();
-  await expect(page.getByPlaceholder(/ask about our products/i)).toBeVisible();
+  await expect(page.getByText(/how can i help you today/i)).toBeVisible();
+  await expect(page.getByRole("group", { name: "Quick options" })).toBeVisible();
+  await expect(page.getByPlaceholder(/ask about gloves/i)).toBeVisible();
 
   await launcher.click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
