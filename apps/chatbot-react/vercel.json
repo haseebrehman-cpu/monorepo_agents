@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/rdx-api/:path*",
+      "destination": "/api/proxy/:path*"
+    }
+  ]
+}
