@@ -23,14 +23,20 @@ function readMarketplace(value: string | undefined): MarketplaceCode {
     : "uk";
 }
 
+function isLocalBrowserHost(): boolean {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname;
+  return host === "localhost" || host === "127.0.0.1";
+}
+
 function resolveBaseUrl(): string {
   const configured = (import.meta.env.VITE_CHAT_API_URL ?? "")
     .trim()
     .replace(/\/+$/, "");
 
-  // Node tests can hit an absolute URL. The browser cannot — staging CORS
-  // does not allow localhost, so always stay same-origin and use the Vite proxy.
-  if (typeof window !== "undefined") {
+  // Local Vite (dev/preview) stays same-origin so the /rdx-api proxy can
+  // bypass staging CORS. Production (Vercel) must call the backend origin.
+  if (isLocalBrowserHost()) {
     return "/rdx-api";
   }
 
