@@ -45,6 +45,24 @@ export default defineConfig({
     fs: {
       allow: [monorepoRoot],
     },
+    proxy: {
+      "/rdx-api": {
+        target: "https://backend-staging-1a2f.up.railway.app",
+        changeOrigin: true,
+        secure: true,
+        rewrite: (requestPath) => requestPath.replace(/^\/rdx-api/, ""),
+      },
+    },
+  },
+  preview: {
+    proxy: {
+      "/rdx-api": {
+        target: "https://backend-staging-1a2f.up.railway.app",
+        changeOrigin: true,
+        secure: true,
+        rewrite: (requestPath) => requestPath.replace(/^\/rdx-api/, ""),
+      },
+    },
   },
   optimizeDeps: {
     exclude: ["@rdx/api-client", "@rdx/chat-contract", "@rdx/ui"],

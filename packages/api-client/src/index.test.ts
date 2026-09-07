@@ -1,6 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, createRdxApiClient } from "./index";
 
+const chatResponse = {
+  conversation_id: "conv_01",
+  turn_id: "turn_01",
+  answer: "Live assistant reply",
+  escalated: false,
+  degraded: false,
+  citations: [],
+  products: [],
+};
+
 describe("createRdxApiClient", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -9,7 +19,8 @@ describe("createRdxApiClient", () => {
   it("posts chat messages to /v1/chat", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      text: async () => JSON.stringify({ reply: "Live assistant reply" }),
+      headers: new Headers(),
+      text: async () => JSON.stringify(chatResponse),
     });
 
     const api = createRdxApiClient({
@@ -17,23 +28,35 @@ describe("createRdxApiClient", () => {
       fetch: fetchMock as unknown as typeof fetch,
     });
 
-    const result = await api.chat.send("Hello");
+    const result = await api.chat.send({
+      message: "Hello",
+      tenant: "rdx",
+      marketplace: "uk",
+    });
 
-    expect(result.reply).toBe("Live assistant reply");
+    expect(result.answer).toBe("Live assistant reply");
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.example.com/v1/chat",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ message: "Hello" }),
+        body: JSON.stringify({
+          message: "Hello",
+          tenant: "rdx",
+          marketplace: "uk",
+        }),
       }),
     );
   });
 
-  it("throws ApiError on non-OK responses", async () => {
+  it("reads FastAPI nested error messages", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
-      status: 503,
-      text: async () => JSON.stringify({ error: "Agent unavailable" }),
+      status: 401,
+      headers: new Headers(),
+      text: async () =>
+        JSON.stringify({
+          error: { code: "unauthorized", message: "Please sign in and try again." },
+        }),
     });
 
     const api = createRdxApiClient({
@@ -41,10 +64,54 @@ describe("createRdxApiClient", () => {
       fetch: fetchMock as unknown as typeof fetch,
     });
 
-    await expect(api.chat.send("Hello")).rejects.toMatchObject({
+    await expect(api.chat.send({ message: "Hello" })).rejects.toMatchObject({
       name: "ApiError",
-      message: "Agent unavailable",
-      status: 503,
+      message: "Please sign in and try again.",
+      status: 401,
+      code: "unauthorized",
     } satisfies Partial<ApiError>);
+  });
+
+  it("loads healthz and resume-turn endpoints", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        headers: new Headers(),
+        text: async () => JSON.stringify({ status: "ok" }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        headers: new Headers(),
+        text: async () =>
+          JSON.stringify({
+            turn_id: "turn_01",
+            status: "complete",
+            answer: "Done",
+            escalated: false,
+            degraded: false,
+            last_sequence_delivered: 3,
+          }),
+      });
+
+    const api = createRdxApiClient({
+      baseUrl: "https://api.example.com",
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await expect(api.health.get()).resolves.toEqual({ status: "ok" });
+    await expect(api.chat.getTurn("conv_01", "turn_01")).resolves.toMatchObject({
+      answer: "Done",
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "https://api.example.com/healthz",
+      expect.any(Object),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "https://api.example.com/v1/conversations/conv_01/turns/turn_01",
+      expect.any(Object),
+    );
   });
 });

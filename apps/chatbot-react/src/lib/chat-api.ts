@@ -1,12 +1,90 @@
 import { createRdxApiClient } from "@rdx/api-client";
+import type {
+  ChatRequestBody,
+  ChatStreamEvent,
+  MarketplaceCode,
+} from "@rdx/chat-contract";
 
-const baseUrl = (
-  import.meta.env.VITE_CHAT_API_URL ?? "http://127.0.0.1:8787"
-).replace(/\/+$/, "");
+const STAGING_API_URL = "https://backend-staging-1a2f.up.railway.app";
 
-/** Shared RDX API client — points at `@rdx/api`. */
-export const api = createRdxApiClient({ baseUrl });
+const MARKETPLACES = new Set<MarketplaceCode>([
+  "uk",
+  "usa",
+  "ca",
+  "eu",
+  "uae",
+  "intl",
+]);
 
-export function sendChatMessage(message: string) {
-  return api.chat.send(message);
+function readMarketplace(value: string | undefined): MarketplaceCode {
+  const code = (value ?? "uk").trim().toLowerCase();
+  return MARKETPLACES.has(code as MarketplaceCode)
+    ? (code as MarketplaceCode)
+    : "uk";
+}
+
+function resolveBaseUrl(): string {
+  const configured = (import.meta.env.VITE_CHAT_API_URL ?? "")
+    .trim()
+    .replace(/\/+$/, "");
+
+  // Node tests can hit an absolute URL. The browser cannot — staging CORS
+  // does not allow localhost, so always stay same-origin and use the Vite proxy.
+  if (typeof window !== "undefined") {
+    return "/rdx-api";
+  }
+
+  return configured || STAGING_API_URL;
+}
+
+const baseUrl = resolveBaseUrl();
+
+const sessionToken = import.meta.env.VITE_SESSION_TOKEN?.trim();
+
+export const api = createRdxApiClient({
+  baseUrl,
+  headers: sessionToken ? { "X-Session-Token": sessionToken } : undefined,
+});
+
+export type SendChatInput = {
+  message: string;
+  conversation_id?: string | null;
+  client_message_id?: string | null;
+};
+
+function withScope(input: SendChatInput): ChatRequestBody {
+  return {
+    message: input.message,
+    conversation_id: input.conversation_id ?? undefined,
+    client_message_id: input.client_message_id ?? undefined,
+    ...(sessionToken
+      ? {}
+      : {
+          tenant: import.meta.env.VITE_TENANT?.trim() || "rdx",
+          marketplace: readMarketplace(import.meta.env.VITE_MARKETPLACE),
+        }),
+  };
+}
+
+export function sendChatMessage(input: SendChatInput) {
+  return api.chat.send(withScope(input));
+}
+
+export function streamChatMessage(
+  input: SendChatInput,
+  onEvent?: (event: ChatStreamEvent) => void,
+) {
+  return api.stream.send(withScope(input), { onEvent });
+}
+
+export function createSession(queryString?: string) {
+  return api.session.create(queryString);
+}
+
+export function getTurn(conversationId: string, turnId: string) {
+  return api.chat.getTurn(conversationId, turnId);
+}
+
+export function getHealthz() {
+  return api.health.get();
 }

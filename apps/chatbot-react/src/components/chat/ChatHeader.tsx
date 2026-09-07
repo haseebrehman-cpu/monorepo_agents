@@ -1,4 +1,5 @@
 import { Button, CrossCircleIcon, PlusIcon } from "@rdx/ui";
+import { useHealthz } from "@/lib/use-healthz";
 import { CHATBOT_ICON_SRC, STORE_NAME } from "./constants";
 
 interface ChatHeaderProps {
@@ -12,6 +13,9 @@ export default function ChatHeader({
   onNewChat,
   onClose,
 }: ChatHeaderProps) {
+  const health = useHealthz();
+  const isOnline = health.data?.status === "ok";
+
   return (
     <div className="relative flex items-center gap-3 bg-rdx-black px-4 py-3.5 text-white">
       <img
@@ -29,10 +33,14 @@ export default function ChatHeader({
         </p>
         <p className="flex items-center gap-1.5 text-xs text-neutral-300">
           <span
-            className="h-1.5 w-1.5 rounded-full bg-rdx-red"
+            className={`h-1.5 w-1.5 rounded-full ${isOnline ? "bg-rdx-red" : "bg-neutral-500"}`}
             aria-hidden="true"
           />
-          Online — gear advice, instantly
+          {isOnline
+            ? "Online — gear advice, instantly"
+            : health.isPending
+              ? "Connecting…"
+              : "API offline"}
         </p>
       </div>
       <Button

@@ -1,7 +1,14 @@
 import type { RefObject } from "react";
 import type { ChatMessage, ChatOption } from "@rdx/chat-contract";
+import {
+  collectDisplayProducts,
+  nonProductCitations,
+  stripProductLinksFromAnswer,
+} from "@/lib/product-cards";
+import CitationList from "./CitationList";
 import MessageContent from "./MessageContent";
 import OptionButtons from "./OptionButtons";
+import ProductCard from "./ProductCard";
 import SizeChartAttachment from "./SizeChartAttachment";
 
 interface MessageListProps {
@@ -71,6 +78,12 @@ export default function MessageList({
 
       {messages.map((message) => {
         const isLatestAssistant = message.id === latestAssistantId;
+        const products =
+          message.role === "assistant" ? collectDisplayProducts(message) : [];
+        const citations =
+          message.role === "assistant"
+            ? nonProductCitations(message.citations)
+            : [];
 
         return (
           <div key={message.id} className="w-full">
@@ -83,7 +96,23 @@ export default function MessageList({
             >
               {message.role === "assistant" ? (
                 <>
-                  <MessageContent content={message.content} />
+                  <MessageContent
+                    content={stripProductLinksFromAnswer(message.content)}
+                  />
+                  {message.escalated && (
+                    <p className="mt-2 text-[11px] font-medium text-slate-700">
+                      A person is taking over this conversation.
+                    </p>
+                  )}
+                  {products.map((product) => (
+                    <ProductCard
+                      key={`${message.id}-${product.handle}`}
+                      product={product}
+                    />
+                  ))}
+                  {citations.length > 0 && (
+                    <CitationList citations={citations} />
+                  )}
                   {message.attachments?.map((attachment, index) =>
                     attachment.kind === "size_chart" ? (
                       <SizeChartAttachment

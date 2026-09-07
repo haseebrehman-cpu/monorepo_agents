@@ -7,6 +7,7 @@ afterEach(() => {
 
 describe("getStorefrontHost", () => {
   it("returns null when the env var is unset", () => {
+    vi.stubEnv("VITE_STOREFRONT_HOST", "");
     expect(getStorefrontHost()).toBeNull();
   });
 
@@ -49,7 +50,8 @@ describe("isAllowedChatHref", () => {
     expect(isAllowedChatHref("https://evil.example/phish")).toBe(false);
   });
 
-  it("fails open for generic https when no storefront is configured", () => {
-    expect(isAllowedChatHref("https://evil.example/phish")).toBe(true);
+  it("allows RDX storefronts and rejects unknown hosts", () => {
+    expect(isAllowedChatHref("https://rdxsports.co.uk/products/x")).toBe(true);
+    expect(isAllowedChatHref("https://evil.example/phish")).toBe(false);
   });
 });

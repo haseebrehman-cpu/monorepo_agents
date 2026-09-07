@@ -3,6 +3,15 @@
  * Blocks dangerous schemes and Shopify CDN; allows storefront + common carriers.
  */
 
+const RDX_HOSTS = [
+  "rdxsports.co.uk",
+  "rdxsports.ae",
+  "global.rdxsports.com",
+  "rdxsports.ca",
+  "rdxsports.com",
+  "rdxsports.de",
+];
+
 const CARRIER_HOST_HINTS = [
   "tracking",
   "dhl.",
@@ -18,6 +27,12 @@ const CARRIER_HOST_HINTS = [
   "hermes.",
   "evri.",
 ];
+
+function isListedHost(hostname: string, allowed: string[]): boolean {
+  return allowed.some(
+    (host) => hostname === host || hostname.endsWith(`.${host}`),
+  );
+}
 
 export function getStorefrontHost(): string | null {
   const fromProcess =
@@ -44,10 +59,11 @@ export function isAllowedChatHref(href: string | undefined): boolean {
     ) {
       return true;
     }
+    if (isListedHost(hostname, RDX_HOSTS)) return true;
     if (hostname.endsWith(".myshopify.com")) return true;
     if (CARRIER_HOST_HINTS.some((h) => hostname.includes(h))) return true;
 
-    return !storefront;
+    return false;
   } catch {
     return false;
   }

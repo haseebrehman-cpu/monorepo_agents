@@ -1,55 +1,69 @@
 import type {
-  ChatErrorResponse,
   ChatRequestBody,
   ChatSuccessResponse,
+  ResumeTurnResponse,
 } from "@rdx/chat-contract";
 import { ApiError, type ApiClient } from "./http";
+import { throwIfErrorPayload, withRetry } from "./errors";
 
-function isErrorResponse(value: unknown): value is ChatErrorResponse {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "error" in value &&
-    typeof (value as ChatErrorResponse).error === "string"
-  );
-}
-
-/** POST /v1/chat — shared by chatbot, dashboard, and future clients. */
 export async function sendChatMessage(
   client: ApiClient,
-  message: string,
+  request: ChatRequestBody,
 ): Promise<ChatSuccessResponse> {
-  const trimmed = message.trim();
+  const trimmed = request.message.trim();
   if (!trimmed) {
     throw new ApiError("Message cannot be empty.", 400);
   }
 
-  const body: ChatRequestBody = { message: trimmed };
-  const payload = await client.request<ChatSuccessResponse | ChatErrorResponse>(
-    "/v1/chat",
-    {
+  const body: ChatRequestBody = {
+    ...request,
+    message: trimmed,
+  };
+
+  const payload = await withRetry(() =>
+    client.request<ChatSuccessResponse>("/v1/chat", {
       method: "POST",
       body: JSON.stringify(body),
-    },
+    }),
   );
 
-  if (isErrorResponse(payload)) {
-    throw new ApiError(payload.error, 400, payload);
-  }
+  throwIfErrorPayload(payload);
 
-  if (typeof payload.reply !== "string" || !payload.reply.trim()) {
+  if (typeof payload.answer !== "string" || !payload.answer.trim()) {
     throw new ApiError("The assistant returned an empty reply.", 502, payload);
   }
 
   return payload;
 }
 
+export async function getTurn(
+  client: ApiClient,
+  conversationId: string,
+  turnId: string,
+): Promise<ResumeTurnResponse> {
+  if (!conversationId.trim() || !turnId.trim()) {
+    throw new ApiError("conversation_id and turn_id are required.", 400);
+  }
+
+  const payload = await client.request<ResumeTurnResponse>(
+    `/v1/conversations/${encodeURIComponent(conversationId)}/turns/${encodeURIComponent(turnId)}`,
+  );
+  throwIfErrorPayload(payload);
+  return payload;
+}
+
 export type ChatApi = {
-  send: (message: string) => Promise<ChatSuccessResponse>;
+  send: (request: ChatRequestBody) => Promise<ChatSuccessResponse>;
+  getTurn: (
+    conversationId: string,
+    turnId: string,
+  ) => Promise<ResumeTurnResponse>;
 };
 
 export function createChatApi(client: ApiClient): ChatApi {
   return {
-    send: (message) => sendChatMessage(client, message),
+    send: (request) => sendChatMessage(client, request),
+    getTurn: (conversationId, turnId) =>
+      getTurn(client, conversationId, turnId),
   };
 }

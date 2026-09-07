@@ -6,16 +6,19 @@ import ChatComposer from "./ChatComposer";
 import MessageList from "./MessageList";
 import { createMessageId, createWelcomeMessage } from "./messages";
 import { PANEL_ID, STORE_NAME } from "./constants";
-import { sendChatMessage } from "@/lib/chat-api";
 import { useDialogFocus } from "@/lib/use-dialog-focus";
+import { useSendChat } from "@/lib/use-send-chat";
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     createWelcomeMessage(),
   ]);
+  const sendChat = useSendChat();
+  const isTyping = sendChat.isPending;
+  const conversationIdRef = useRef<string | null>(null);
+  const generationRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
@@ -35,62 +38,80 @@ export default function ChatWidget() {
   }, [messages, isTyping, isOpen]);
 
   const handleNewChat = useCallback(() => {
+    generationRef.current += 1;
+    conversationIdRef.current = null;
+    sendChat.reset();
     setInput("");
-    setIsTyping(false);
     setMessages([createWelcomeMessage()]);
-  }, []);
+  }, [sendChat]);
 
-  const sendUserText = useCallback(async (text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
+  const sendUserText = useCallback(
+    (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed || sendChat.isPending) return;
 
-    const userMessage: ChatMessage = {
-      id: createMessageId(),
-      role: "user",
-      content: trimmed,
-    };
+      const generation = generationRef.current;
+      const clientMessageId = createMessageId();
 
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setIsTyping(true);
-
-    try {
-      const result = await sendChatMessage(trimmed);
-      const assistantMessage: ChatMessage = {
-        id: createMessageId(),
-        role: "assistant",
-        content: result.reply,
-        attachments: result.attachments,
-        showMenu: /^m$/i.test(trimmed),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Something went wrong. Please try again.";
       setMessages((prev) => [
         ...prev,
-        {
-          id: createMessageId(),
-          role: "assistant",
-          content: message,
-        },
+        { id: createMessageId(), role: "user", content: trimmed },
       ]);
-    } finally {
-      setIsTyping(false);
-    }
-  }, []);
+      setInput("");
+
+      sendChat.mutate(
+        {
+          message: trimmed,
+          conversation_id: conversationIdRef.current,
+          client_message_id: clientMessageId,
+        },
+        {
+          onSuccess: (result) => {
+            if (generation !== generationRef.current) return;
+            conversationIdRef.current = result.conversation_id;
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: createMessageId(),
+                role: "assistant",
+                content: result.answer,
+                products: result.products,
+                citations: result.citations,
+                escalated: result.escalated,
+                degraded: result.degraded,
+                showMenu: /^m$/i.test(trimmed),
+              },
+            ]);
+          },
+          onError: (error) => {
+            if (generation !== generationRef.current) return;
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: createMessageId(),
+                role: "assistant",
+                content:
+                  error instanceof Error
+                    ? error.message
+                    : "Something went wrong. Please try again.",
+              },
+            ]);
+          },
+        },
+      );
+    },
+    [sendChat],
+  );
 
   const handleSubmit = useCallback(() => {
     if (isTyping) return;
-    void sendUserText(input);
+    sendUserText(input);
   }, [input, isTyping, sendUserText]);
 
   const handleOptionSelect = useCallback(
     (option: ChatOption) => {
       if (isTyping || !option.enabled) return;
-      void sendUserText(option.label);
+      sendUserText(option.label);
     },
     [isTyping, sendUserText],
   );
