@@ -1,6 +1,10 @@
 import ChatWidget from "@/components/chat/ChatWidget";
+import SelectRegion from "./components/chat/SelectRegion";
+import { useState } from "react";
 
 export default function App() {
+  const [region, setRegion] = useState('uk');
+  
   return (
     <main className="relative flex min-h-screen flex-col overflow-hidden bg-rdx-black px-6 text-white">
       <div
@@ -17,12 +21,13 @@ export default function App() {
         <p className="mt-2 font-display text-lg tracking-[0.28em] text-rdx-red uppercase">
           Shopping Assistant
         </p>
+        <SelectRegion region={region} setRegion={setRegion} />
         <p className="mt-5 max-w-xl text-base leading-relaxed text-neutral-300">
           Need the right gloves, bag, or size? Tap the RDX chat icon in the
           corner for instant answers on gear, fit, and availability.
         </p>
       </div>
-      <ChatWidget />
+      <ChatWidget region={region} />
     </main>
   );
 }

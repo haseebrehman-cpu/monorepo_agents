@@ -9,7 +9,7 @@ import { PANEL_ID, STORE_NAME } from "./constants";
 import { useDialogFocus } from "@/lib/use-dialog-focus";
 import { useSendChat } from "@/lib/use-send-chat";
 
-export default function ChatWidget() {
+export default function ChatWidget({ region }: { region: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
@@ -64,6 +64,7 @@ export default function ChatWidget() {
           message: trimmed,
           conversation_id: conversationIdRef.current,
           client_message_id: clientMessageId,
+          region,
         },
         {
           onSuccess: (result) => {
@@ -100,7 +101,7 @@ export default function ChatWidget() {
         },
       );
     },
-    [sendChat],
+    [region, sendChat],
   );
 
   const handleSubmit = useCallback(() => {
@@ -138,6 +139,7 @@ export default function ChatWidget() {
             isTyping={isTyping}
             onNewChat={handleNewChat}
             onClose={close}
+            region={region}
           />
 
           <MessageList

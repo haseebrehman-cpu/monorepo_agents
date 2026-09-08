@@ -6,12 +6,14 @@ interface ChatHeaderProps {
   isTyping: boolean;
   onNewChat: () => void;
   onClose: () => void;
+  region: string;
 }
 
 export default function ChatHeader({
   isTyping,
   onNewChat,
   onClose,
+  region,
 }: ChatHeaderProps) {
   const health = useHealthz();
   console.log("healthAPI",health);
@@ -31,7 +33,7 @@ export default function ChatHeader({
       />
       <div className="min-w-0 flex-1">
         <p className="truncate font-display text-sm font-semibold tracking-[0.14em] uppercase">
-          {STORE_NAME}
+          {STORE_NAME} {region}
         </p>
         <p className="flex items-center gap-1.5 text-xs text-neutral-300">
           <span

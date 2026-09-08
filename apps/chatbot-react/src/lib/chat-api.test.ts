@@ -24,7 +24,6 @@ describe("sendChatMessage", () => {
   it("posts to the configured chat API base URL with staging scope", async () => {
     vi.stubEnv("VITE_CHAT_API_URL", "https://api.example.com");
     vi.stubEnv("VITE_TENANT", "rdx");
-    vi.stubEnv("VITE_MARKETPLACE", "uk");
     const fetchMock = vi.fn().mockResolvedValue(mockChatResponse());
     vi.stubGlobal("fetch", fetchMock);
 
@@ -32,6 +31,7 @@ describe("sendChatMessage", () => {
     const result = await sendChatMessage({
       message: "Hello",
       client_message_id: "msg-1",
+      region: "uk",
     });
 
     expect(result.answer).toBe("Live assistant reply");
@@ -44,6 +44,31 @@ describe("sendChatMessage", () => {
           client_message_id: "msg-1",
           tenant: "rdx",
           marketplace: "uk",
+        }),
+      }),
+    );
+  });
+
+  it("uses the selected region as marketplace instead of VITE_MARKETPLACE", async () => {
+    vi.stubEnv("VITE_CHAT_API_URL", "https://api.example.com");
+    vi.stubEnv("VITE_TENANT", "rdx");
+    vi.stubEnv("VITE_MARKETPLACE", "uk");
+    const fetchMock = vi.fn().mockResolvedValue(mockChatResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { sendChatMessage } = await import("./chat-api");
+    await sendChatMessage({
+      message: "Hello",
+      region: "usa",
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.com/v1/chat",
+      expect.objectContaining({
+        body: JSON.stringify({
+          message: "Hello",
+          tenant: "rdx",
+          marketplace: "usa",
         }),
       }),
     );

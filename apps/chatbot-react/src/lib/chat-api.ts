@@ -56,9 +56,11 @@ export type SendChatInput = {
   message: string;
   conversation_id?: string | null;
   client_message_id?: string | null;
+  region?: string | null;
 };
 
 function withScope(input: SendChatInput): ChatRequestBody {
+  const marketplace = readMarketplace(input.region ?? undefined);
   return {
     message: input.message,
     conversation_id: input.conversation_id ?? undefined,
@@ -67,7 +69,7 @@ function withScope(input: SendChatInput): ChatRequestBody {
       ? {}
       : {
           tenant: import.meta.env.VITE_TENANT?.trim() || "rdx",
-          marketplace: readMarketplace(import.meta.env.VITE_MARKETPLACE),
+          marketplace,
         }),
   };
 }
