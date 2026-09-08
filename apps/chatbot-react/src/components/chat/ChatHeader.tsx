@@ -14,7 +14,9 @@ export default function ChatHeader({
   onClose,
 }: ChatHeaderProps) {
   const health = useHealthz();
-  const isOnline = health.data?.status === "ok";
+  console.log("healthAPI",health);
+  
+  const isOnline = health.data?.web === "ok";
 
   return (
     <div className="relative flex items-center gap-3 bg-rdx-black px-4 py-3.5 text-white">
