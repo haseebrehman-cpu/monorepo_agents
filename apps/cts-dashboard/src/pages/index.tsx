@@ -1,4 +1,20 @@
 import Login from "./authentication/Login";
 import DashboardHome from "./dashboard/Dashboard_Home";
+import Tickets from "./dashboard/CTS/Tickets";
+import TicketsHistory from "./dashboard/CTS/Tickets_History";
+import RefundResend from "./dashboard/RefundResend/Refund_Resend";
+import Invoices from "./dashboard/CourierInvoices/Invoices";
+import Prices from "./dashboard/CourierInvoices/Prices";
+import Reports from "./dashboard/CourierInvoices/Reports";
+import OverallDetails from "./dashboard/Performance/OverallDetails";
+import On_TimeDelivery_Ratio from "./dashboard/Performance/On_TimeDelivery_Ratio";
+import In_Transit_Details from "./dashboard/Performance/In_Transit_Details";
+import Counrty_Specific from "./dashboard/Performance/Counrty_Specific";
+import Country_Courier_Specific from "./dashboard/Performance/Country_Courier_Specific";
+import Warehouse_Pending from "./dashboard/Performance/Warehouse_Pending";
+import ManualPerformance from "./dashboard/Manual_Performance";
+import Frequency from "./dashboard/Reports/Frequency";
+import Refund from "./dashboard/Reports/Refund";
+import Resend from "./dashboard/Reports/Resend";
 
-export { Login, DashboardHome }
+export { Login, DashboardHome, Tickets, TicketsHistory, RefundResend, Invoices, Prices, Reports, OverallDetails, On_TimeDelivery_Ratio, In_Transit_Details, Counrty_Specific, Country_Courier_Specific, Warehouse_Pending, ManualPerformance, Frequency, Refund, Resend };

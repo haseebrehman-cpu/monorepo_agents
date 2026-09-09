@@ -1,7 +1,12 @@
 {
   "extends": "../tsconfig/react-library.json",
   "compilerOptions": {
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "paths": {
+      "#components/*": ["./components/*"],
+      "#lib/*": ["./lib/*"],
+      "#hooks/*": ["./hooks/*"]
+    }
   },
   "include": ["**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules", "vitest.config.ts"]

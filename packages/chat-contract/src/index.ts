@@ -38,6 +38,7 @@ export interface ChatProductCard {
   promotions: string[] | null;
   availability: string;
   stock_status: string;
+  image_url: string | null;
 }
 
 export interface ChatTokenUsage {

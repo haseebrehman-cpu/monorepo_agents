@@ -15,6 +15,7 @@
   "scripts": {
     "dev:dashboard": "npm run dev --workspace=@rdx/dashboard",
     "dev:chatbot": "npm run dev --workspace=@rdx/chatbot",
+    "dev:cts": "npm run dev --workspace=@rdx/cts-dashboard",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
