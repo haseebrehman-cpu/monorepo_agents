@@ -46,6 +46,7 @@ function asCard(partial: {
     promotions: null,
     availability: "",
     stock_status: "",
+    image_url: null,
   };
 }
 

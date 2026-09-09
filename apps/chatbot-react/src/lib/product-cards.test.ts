@@ -34,7 +34,7 @@ describe("collectDisplayProducts", () => {
   it("promotes product citations and markdown links into cards", () => {
     const cards = collectDisplayProducts(
       message({
-        products: [{...product, image_url: "https://rdxsports.co.uk/images/t2-wako-blue.jpg"}],
+        products: [{ ...product, image_url: "https://rdxsports.co.uk/images/t2-wako-blue.jpg" }],
         citations: [
           {
             title: "RDX T15 Noir Black Shin Instep Guards",
@@ -62,7 +62,7 @@ describe("collectDisplayProducts", () => {
   it("deduplicates the same product from products, citations, and markdown", () => {
     const cards = collectDisplayProducts(
       message({
-        products: [{...product, image_url: "https://rdxsports.co.uk/images/t2-wako-blue.jpg"}],
+        products: [{ ...product, image_url: "https://rdxsports.co.uk/images/t2-wako-blue.jpg" }],
         citations: [
           {
             title: product.title,
