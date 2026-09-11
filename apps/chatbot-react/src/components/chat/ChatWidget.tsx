@@ -26,13 +26,20 @@ export default function ChatWidget({ region }: { region: string }) {
   const [failedListingIds, setFailedListingIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const [cartSessionRegion, setCartSessionRegion] = useState(region);
   const conversationIdRef = useRef<string | null>(null);
   const generationRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
   const close = useCallback(() => setIsOpen(false), []);
-  console.log("cart", cart);
+
+  if (cartSessionRegion !== region) {
+    setCartSessionRegion(region);
+    setCartOpen(false);
+    setCartNotice(null);
+    setFailedListingIds(new Set());
+  }
 
   useDialogFocus({
     isOpen,
@@ -47,12 +54,6 @@ export default function ChatWidget({ region }: { region: string }) {
     node.scrollTop = node.scrollHeight;
   }, [messages, isTyping, isOpen]);
 
-  useEffect(() => {
-    setCartOpen(false);
-    setCartNotice(null);
-    setFailedListingIds(new Set());
-  }, [region]);
-
   const handleNewChat = useCallback(() => {
     generationRef.current += 1;
     conversationIdRef.current = null;
@@ -61,14 +62,10 @@ export default function ChatWidget({ region }: { region: string }) {
     setCartOpen(false);
     setCartNotice(null);
     setMessages([createWelcomeMessage()]);
-  }, [sendChat]);
+  }, [sendChat, setCartNotice]);
 
   const handleListingFailed = useCallback((listingId: string) => {
     setFailedListingIds((prev) => new Set(prev).add(listingId));
-  }, []);
-
-  const handleAddedToCart = useCallback(() => {
-    setCartOpen(true);
   }, []);
 
   const sendUserText = useCallback(
@@ -188,7 +185,6 @@ export default function ChatWidget({ region }: { region: string }) {
                 failedListingIds={failedListingIds}
                 onListingFailed={handleListingFailed}
                 onCartNotice={setCartNotice}
-                onAddedToCart={handleAddedToCart}
                 onOptionSelect={handleOptionSelect}
                 scrollRef={scrollRef}
               />

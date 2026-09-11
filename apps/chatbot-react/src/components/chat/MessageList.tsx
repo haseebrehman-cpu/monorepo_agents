@@ -19,7 +19,6 @@ interface MessageListProps {
   failedListingIds: Set<string>;
   onListingFailed: (listingId: string) => void;
   onCartNotice: (notice: CartNotice) => void;
-  onAddedToCart: () => void;
   onOptionSelect: (option: ChatOption) => void;
   scrollRef: RefObject<HTMLDivElement | null>;
 }
@@ -55,7 +54,6 @@ export default function MessageList({
   failedListingIds,
   onListingFailed,
   onCartNotice,
-  onAddedToCart,
   onOptionSelect,
   scrollRef,
 }: MessageListProps) {
@@ -123,7 +121,6 @@ export default function MessageList({
                       failedListingIds={failedListingIds}
                       onListingFailed={onListingFailed}
                       onNotice={onCartNotice}
-                      onAdded={onAddedToCart}
                     />
                   ))}
                   {/* {citations.length > 0 && (

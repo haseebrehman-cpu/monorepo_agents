@@ -33,14 +33,12 @@ export default function ProductCard({
   failedListingIds,
   onListingFailed,
   onNotice,
-  onAdded,
 }: {
   product: ChatProductCard;
   region: string;
   failedListingIds: Set<string>;
   onListingFailed: (listingId: string) => void;
   onNotice: (notice: CartNotice) => void;
-  onAdded: () => void;
 }) {
   const addLine = useAddCartLine(region);
   const [pending, setPending] = useState(false);
@@ -87,9 +85,6 @@ export default function ProductCard({
         onListingFailed(listingId);
         return;
       }
-      // if (result.outcome === "succeeded" || result.outcome === "adjusted") {
-      //   onAdded();
-      // }
     } catch (error) {
       onNotice({
         kind: "error",
