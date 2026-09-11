@@ -1,4 +1,4 @@
-import { Login, Tickets, TicketsHistory, RefundResend, Reports, Prices, Invoices, OverallDetails, On_TimeDelivery_Ratio, In_Transit_Details, Counrty_Specific, Country_Courier_Specific, Warehouse_Pending, ManualPerformance, Frequency, Resend, Refund } from "../pages";
+import { Login, Tickets, RefundResend, Reports, Prices, Invoices, OverallDetails, On_TimeDelivery_Ratio, In_Transit_Details, Counrty_Specific, Country_Courier_Specific, Warehouse_Pending, ManualPerformance, Frequency, Resend, Refund } from "../pages";
 import Dashboard_Home from "../pages/dashboard/Dashboard_Home";
 
 const publicRoutes = [
@@ -7,8 +7,7 @@ const publicRoutes = [
 
 const privateRoutes = [
     { path: '/', component: Dashboard_Home },
-    { path: '/tickets', component: Tickets },
-    { path: '/tickets-history', component: TicketsHistory },
+    { path: '/tracking', component: Tickets },
     { path: '/refund-resend', component: RefundResend },
     { path: '/invoices', component: Invoices },
     { path: '/prices', component: Prices },

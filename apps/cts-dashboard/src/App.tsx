@@ -4,8 +4,7 @@ import { type ActiveNavId } from './Data/nav'
 
 const NAV_PATHS: Partial<Record<ActiveNavId, string>> = {
   home: '/',
-  tickets: '/tickets',
-  tickets_history: '/tickets-history',
+  tracking: '/tracking',
   refund_resend: '/refund-resend',
   invoices: '/invoices',
   prices: '/prices',
@@ -24,8 +23,7 @@ const NAV_PATHS: Partial<Record<ActiveNavId, string>> = {
 
 const PATH_NAV: Record<string, ActiveNavId> = {
   '/': 'home',
-  '/tickets': 'tickets',
-  '/tickets-history': 'tickets_history',
+  '/tracking': 'tracking',
   '/refund-resend': 'refund_resend',
   '/invoices': 'invoices',
   '/prices': 'prices',

@@ -1,6 +1,8 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import Filters from "../../organisms/HomeReportFilters/Filters";
 import { Button } from "@rdx/ui";
+import { FilterIcon } from "lucide-react";
+import { RotateCcwIcon } from "lucide-react";
 
 const EMPTY_FILTERS = {
   courier: "",
@@ -21,12 +23,12 @@ const SELECT_FIELDS: Array<{
   label: string;
   options: string[];
 }> = [
-  { id: "courier", label: "Courier", options: ["DHL", "FedEx", "UPS", "Aramex"] },
-  { id: "issue", label: "Issue", options: ["Delayed", "Lost", "Damaged", "Wrong address"] },
-  { id: "assignedTo", label: "Assigned to", options: ["Unassigned", "Agent A", "Agent B"] },
-  { id: "createdBy", label: "Created by", options: ["System", "Agent A", "Agent B"] },
-  { id: "status", label: "Status", options: ["Open", "In progress", "Resolved", "Closed"] },
-];
+    { id: "courier", label: "Courier", options: ["DHL", "FedEx", "UPS", "Aramex"] },
+    { id: "issue", label: "Issue", options: ["Delayed", "Lost", "Damaged", "Wrong address"] },
+    { id: "assignedTo", label: "Assigned to", options: ["Unassigned", "Agent A", "Agent B"] },
+    { id: "createdBy", label: "Created by", options: ["System", "Agent A", "Agent B"] },
+    { id: "status", label: "Status", options: ["Open", "In progress", "Resolved", "Closed"] },
+  ];
 
 const DATE_INPUT_CLASS =
   "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm text-slate-900 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -53,7 +55,6 @@ const Dashboard_Home_Filters_Pane = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold text-slate-900">Ticket List</h1>
       <form
         onSubmit={onApply}
         className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
@@ -117,10 +118,12 @@ const Dashboard_Home_Filters_Pane = () => {
         </div>
 
         <div className="mt-4 flex flex-wrap justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onReset}>
+          <Button size="sm" type="button" variant="outline" onClick={onReset}>
+            <RotateCcwIcon className="h-4 w-4" />
             Reset Filters
           </Button>
-          <Button type="submit" variant="primary">
+          <Button size="sm" type="submit" variant="primary">
+            <FilterIcon className="h-4 w-4" />
             Apply Filters
           </Button>
         </div>

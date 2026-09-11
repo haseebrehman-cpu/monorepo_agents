@@ -17,7 +17,7 @@ import { useState, type ReactNode } from "react";
 
 const NAV_ICONS: Record<NavId, ReactNode> = {
   home: <HomeIcon />,
-  CTS: <IntegrationIcon />,
+  tracking: <IntegrationIcon />,
   refund_resend: <BookIcon />,
   courier_invoices: <ChannelIcon />,
   performance: <ChartIcon />,

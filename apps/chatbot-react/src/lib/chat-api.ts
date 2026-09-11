@@ -5,9 +5,9 @@ import type {
   MarketplaceCode,
 } from "@rdx/chat-contract";
 
-const STAGING_API_URL = "https://backend-staging-1a2f.up.railway.app";
+export const STAGING_API_URL = "https://backend-staging-1a2f.up.railway.app";
 
-const MARKETPLACES = new Set<MarketplaceCode>([
+export const MARKETPLACES = new Set<MarketplaceCode>([
   "uk",
   "usa",
   "ca",
@@ -16,20 +16,20 @@ const MARKETPLACES = new Set<MarketplaceCode>([
   "intl",
 ]);
 
-function readMarketplace(value: string | undefined): MarketplaceCode {
+export function readMarketplace(value: string | undefined): MarketplaceCode {
   const code = (value ?? "uk").trim().toLowerCase();
   return MARKETPLACES.has(code as MarketplaceCode)
     ? (code as MarketplaceCode)
     : "uk";
 }
 
-function isLocalBrowserHost(): boolean {
+export function isLocalBrowserHost(): boolean {
   if (typeof window === "undefined") return false;
   const host = window.location.hostname;
   return host === "localhost" || host === "127.0.0.1";
 }
 
-function resolveBaseUrl(): string {
+export function resolveBaseUrl(): string {
   const configured = (import.meta.env.VITE_CHAT_API_URL ?? "")
     .trim()
     .replace(/\/+$/, "");
@@ -46,6 +46,14 @@ function resolveBaseUrl(): string {
 const baseUrl = resolveBaseUrl();
 
 const sessionToken = import.meta.env.VITE_SESSION_TOKEN?.trim();
+
+export function hasSessionToken(): boolean {
+  return Boolean(sessionToken);
+}
+
+export function readTenant(): string {
+  return import.meta.env.VITE_TENANT?.trim() || "rdx";
+}
 
 export const api = createRdxApiClient({
   baseUrl,

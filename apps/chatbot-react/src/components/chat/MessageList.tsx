@@ -1,11 +1,12 @@
 import type { RefObject } from "react";
 import type { ChatMessage, ChatOption } from "@rdx/chat-contract";
+import type { CartNotice } from "@/lib/cart-outcome";
 import {
   collectDisplayProducts,
-  nonProductCitations,
+  // nonProductCitations,
   stripProductLinksFromAnswer,
 } from "@/lib/product-cards";
-import CitationList from "./CitationList";
+// import CitationList from "./CitationList";
 import MessageContent from "./MessageContent";
 import OptionButtons from "./OptionButtons";
 import ProductCard from "./ProductCard";
@@ -14,6 +15,11 @@ import SizeChartAttachment from "./SizeChartAttachment";
 interface MessageListProps {
   messages: ChatMessage[];
   isTyping: boolean;
+  region: string;
+  failedListingIds: Set<string>;
+  onListingFailed: (listingId: string) => void;
+  onCartNotice: (notice: CartNotice) => void;
+  onAddedToCart: () => void;
   onOptionSelect: (option: ChatOption) => void;
   scrollRef: RefObject<HTMLDivElement | null>;
 }
@@ -45,6 +51,11 @@ function findLatestId(
 export default function MessageList({
   messages,
   isTyping,
+  region,
+  failedListingIds,
+  onListingFailed,
+  onCartNotice,
+  onAddedToCart,
   onOptionSelect,
   scrollRef,
 }: MessageListProps) {
@@ -80,10 +91,10 @@ export default function MessageList({
         const isLatestAssistant = message.id === latestAssistantId;
         const products =
           message.role === "assistant" ? collectDisplayProducts(message) : [];
-        const citations =
-          message.role === "assistant"
-            ? nonProductCitations(message.citations)
-            : [];
+        // const citations =
+        //   message.role === "assistant"
+        //     ? nonProductCitations(message.citations)
+        //     : [];
 
         return (
           <div key={message.id} className="w-full">
@@ -106,13 +117,18 @@ export default function MessageList({
                   )}
                   {products.map((product) => (
                     <ProductCard
-                      key={`${message.id}-${product.handle}`}
+                      key={`${message.id}-${product.listing_id ?? product.handle}`}
                       product={product}
+                      region={region}
+                      failedListingIds={failedListingIds}
+                      onListingFailed={onListingFailed}
+                      onNotice={onCartNotice}
+                      onAdded={onAddedToCart}
                     />
                   ))}
-                  {citations.length > 0 && (
+                  {/* {citations.length > 0 && (
                     <CitationList citations={citations} />
-                  )}
+                  )} */}
                   {message.attachments?.map((attachment, index) =>
                     attachment.kind === "size_chart" ? (
                       <SizeChartAttachment

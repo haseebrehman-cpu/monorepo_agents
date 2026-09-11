@@ -38,6 +38,7 @@ function asCard(partial: {
     title: partial.title,
     url: partial.url,
     handle: partial.handle || handleFromUrl(partial.url),
+    listing_id: null,
     price_min: null,
     price_max: null,
     compare_at_min: null,

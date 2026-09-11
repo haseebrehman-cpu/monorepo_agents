@@ -30,6 +30,8 @@ export interface ChatProductCard {
   title: string;
   url: string;
   handle: string;
+  /** Opaque id of this exact variant in this store. Posted to POST /v1/cart/lines. */
+  listing_id?: string | null;
   price_min: string | null;
   price_max: string | null;
   compare_at_min: string | null;
@@ -39,6 +41,9 @@ export interface ChatProductCard {
   availability: string;
   stock_status: string;
   image_url: string | null;
+  image_alt?: string | null;
+  availability_as_of?: string | null;
+  size_chart?: { url: string; alt?: string } | null;
 }
 
 export interface ChatTokenUsage {
@@ -180,4 +185,68 @@ export interface ChatOption {
   id: string;
   label: string;
   enabled: boolean;
+}
+
+export type CartOutcome =
+  | "succeeded"
+  | "adjusted"
+  | "failed"
+  | "quote_stale"
+  | "unknown"
+  | "unresolved"
+  | "busy"
+  | "not_found"
+  | "invalid";
+
+export interface CartLine {
+  line_ref: string;
+  title: string;
+  sku?: string | null;
+  quantity: number;
+  unit_amount: number;
+  line_amount: number;
+  currency: string;
+  image_url?: string | null;
+  product_url?: string | null;
+  available?: boolean;
+}
+
+export interface CartSnapshot {
+  cart_ref: string | null;
+  currency?: string;
+  empty: boolean;
+  total_quantity?: number;
+  subtotal?: number;
+  total?: number;
+  totals_are_estimates: boolean;
+  unresolved_action_id?: string | null;
+  messages?: string[];
+  lines: CartLine[];
+}
+
+export interface CartAddLineRequest {
+  listing_id: string;
+  quantity: number;
+  quoted_unit_amount?: number;
+  quoted_currency?: string;
+}
+
+export interface CartPatchLineRequest {
+  quantity: number;
+}
+
+export interface CartActionResponse {
+  action_id: string;
+  op: string;
+  outcome: CartOutcome;
+  reason?: string;
+  cart?: CartSnapshot | null;
+  requested_quantity?: number;
+  resulting_quantity?: number;
+  message_codes?: string[];
+  checkout_url?: string | null;
+  checkout_status?: string | null;
+  note?: string | null;
+  replayed?: boolean;
+  retryable?: boolean;
 }

@@ -1,12 +1,8 @@
 export const NAV_ITEMS = [
   { id: "home", label: "Home" },
   {
-    id: "CTS",
-    label: "CTS",
-    children: [
-      { id: "tickets", label: "Tickets" },
-      { id: "tickets_history", label: "Tickets History" },
-    ],
+    id: "tracking",
+    label: "Tracking",
   },
   { id: "refund_resend", label: "Refund & Resend" },
   { id: "courier_invoices", label: "Courier Invoices", children: [

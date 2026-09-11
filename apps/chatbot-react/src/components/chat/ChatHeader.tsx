@@ -6,6 +6,9 @@ interface ChatHeaderProps {
   isTyping: boolean;
   onNewChat: () => void;
   onClose: () => void;
+  onToggleCart: () => void;
+  cartOpen: boolean;
+  cartCount: number;
   region: string;
 }
 
@@ -13,11 +16,12 @@ export default function ChatHeader({
   isTyping,
   onNewChat,
   onClose,
+  onToggleCart,
+  cartOpen,
+  cartCount,
   region,
 }: ChatHeaderProps) {
   const health = useHealthz();
-  console.log("healthAPI",health);
-  
   const isOnline = health.data?.web === "ok";
 
   return (
@@ -47,6 +51,34 @@ export default function ChatHeader({
               : "API offline"}
         </p>
       </div>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="relative text-white hover:bg-white/10 hover:text-white"
+        onClick={onToggleCart}
+        aria-label={cartOpen ? "Close bag" : "Open bag"}
+        aria-pressed={cartOpen}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          className="h-4 w-4"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M3 3h2l.4 2M7 13h10l3-8H6.4M7 13 5.4 5M7 13l-2 6h13M10 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm8 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
+          />
+        </svg>
+        {cartCount > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rdx-red px-1 text-[9px] font-bold text-white">
+            {cartCount > 99 ? "99+" : cartCount}
+          </span>
+        )}
+      </Button>
       <Button
         size="sm"
         variant="ghost"

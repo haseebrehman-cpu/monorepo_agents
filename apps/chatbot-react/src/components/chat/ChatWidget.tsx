@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage, ChatOption } from "@rdx/chat-contract";
+import { useTimedCartNotice } from "@/lib/cart-outcome";
+import { useCart } from "@/lib/use-cart";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
+import { useSendChat } from "@/lib/use-send-chat";
+import CartPanel from "./CartPanel";
 import ChatHeader from "./ChatHeader";
 import ChatLauncher from "./ChatLauncher";
 import ChatComposer from "./ChatComposer";
 import MessageList from "./MessageList";
 import { createMessageId, createWelcomeMessage } from "./messages";
 import { PANEL_ID, STORE_NAME } from "./constants";
-import { useDialogFocus } from "@/lib/use-dialog-focus";
-import { useSendChat } from "@/lib/use-send-chat";
 
 export default function ChatWidget({ region }: { region: string }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,13 +19,20 @@ export default function ChatWidget({ region }: { region: string }) {
     createWelcomeMessage(),
   ]);
   const sendChat = useSendChat();
+  const cart = useCart(region, isOpen);
   const isTyping = sendChat.isPending;
+  const [cartOpen, setCartOpen] = useState(false);
+  const [cartNotice, setCartNotice] = useTimedCartNotice();
+  const [failedListingIds, setFailedListingIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const conversationIdRef = useRef<string | null>(null);
   const generationRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
   const close = useCallback(() => setIsOpen(false), []);
+  console.log("cart", cart);
 
   useDialogFocus({
     isOpen,
@@ -37,13 +47,29 @@ export default function ChatWidget({ region }: { region: string }) {
     node.scrollTop = node.scrollHeight;
   }, [messages, isTyping, isOpen]);
 
+  useEffect(() => {
+    setCartOpen(false);
+    setCartNotice(null);
+    setFailedListingIds(new Set());
+  }, [region]);
+
   const handleNewChat = useCallback(() => {
     generationRef.current += 1;
     conversationIdRef.current = null;
     sendChat.reset();
     setInput("");
+    setCartOpen(false);
+    setCartNotice(null);
     setMessages([createWelcomeMessage()]);
   }, [sendChat]);
+
+  const handleListingFailed = useCallback((listingId: string) => {
+    setFailedListingIds((prev) => new Set(prev).add(listingId));
+  }, []);
+
+  const handleAddedToCart = useCallback(() => {
+    setCartOpen(true);
+  }, []);
 
   const sendUserText = useCallback(
     (text: string) => {
@@ -139,23 +165,52 @@ export default function ChatWidget({ region }: { region: string }) {
             isTyping={isTyping}
             onNewChat={handleNewChat}
             onClose={close}
+            onToggleCart={() => setCartOpen((open) => !open)}
+            cartOpen={cartOpen}
+            cartCount={cart.data?.lines?.length ?? 0}
             region={region}
           />
 
-          <MessageList
-            messages={messages}
-            isTyping={isTyping}
-            onOptionSelect={handleOptionSelect}
-            scrollRef={scrollRef}
-          />
+          {cartOpen ? (
+            <CartPanel
+              region={region}
+              cart={cart.data}
+              notice={cartNotice}
+              onNotice={setCartNotice}
+              onClose={() => setCartOpen(false)}
+            />
+          ) : (
+            <>
+              <MessageList
+                messages={messages}
+                isTyping={isTyping}
+                region={region}
+                failedListingIds={failedListingIds}
+                onListingFailed={handleListingFailed}
+                onCartNotice={setCartNotice}
+                onAddedToCart={handleAddedToCart}
+                onOptionSelect={handleOptionSelect}
+                scrollRef={scrollRef}
+              />
 
-          <ChatComposer
-            value={input}
-            isTyping={isTyping}
-            inputRef={inputRef}
-            onChange={setInput}
-            onSubmit={handleSubmit}
-          />
+              {cartNotice && (
+                <p
+                  className="mx-4 mb-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] text-slate-800"
+                  role="status"
+                >
+                  {cartNotice.text}
+                </p>
+              )}
+
+              <ChatComposer
+                value={input}
+                isTyping={isTyping}
+                inputRef={inputRef}
+                onChange={setInput}
+                onSubmit={handleSubmit}
+              />
+            </>
+          )}
         </div>
       )}
     </>

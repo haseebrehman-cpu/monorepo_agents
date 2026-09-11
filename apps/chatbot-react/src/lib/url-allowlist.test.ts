@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getStorefrontHost, isAllowedChatHref } from "./url-allowlist";
+import {
+  getStorefrontHost,
+  isAllowedChatHref,
+  isAllowedImageUrl,
+} from "./url-allowlist";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -53,5 +57,21 @@ describe("isAllowedChatHref", () => {
   it("allows RDX storefronts and rejects unknown hosts", () => {
     expect(isAllowedChatHref("https://rdxsports.co.uk/products/x")).toBe(true);
     expect(isAllowedChatHref("https://evil.example/phish")).toBe(false);
+  });
+});
+
+describe("isAllowedImageUrl", () => {
+  it("allows Shopify CDN and storefront https images", () => {
+    expect(
+      isAllowedImageUrl("https://cdn.shopify.com/s/files/1/example.jpg"),
+    ).toBe(true);
+    expect(
+      isAllowedImageUrl("https://rdxsports.co.uk/cdn/shop/files/x.jpg"),
+    ).toBe(true);
+  });
+
+  it("rejects non-https and unknown hosts", () => {
+    expect(isAllowedImageUrl("http://cdn.shopify.com/x.jpg")).toBe(false);
+    expect(isAllowedImageUrl("https://evil.example/x.jpg")).toBe(false);
   });
 });

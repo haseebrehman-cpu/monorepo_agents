@@ -44,6 +44,30 @@ export function getStorefrontHost(): string | null {
   return host.replace(/^https?:\/\//, "").split("/")[0] || null;
 }
 
+export function isAllowedImageUrl(href: string | undefined): boolean {
+  if (!href || !/^https:\/\//i.test(href)) return false;
+  try {
+    const url = new URL(href);
+    if (url.protocol !== "https:") return false;
+    const hostname = url.hostname.toLowerCase();
+    if (hostname === "cdn.shopify.com" || hostname.endsWith(".cdn.shopify.com")) {
+      return true;
+    }
+    const storefront = getStorefrontHost();
+    if (
+      storefront &&
+      (hostname === storefront || hostname.endsWith(`.${storefront}`))
+    ) {
+      return true;
+    }
+    if (isListedHost(hostname, RDX_HOSTS)) return true;
+    if (hostname.endsWith(".myshopify.com")) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export function isAllowedChatHref(href: string | undefined): boolean {
   if (!href || !/^https?:\/\//i.test(href)) return false;
   try {
