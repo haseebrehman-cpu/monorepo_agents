@@ -1,17 +1,5 @@
-import { createColumnHelper } from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal } from "lucide-react";
-import {
-  Button,
-  Checkbox,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@rdx/ui";
-import { type DataTableFeatures } from "./data-table-features";
+import { Copy, Eye, History } from "lucide-react";
+import { GridActionsCellItem, type GridColDef } from "@rdx/ui";
 
 export type Ticket = {
   id: string;
@@ -26,108 +14,111 @@ export type Ticket = {
   closedBy: string;
 };
 
-const columnHelper = createColumnHelper<DataTableFeatures, Ticket>();
+const STATUS_CLASS: Record<Ticket["status"], string> = {
+  Open: "bg-sky-100 text-sky-800",
+  "In progress": "bg-amber-100 text-amber-800",
+  Resolved: "bg-emerald-100 text-emerald-800",
+  Closed: "bg-slate-100 text-slate-700",
+};
 
-export const columns = columnHelper.columns([
-  columnHelper.display({
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={table.getIsAllPageRowsSelected()}
-        indeterminate={
-          table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  }),
-  columnHelper.accessor('ticketDate', {
-    header: "Ticket date",
-    cell: ({ row }) => (
-      <span className="font-medium">{row.getValue("ticketDate")}</span>
-    ),
-  }),
-  columnHelper.accessor("id", {
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Ticket ID
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
-    cell: ({ row }) => (
-      <span className="font-medium">{row.getValue("id")}</span>
-    ),
-    filterFn: "includesString",
-  }),
-  columnHelper.accessor("courier", {
-    header: "Courier",
-  }),
-  columnHelper.accessor("trackingNumber", {
-    header: "Tracking number",
-  }),
-  columnHelper.accessor("issue", {
-    header: "Issue",
-  }),
-  columnHelper.accessor("assignedTo", {
-    header: "Assigned to",
-  }),
- 
- 
-  columnHelper.accessor("createdBy", {
-    header: "Created by",
-  }),
-  columnHelper.accessor("modifiedBy", {
-    header: "Modified by",
-  }),
-  columnHelper.accessor("closedBy", {
-    header: "Closed by",
-  }),
-  columnHelper.accessor("status", {
-    header: "Status",
-  }),
-  columnHelper.display({
-    id: "actions",
-    enableHiding: false,
-    cell: ({ row }) => {
-      const ticket = row.original;
-
+export const columns: GridColDef<Ticket>[] = [
+  {
+    field: "ticketDate",
+    headerName: "Ticket date",
+    type: "date",
+    width: 150,
+    valueGetter: (value) =>
+      typeof value === "string" ? new Date(value) : value,
+  },
+  {
+    field: "id",
+    headerName: "Ticket ID",
+    width: 130,
+  },
+  {
+    field: "courier",
+    headerName: "Courier",
+    flex: 1,
+    minWidth: 120,
+  },
+  {
+    field: "trackingNumber",
+    headerName: "Tracking number",
+    flex: 1,
+    minWidth: 150,
+  },
+  {
+    field: "issue",
+    headerName: "Issue",
+    flex: 1,
+    minWidth: 140,
+  },
+  {
+    field: "assignedTo",
+    headerName: "Assigned to",
+    flex: 1,
+    minWidth: 140,
+  },
+  {
+    field: "createdBy",
+    headerName: "Created by",
+    width: 130,
+  },
+  {
+    field: "modifiedBy",
+    headerName: "Modified by",
+    width: 130,
+  },
+  {
+    field: "closedBy",
+    headerName: "Closed by",
+    width: 130,
+  },
+  {
+    field: "status",
+    headerName: "Status",
+    type: "singleSelect",
+    width: 140,
+    editable: true,
+    valueOptions: ["Open", "In progress", "Resolved", "Closed"],
+    renderCell: (params) => {
+      const status = params.value as Ticket["status"];
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100"
-            aria-label="Open menu"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(ticket.id)}
-              >
-                Copy ticket ID
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>View ticket</DropdownMenuItem>
-              <DropdownMenuItem>View history</DropdownMenuItem>
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASS[status] ?? "bg-slate-100 text-slate-700"}`}
+        >
+          {status}
+        </span>
       );
     },
-  }),
-]);
+  },
+  {
+    field: "actions",
+    type: "actions",
+    headerName: "Actions",
+    width: 90,
+    getActions: (params) => [
+      <GridActionsCellItem
+        key="copy"
+        icon={<Copy className="h-4 w-4" />}
+        label="Copy ticket ID"
+        onClick={() => {
+          void navigator.clipboard.writeText(params.row.id);
+        }}
+        showInMenu
+      />,
+      <GridActionsCellItem
+        key="view"
+        icon={<Eye className="h-4 w-4" />}
+        label="View ticket"
+        showInMenu
+      />,
+      <GridActionsCellItem
+        key="history"
+        icon={<History className="h-4 w-4" />}
+        label="View history"
+        showInMenu
+      />,
+    ],
+  },
+];

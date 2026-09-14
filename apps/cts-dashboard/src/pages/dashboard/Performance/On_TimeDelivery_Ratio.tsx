@@ -1,5 +1,3 @@
-import React from 'react'
-
 const On_TimeDelivery_Ratio = () => {
   return (
     <div>On_TimeDelivery_Ratio</div>

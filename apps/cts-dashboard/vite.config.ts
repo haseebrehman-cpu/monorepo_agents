@@ -31,5 +31,12 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ["@rdx/ui"],
+    include: [
+      "@emotion/react",
+      "@emotion/styled",
+      "@mui/material",
+      "@mui/x-charts-premium",
+      "@mui/x-data-grid-premium",
+    ],
   },
 });

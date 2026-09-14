@@ -42,3 +42,23 @@ export {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
 } from "./components/dropdown-menu";
+export {
+  DataGrid,
+  DataGridPremium,
+  GRID_CHECKBOX_SELECTION_FIELD,
+  GridActionsCellItem,
+} from "./DataGrid/index";
+export type {
+  DataGridProps,
+  GridColDef,
+  GridRenderCellParams,
+  GridRowParams,
+  GridRowsProp,
+  GridValidRowModel,
+} from "./DataGrid/index";
+export {
+  DEFAULT_DATA_GRID_HEIGHT,
+  getDataGridFormControlStyles,
+  getDataGridStyles,
+  getFormControlStyles,
+} from "./DataGrid/styles";
