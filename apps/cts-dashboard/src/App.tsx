@@ -1,14 +1,18 @@
 import { BrowserRouter as Router, useNavigate, useLocation } from 'react-router-dom'
 import Layout from './layout/Layout'
 import { type ActiveNavId } from './Data/nav'
+import Login from './pages/authentication/Login'
+import { GuestOnly, RequireAuth, RoleHomeRedirect } from './routes/guards'
 
 const NAV_PATHS: Partial<Record<ActiveNavId, string>> = {
-  home: '/',
+  dashboard: '/',
   tracking: '/tracking',
-  refund_resend: '/refund-resend',
-  invoices: '/invoices',
+  refund: '/refund',
+  resend: '/resend',
+  return: '/return',
+  courier_invoices: '/invoices',
   prices: '/prices',
-  courier_reports: '/reports',
+  reports: '/reports',
   overall_details: '/overall-details',
   on_time_delivery_ratio: '/on-time-delivery-ratio',
   in_transit_details: '/in-transit-details',
@@ -16,18 +20,21 @@ const NAV_PATHS: Partial<Record<ActiveNavId, string>> = {
   country_courier_specific: '/country-courier-specific',
   warehouse_pending: '/warehouse-pending',
   manual_performance: '/manual-performance',
-  refund: '/refund',
-  resend: '/resend',
   frequency: '/frequency',
+  addTickets: '/add-tickets',
+  addBulkTickets: '/add-bulk-tickets',
+  access: '/access',
 }
 
 const PATH_NAV: Record<string, ActiveNavId> = {
-  '/': 'home',
+  '/': 'dashboard',
   '/tracking': 'tracking',
-  '/refund-resend': 'refund_resend',
+  '/refund': 'refund',
+  '/resend': 'resend',
+  '/return': 'return',
   '/invoices': 'invoices',
   '/prices': 'prices',
-  '/reports': 'courier_reports',
+  '/reports': 'reports',
   '/overall-details': 'overall_details',
   '/on-time-delivery-ratio': 'on_time_delivery_ratio',
   '/in-transit-details': 'in_transit_details',
@@ -35,15 +42,16 @@ const PATH_NAV: Record<string, ActiveNavId> = {
   '/country-courier-specific': 'country_courier_specific',
   '/warehouse-pending': 'warehouse_pending',
   '/manual-performance': 'manual_performance',
-  '/refund': 'refund',
-  '/resend': 'resend',
   '/frequency': 'frequency',
+  '/add-tickets': 'addTickets',
+  '/add-bulk-tickets': 'addBulkTickets',
+  '/access': 'access',
 }
 
 function AppShell() {
   const navigate = useNavigate()
   const location = useLocation()
-  const activeId = PATH_NAV[location.pathname] ?? 'home'
+  const activeId = PATH_NAV[location.pathname] ?? 'dashboard'
 
   const onNavigate = (id: ActiveNavId) => {
     const path = NAV_PATHS[id]
@@ -53,10 +61,30 @@ function AppShell() {
   return <Layout activeId={activeId} onNavigate={onNavigate} />
 }
 
+function AppRoutes() {
+  const { pathname } = useLocation()
+
+  if (pathname === '/login') {
+    return (
+      <GuestOnly>
+        <Login />
+      </GuestOnly>
+    )
+  }
+
+  return (
+    <RequireAuth>
+      <RoleHomeRedirect>
+        <AppShell />
+      </RoleHomeRedirect>
+    </RequireAuth>
+  )
+}
+
 function App() {
   return (
     <Router basename='/cts-dashboard'>
-      <AppShell />
+      <AppRoutes />
     </Router>
   )
 }

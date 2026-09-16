@@ -21,6 +21,10 @@ export default defineConfig({
         find: "@rdx/ui",
         replacement: path.join(uiPackage, "index.ts"),
       },
+      {
+        find: "@rdx/api-client",
+        replacement: path.join(monorepoRoot, "packages/api-client/src/index.ts"),
+      },
     ],
   },
   base: '/cts-dashboard',
@@ -28,9 +32,16 @@ export default defineConfig({
     fs: {
       allow: [monorepoRoot],
     },
+    proxy: {
+      "/cts-api": {
+        target: "http://localhost:5000",
+        changeOrigin: true,
+        rewrite: (requestPath) => requestPath.replace(/^\/cts-api/, ""),
+      },
+    },
   },
   optimizeDeps: {
-    exclude: ["@rdx/ui"],
+    exclude: ["@rdx/api-client", "@rdx/ui"],
     include: [
       "@emotion/react",
       "@emotion/styled",

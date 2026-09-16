@@ -1,4 +1,4 @@
-import { Copy, Eye, History } from "lucide-react";
+import { Copy, Eye } from "lucide-react";
 import { GridActionsCellItem, type GridColDef } from "@rdx/ui";
 
 export type Ticket = {
@@ -113,12 +113,12 @@ export const columns: GridColDef<Ticket>[] = [
         label="View ticket"
         showInMenu
       />,
-      <GridActionsCellItem
-        key="history"
-        icon={<History className="h-4 w-4" />}
-        label="View history"
-        showInMenu
-      />,
+      // <GridActionsCellItem
+      //   key="history"
+      //   icon={<History className="h-4 w-4" />}
+      //   label="View history"
+      //   showInMenu
+      // />,
     ],
   },
 ];

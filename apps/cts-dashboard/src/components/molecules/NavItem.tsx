@@ -47,7 +47,7 @@ export default function NavItem({
             : "text-slate-400 hover:bg-white/10 hover:text-white",
         )}
       >
-        <span className="shrink-0">{icon}</span>
+        <span className="shrink-0 w-5 h-5 flex items-center justify-center">{icon}</span>
         <span
           className={cn(
             "min-w-0 flex-1 truncate text-left",

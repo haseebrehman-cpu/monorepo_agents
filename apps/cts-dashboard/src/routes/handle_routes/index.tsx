@@ -1,15 +1,24 @@
-import { privateRoutes, publicRoutes } from '..'
+import { privateRoutes } from '..'
 import { Route, Routes } from 'react-router-dom'
+import { RequirePermission } from '../guards'
 
 const HandleRoutes = () => {
     return (
         <div>
             <Routes>
-                {publicRoutes.map((route, index) => {
-                    return <Route key={index} path={route.path} element={<route.component />} />
-                })}
                 {privateRoutes.map((route, index) => {
-                    return <Route key={index} path={route.path} element={<route.component />} />
+                    const Page = route.component
+                    return (
+                        <Route
+                            key={index}
+                            path={route.path}
+                            element={
+                                <RequirePermission code={route.permission}>
+                                    <Page />
+                                </RequirePermission>
+                            }
+                        />
+                    )
                 })}
             </Routes>
         </div>

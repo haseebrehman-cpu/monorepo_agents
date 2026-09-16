@@ -1,14 +1,16 @@
 export const NAV_ITEMS = [
-  { id: "home", label: "Home" },
+  { id: "dashboard", label: "Dashboard" },
   {
     id: "tracking",
     label: "Tracking",
   },
-  { id: "refund_resend", label: "Refund & Resend" },
+  { id: "refund", label: "Refund" },
+  { id: "resend", label: "Resend" },
+  { id: "return", label: "Return" },
   { id: "courier_invoices", label: "Courier Invoices", children: [
     { id: "invoices", label: "Invoices" },
     { id: "prices", label: "Prices" },
-    { id: "courier_reports", label: "Reports" },
+    { id: "reports", label: "Reports" },
   ] },
   { id: "performance", label: "Performance", children: [
     { id: "overall_details", label: "Overall Details" },
@@ -33,9 +35,21 @@ export type NavChildId = Extract<
   { children: readonly unknown[] }
 >["children"][number]["id"];
 
-export type ActiveNavId = NavId | NavChildId;
+export type ExtraPageId = "addTickets" | "addBulkTickets" | "access";
+
+export type ActiveNavId = NavId | NavChildId | ExtraPageId;
+
+const EXTRA_PAGE_LABELS: Record<ExtraPageId, string> = {
+  addTickets: "Add Tickets",
+  addBulkTickets: "Add Bulk Tickets",
+  access: "Access control",
+};
 
 export function getNavLabel(id: string): string {
+  if (id in EXTRA_PAGE_LABELS) {
+    return EXTRA_PAGE_LABELS[id as ExtraPageId];
+  }
+
   for (const item of NAV_ITEMS) {
     if (item.id === id) return item.label;
     if ("children" in item) {

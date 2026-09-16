@@ -2,7 +2,11 @@ import { Button } from "@rdx/ui";
 import CTS from "../../../components/atoms/CTS";
 import { columns, type Ticket } from "./tickets-table/columns";
 import { DataTable } from "./tickets-table/data-table";
-import { PlusIcon } from "lucide-react";
+import { FileUpIcon, PlusIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { getAuthUser } from "../../../lib/auth";
+import { hasPermission, P } from "../../../lib/permissions";
+import { useMe } from "../../../lib/use-me";
 
 const TICKETS: Ticket[] = [
   {
@@ -104,24 +108,41 @@ const TICKETS: Ticket[] = [
 ];
 
 const Tickets = () => {
+  const navigate = useNavigate();
+  const me = useMe();
+  const user = me.data?.user ?? getAuthUser();
+  const canAdd = hasPermission(user, P.TRACKING_ADD);
+  const canAddBulk = hasPermission(user, P.TRACKING_ADD_BULK);
+  const ADD_TICKETS = "/add-tickets";
+  const ADD_BULK_TICKETS = "/add-bulk-tickets";
+  const handleAddTicket = () => {
+    navigate(ADD_TICKETS);
+  }
+  const handleAddBulkTickets = () => {
+    navigate(ADD_BULK_TICKETS);
+  }
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-row justify-between gap-2">
         <h1 className="text-xl font-semibold text-slate-900">Ticket List</h1>
         <div className="flex flex-row gap-2">
-          <Button size="sm" variant="outline" >
-            <PlusIcon className="h-4 w-4" />
-            Add Ticket
-          </Button>
-          {/* <Button size="sm" variant="outline" >
-            <FileUpIcon className="h-4 w-5" />
-            Add Bulk Ticket
-          </Button> */}
+          {canAdd ? (
+            <Button size="sm" variant="outline" onClick={handleAddTicket}>
+              <PlusIcon className="h-4 w-4" />
+              Add Ticket
+            </Button>
+          ) : null}
+          {canAddBulk ? (
+            <Button size="sm" variant="outline" onClick={handleAddBulkTickets}>
+              <FileUpIcon className="h-4 w-5" />
+              Add Bulk Tickets
+            </Button>
+          ) : null}
         </div>
       </div>
       <CTS />
       <DataTable columns={columns} data={TICKETS} />
-    </div>
+    </div >
   );
 };
 

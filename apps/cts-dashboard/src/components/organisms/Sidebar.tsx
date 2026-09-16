@@ -13,12 +13,19 @@ import {
   TeamIcon,
   cn,
 } from "@rdx/ui";
+import { LogOutIcon, RefreshCcwIcon, RotateCwIcon, ShieldIcon } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { getAuthUser, isSuperAdminUser } from "../../lib/auth";
+import { filterNavItems } from "../../lib/permissions";
+import { useLogout } from "../../lib/use-logout";
+import { useMe } from "../../lib/use-me";
 
 const NAV_ICONS: Record<NavId, ReactNode> = {
-  home: <HomeIcon />,
+  dashboard: <HomeIcon />,
   tracking: <IntegrationIcon />,
-  refund_resend: <BookIcon />,
+  refund: <BookIcon />,
+  resend: <RefreshCcwIcon />,
+  return: <RotateCwIcon />,
   courier_invoices: <ChannelIcon />,
   performance: <ChartIcon />,
   manual_performance: <TeamIcon />,
@@ -44,6 +51,11 @@ export default function Sidebar({
   const [expandedIds, setExpandedIds] = useState<Partial<Record<NavId, boolean>>>(
     {},
   );
+  const me = useMe();
+  const logout = useLogout();
+  const user = me.data?.user ?? getAuthUser();
+  const isSuperAdmin = isSuperAdminUser(user);
+  const navItems = filterNavItems(NAV_ITEMS, user);
 
   const toggleExpanded = (id: NavId) => {
     setExpandedIds((current) => ({ ...current, [id]: !current[id] }));
@@ -83,7 +95,7 @@ export default function Sidebar({
       </div>
 
       <nav className="sidebar-scroll flex-1 space-y-1 overflow-y-auto p-3" aria-label="Main">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const children = "children" in item ? item.children : undefined;
           const childActive = children?.some((child) => child.id === activeId);
           const expanded = Boolean(expandedIds[item.id]);
@@ -91,7 +103,7 @@ export default function Sidebar({
           return (
             <NavItem
               key={item.id}
-              icon={NAV_ICONS[item.id]}
+              icon={NAV_ICONS[item.id as NavId]}
               label={item.label}
               active={activeId === item.id || Boolean(childActive)}
               collapsed={iconOnly}
@@ -109,7 +121,35 @@ export default function Sidebar({
             />
           );
         })}
+
+        {isSuperAdmin ? (
+          <NavItem
+            icon={<ShieldIcon className="h-5 w-5" />}
+            label="Access control"
+            active={activeId === "access"}
+            collapsed={iconOnly}
+            onClick={() => onNavigate("access")}
+          />
+        ) : null}
       </nav>
+
+      <div className="border-t border-white/10 p-3">
+        <button
+          type="button"
+          title={iconOnly ? "Log out" : undefined}
+          disabled={logout.isPending}
+          onClick={() => logout.mutate()}
+          className={cn(
+            "flex w-full items-center rounded-lg text-sm font-medium text-slate-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50",
+            iconOnly ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5",
+          )}
+        >
+          <LogOutIcon className="h-5 w-5 shrink-0" />
+          <span className={cn("min-w-0 flex-1 truncate text-left", iconOnly && "sr-only")}>
+            {logout.isPending ? "Signing out..." : "Log out"}
+          </span>
+        </button>
+      </div>
     </aside>
   );
 }

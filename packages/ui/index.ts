@@ -30,6 +30,15 @@ export {
 export { Checkbox } from "./components/checkbox";
 export { Input } from "./components/input";
 export {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+} from "./components/dialog";
+export {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,

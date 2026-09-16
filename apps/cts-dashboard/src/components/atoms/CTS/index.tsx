@@ -1,8 +1,9 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
-import Filters from "../../organisms/HomeReportFilters/Filters";
+import { useState, type ChangeEvent } from "react";
+import Filters from "../../organisms/TrackingFilters/Filters";
 import { Button } from "@rdx/ui";
 import { FilterIcon } from "lucide-react";
 import { RotateCcwIcon } from "lucide-react";
+import { toast } from "react-toastify";
 
 const EMPTY_FILTERS = {
   courier: "",
@@ -45,12 +46,14 @@ const Dashboard_Home_Filters_Pane = () => {
       setFilters((prev) => ({ ...prev, [id]: event.target.value }));
     };
 
-  const onApply = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const onApply = () => {
+    toast("Filters applied successfully");
   };
 
   const onReset = () => {
     setFilters(EMPTY_FILTERS);
+    toast("Filters reset successfully");
+
   };
 
   return (
@@ -118,11 +121,11 @@ const Dashboard_Home_Filters_Pane = () => {
         </div>
 
         <div className="mt-4 flex flex-wrap justify-end gap-2">
-          <Button size="sm" type="button" variant="outline" onClick={onReset}>
+          <Button size="sm" type="button" variant="outline" onClick={() => onReset()}>
             <RotateCcwIcon className="h-4 w-4" />
             Reset Filters
           </Button>
-          <Button size="sm" type="submit" variant="primary">
+          <Button size="sm" type="submit" variant="primary" onClick={() => onApply()}>
             <FilterIcon className="h-4 w-4" />
             Apply Filters
           </Button>
