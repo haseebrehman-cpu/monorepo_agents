@@ -1,41 +1,63 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Filters from "../../organisms/TrackingFilters/Filters";
 import RichTextEditor from "../../molecules/RichTextEditor";
+import { useCreateTicket, useTicketOptions } from "../../../lib/use-tickets";
 
 const AddNewTicket = () => {
+    const navigate = useNavigate();
+    const optionsQuery = useTicketOptions();
+    const createTicket = useCreateTicket();
     const [orderId, setOrderId] = useState("");
     const [courier, setCourier] = useState("");
     const [trackingNumber, setTrackingNumber] = useState("");
     const [issue, setIssue] = useState("");
     const [content, setContent] = useState("");
     const [assignedTo, setAssignedTo] = useState("");
-    const [status, setStatus] = useState("");
+    const [status, setStatus] = useState("Open");
     const [attachments, setAttachments] = useState<File[]>([]);
+    const [error, setError] = useState("");
+
+    const options = optionsQuery.data;
+    const statuses = options?.statuses ?? [];
+    const selectedStatus =
+        statuses.length > 0 && !statuses.includes(status) ? statuses[0] : status;
+    const assigneeOptions = (options?.departments ?? []).map((department) => ({
+        label: department.name,
+        value: String(department.id),
+    }));
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // Handle form submission here
-        console.log({
-            orderId,
-            courier,
-            trackingNumber,
-            issue,
-            content,
-            assignedTo,
-            status,
-            attachments,
-        });
+        if (!orderId.trim() || !courier || !trackingNumber.trim() || !issue) {
+            setError("Order ID, courier, tracking number, and issue are required.");
+            return;
+        }
+        setError("");
+        createTicket.mutate(
+            {
+                orderId: orderId.trim(),
+                courier,
+                trackingNumber: trackingNumber.trim(),
+                issue,
+                comment: content,
+                assignedDepartmentId: assignedTo ? Number(assignedTo) : null,
+                status: selectedStatus || "Open",
+                attachments,
+            },
+            {
+                onSuccess: () => navigate("/tracking"),
+            }
+        );
     };
 
     return (
         <div className="">
-            {/* Form Card */}
             <form
                 onSubmit={handleSubmit}
                 className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden"
             >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 space-y-1.5 p-4">
-                    {/* Order ID */}
                     <div className="space-y-1.5">
                         <label
                             htmlFor="order_id"
@@ -53,7 +75,6 @@ const AddNewTicket = () => {
                         />
                     </div>
 
-                    {/* Courier */}
                     <div className="space-y-1.5">
                         <label
                             htmlFor="courier"
@@ -65,12 +86,11 @@ const AddNewTicket = () => {
                             id="courier"
                             value={courier}
                             onChange={setCourier}
-                            options={[]}
+                            options={options?.couriers ?? []}
                             placeholder="Select Courier"
                         />
                     </div>
 
-                    {/* Tracking / Order Number */}
                     <div className="space-y-1.5">
                         <label
                             htmlFor="tracking_order_number"
@@ -88,7 +108,6 @@ const AddNewTicket = () => {
                         />
                     </div>
 
-                    {/* Issue */}
                     <div className="space-y-1.5">
                         <label
                             htmlFor="issue"
@@ -100,12 +119,11 @@ const AddNewTicket = () => {
                             id="issue"
                             value={issue}
                             onChange={setIssue}
-                            options={[]}
+                            options={options?.issues ?? []}
                             placeholder="Select Issue"
                         />
                     </div>
 
-                    {/* Assigned To */}
                     <div className="space-y-1.5">
                         <label
                             htmlFor="assigned_to"
@@ -117,12 +135,11 @@ const AddNewTicket = () => {
                             id="assigned_to"
                             value={assignedTo}
                             onChange={setAssignedTo}
-                            options={[]}
-                            placeholder="Select Assigned To"
+                            options={assigneeOptions}
+                            placeholder="Select department"
                         />
                     </div>
 
-                    {/* Status */}
                     <div className="space-y-1.5">
                         <label
                             htmlFor="status"
@@ -132,14 +149,13 @@ const AddNewTicket = () => {
                         </label>
                         <Filters
                             id="status"
-                            value={status}
+                            value={selectedStatus}
                             onChange={setStatus}
-                            options={[]}
+                            options={statuses}
                             placeholder="Select Status"
                         />
                     </div>
 
-                    {/* Comment */}
                     <div className="space-y-1.5 col-span-2">
                         <label
                             htmlFor="comment"
@@ -155,7 +171,6 @@ const AddNewTicket = () => {
                         />
                     </div>
 
-                    {/* Attachments */}
                     <div className="space-y-1.5 col-span-2">
                         <label
                             htmlFor="attachments"
@@ -193,6 +208,7 @@ const AddNewTicket = () => {
                                     id="attachments"
                                     type="file"
                                     multiple
+                                    accept="image/png,image/jpeg,application/pdf"
                                     className="hidden"
                                     onChange={(e) =>
                                         setAttachments(Array.from(e.target.files || []))
@@ -201,12 +217,11 @@ const AddNewTicket = () => {
                             </label>
                         </div>
 
-                        {/* Selected files preview */}
                         {attachments.length > 0 && (
                             <div className="mt-3 space-y-2">
                                 {attachments.map((file, index) => (
                                     <div
-                                        key={index}
+                                        key={`${file.name}-${index}`}
                                         className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg text-sm"
                                     >
                                         <span className="text-slate-700 truncate">{file.name}</span>
@@ -228,19 +243,24 @@ const AddNewTicket = () => {
                     </div>
                 </div>
 
-                {/* Footer Actions */}
+                {error ? (
+                    <p className="px-6 pb-2 text-sm text-red-600">{error}</p>
+                ) : null}
+
                 <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
                     <button
                         type="button"
+                        onClick={() => navigate(-1)}
                         className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition"
                     >
                         Cancel
                     </button>
                     <button
                         type="submit"
-                        className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition"
+                        disabled={createTicket.isPending}
+                        className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-60"
                     >
-                        Create Ticket
+                        {createTicket.isPending ? "Creating..." : "Create Ticket"}
                     </button>
                 </div>
             </form>

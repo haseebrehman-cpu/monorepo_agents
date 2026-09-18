@@ -66,6 +66,8 @@ export interface ChatSuccessResponse {
   diagnostic?: unknown;
   fallback_reason?: string | null;
   replayed?: boolean;
+  /** Present when the customer must prove an order is theirs. */
+  order_verification?: OrderVerificationChallenge | null;
 }
 
 export interface ChatErrorDetail {
@@ -142,6 +144,7 @@ export interface StreamDoneEvent {
     products?: ChatProductCard[];
     cost_usd?: number;
     skill?: string | null;
+    order_verification?: OrderVerificationChallenge | null;
   };
 }
 
@@ -179,6 +182,7 @@ export interface ChatMessage {
   citations?: ChatCitation[];
   escalated?: boolean;
   degraded?: boolean;
+  order_verification?: OrderVerificationChallenge | null;
 }
 
 export interface ChatOption {
@@ -249,4 +253,73 @@ export interface CartActionResponse {
   note?: string | null;
   replayed?: boolean;
   retryable?: boolean;
+}
+
+export interface OrderVerificationField {
+  name: string;
+  type: string;
+  label: string;
+  max_length?: number;
+  required?: boolean;
+  autocomplete?: string;
+}
+
+export interface OrderVerificationSubmit {
+  method: string;
+  path: string;
+}
+
+export interface OrderVerificationChallenge {
+  message?: string;
+  required: boolean;
+  reason: string;
+  order_reference?: string | null;
+  factors: string[];
+  fields: OrderVerificationField[];
+  submit: OrderVerificationSubmit;
+  expires_in_seconds?: number;
+}
+
+export interface OrderItem {
+  title: string;
+  quantity: number;
+}
+
+export interface OrderShipment {
+  carrier?: string | null;
+  tracking_url?: string | null;
+  status?: string | null;
+  estimated_delivery?: string | null;
+  source_of_truth?: string | null;
+}
+
+export interface VerifiedOrder {
+  order_number: string;
+  status?: string | null;
+  financial_status?: string | null;
+  fulfillment_status?: string | null;
+  placed_at?: string | null;
+  items?: OrderItem[];
+  shipments?: OrderShipment[];
+}
+
+export interface OrderVerifyRequest {
+  order_number: string;
+  email?: string;
+  postcode?: string;
+}
+
+export interface OrderVerifyResponse {
+  verified: boolean;
+  locked: boolean;
+  order_reference?: string | null;
+  expires_in_seconds?: number;
+  order?: VerifiedOrder | null;
+  detail_unavailable?: boolean;
+  note?: string | null;
+  message?: string;
+  attempts_remaining?: number;
+  retryable?: boolean;
+  challenge?: OrderVerificationChallenge | null;
+  escalation_offered?: boolean;
 }

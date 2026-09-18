@@ -37,16 +37,19 @@ describe("sendChatMessage", () => {
     expect(result.answer).toBe("Live assistant reply");
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.example.com/v1/chat",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({
-          message: "Hello",
-          client_message_id: "msg-1",
-          tenant: "rdx",
-          marketplace: "uk",
-        }),
-      }),
+      expect.objectContaining({ method: "POST" }),
     );
+    const body = JSON.parse(
+      String(fetchMock.mock.calls[0]?.[1]?.body),
+    ) as Record<string, unknown>;
+    expect(body).toMatchObject({
+      message: "Hello",
+      client_message_id: "msg-1",
+      tenant: "rdx",
+      marketplace: "uk",
+    });
+    expect(typeof body.session_id).toBe("string");
+    expect(String(body.session_id).length).toBeGreaterThan(0);
   });
 
   it("uses the selected region as marketplace instead of VITE_MARKETPLACE", async () => {
@@ -62,16 +65,15 @@ describe("sendChatMessage", () => {
       region: "usa",
     });
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://api.example.com/v1/chat",
-      expect.objectContaining({
-        body: JSON.stringify({
-          message: "Hello",
-          tenant: "rdx",
-          marketplace: "usa",
-        }),
-      }),
-    );
+    const body = JSON.parse(
+      String(fetchMock.mock.calls[0]?.[1]?.body),
+    ) as Record<string, unknown>;
+    expect(body).toMatchObject({
+      message: "Hello",
+      tenant: "rdx",
+      marketplace: "usa",
+    });
+    expect(typeof body.session_id).toBe("string");
   });
 
   it("uses the backend URL on a production host instead of a same-origin proxy", async () => {

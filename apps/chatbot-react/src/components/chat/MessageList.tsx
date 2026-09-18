@@ -11,6 +11,7 @@ import MessageContent from "./MessageContent";
 import OptionButtons from "./OptionButtons";
 import ProductCard from "./ProductCard";
 import SizeChartAttachment from "./SizeChartAttachment";
+import TrackingForm from "./TrackingForm";
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -20,6 +21,7 @@ interface MessageListProps {
   onListingFailed: (listingId: string) => void;
   onCartNotice: (notice: CartNotice) => void;
   onOptionSelect: (option: ChatOption) => void;
+  onEscalate: () => void;
   scrollRef: RefObject<HTMLDivElement | null>;
 }
 
@@ -55,6 +57,7 @@ export default function MessageList({
   onListingFailed,
   onCartNotice,
   onOptionSelect,
+  onEscalate,
   scrollRef,
 }: MessageListProps) {
   const showMenuHint = messages.filter((m) => m.role === "user").length >= 1;
@@ -65,6 +68,10 @@ export default function MessageList({
   const latestMenuId = findLatestId(
     messages,
     (m) => m.role === "assistant" && Boolean(m.showMenu),
+  );
+  const latestVerificationId = findLatestId(
+    messages,
+    (m) => m.role === "assistant" && Boolean(m.order_verification),
   );
 
   return (
@@ -133,6 +140,16 @@ export default function MessageList({
                         attachment={attachment}
                       />
                     ) : null,
+                  )}
+                  {message.order_verification && (
+                    <TrackingForm
+                      challenge={message.order_verification}
+                      region={region}
+                      disabled={
+                        isTyping || message.id !== latestVerificationId
+                      }
+                      onEscalate={onEscalate}
+                    />
                   )}
                 </>
               ) : (

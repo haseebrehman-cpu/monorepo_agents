@@ -1,9 +1,9 @@
-import { DropDown } from "@rdx/ui";
+import { DropDown, type DropDownOption } from "@rdx/ui";
 
 type FiltersProps = {
   value: string;
   onChange: (value: string) => void;
-  options: string[];
+  options: Array<string | DropDownOption>;
   id?: string;
   placeholder?: string;
 };

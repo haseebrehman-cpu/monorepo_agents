@@ -51,7 +51,9 @@ const PATH_NAV: Record<string, ActiveNavId> = {
 function AppShell() {
   const navigate = useNavigate()
   const location = useLocation()
-  const activeId = PATH_NAV[location.pathname] ?? 'dashboard'
+  const activeId =
+    PATH_NAV[location.pathname] ??
+    (location.pathname.startsWith("/tracking/") ? "tracking" : "dashboard")
 
   const onNavigate = (id: ActiveNavId) => {
     const path = NAV_PATHS[id]

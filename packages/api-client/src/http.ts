@@ -113,7 +113,9 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       for (const [key, value] of Object.entries(defaultHeaders)) {
         if (!headers.has(key)) headers.set(key, value);
       }
-      if (init.body && !headers.has("Content-Type")) {
+      const isFormData =
+        typeof FormData !== "undefined" && init.body instanceof FormData;
+      if (init.body && !headers.has("Content-Type") && !isFormData) {
         headers.set("Content-Type", "application/json");
       }
       if (!headers.has("Accept")) {

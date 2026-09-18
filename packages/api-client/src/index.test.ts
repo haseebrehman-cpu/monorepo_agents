@@ -193,4 +193,74 @@ describe("createRdxApiClient", () => {
       "cact_01M258GXFZSCT8MNPP0YNG2856",
     );
   });
+
+  it("reads and submits order verification with shopper headers", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        headers: new Headers(),
+        text: async () =>
+          JSON.stringify({
+            required: true,
+            reason: "verification_required",
+            factors: ["email"],
+            fields: [
+              { name: "order_number", type: "text", label: "Order number" },
+            ],
+            submit: { method: "POST", path: "/v1/orders/verify" },
+          }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        headers: new Headers(),
+        text: async () =>
+          JSON.stringify({
+            verified: true,
+            locked: false,
+            order_reference: "1001",
+            order: { order_number: "1001", status: "PAID" },
+          }),
+      });
+
+    const api = createRdxApiClient({
+      baseUrl: "https://api.example.com",
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await expect(
+      api.orders.getChallenge({
+        tenant: "rdx",
+        marketplace: "uk",
+        sessionId: "shopper-1",
+        orderNumber: "1001",
+      }),
+    ).resolves.toMatchObject({ required: true });
+
+    await expect(
+      api.orders.verify(
+        { order_number: "1001", email: "buyer@example.com" },
+        { tenant: "rdx", marketplace: "uk", sessionId: "shopper-1" },
+      ),
+    ).resolves.toMatchObject({ verified: true });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "https://api.example.com/v1/orders/challenge?tenant=rdx&marketplace=uk&order_number=1001",
+      expect.any(Object),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "https://api.example.com/v1/orders/verify?tenant=rdx&marketplace=uk",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          order_number: "1001",
+          email: "buyer@example.com",
+        }),
+      }),
+    );
+    const verifyHeaders = fetchMock.mock.calls[1]?.[1]?.headers as Headers;
+    expect(verifyHeaders.get("X-Session-Id")).toBe("shopper-1");
+  });
 });

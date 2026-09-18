@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { Tickets, RefundResend, Reports, Prices, Invoices, OverallDetails, On_TimeDelivery_Ratio, In_Transit_Details, Counrty_Specific, Country_Courier_Specific, Warehouse_Pending, ManualPerformance, Frequency, Resend, Refund, AddBulkTickets, AddTickets, AccessControl, Return } from "../pages";
+import { Tickets, RefundResend, Reports, Prices, Invoices, OverallDetails, On_TimeDelivery_Ratio, In_Transit_Details, Counrty_Specific, Country_Courier_Specific, Warehouse_Pending, ManualPerformance, Frequency, Resend, Refund, AddBulkTickets, AddTickets, AccessControl, Return, ViewTicket } from "../pages";
 import Dashboard_Home from "../pages/dashboard/Dashboard_Home";
 import { P } from "../lib/permissions";
 
@@ -12,6 +12,7 @@ type PrivateRoute = {
 const privateRoutes: PrivateRoute[] = [
     { path: '/', component: Dashboard_Home },
     { path: '/tracking', component: Tickets, permission: P.TRACKING_ACCESS },
+    { path: '/tracking/:ticketId', component: ViewTicket, permission: P.TRACKING_ACCESS },
     { path: '/refund-resend', component: RefundResend, permission: P.REFUND_ACCESS },
     { path: '/invoices', component: Invoices, permission: P.COURIER_INVOICES_INVOICES },
     { path: '/prices', component: Prices, permission: P.COURIER_INVOICES_PRICES },

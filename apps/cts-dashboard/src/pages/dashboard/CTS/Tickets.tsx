@@ -1,115 +1,31 @@
+import { useMemo, useState } from "react";
 import { Button } from "@rdx/ui";
-import CTS from "../../../components/atoms/CTS";
-import { columns, type Ticket } from "./tickets-table/columns";
-import { DataTable } from "./tickets-table/data-table";
-import { FileUpIcon, PlusIcon } from "lucide-react";
+import { FileUpIcon, Loader, PlusIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import CTS from "../../../components/atoms/CTS";
 import { getAuthUser } from "../../../lib/auth";
 import { hasPermission, P } from "../../../lib/permissions";
+import { EMPTY_TICKET_FILTERS } from "../../../lib/tickets-api";
 import { useMe } from "../../../lib/use-me";
-
-const TICKETS: Ticket[] = [
-  {
-    id: "CTS-1001",
-    courier: "DHL",
-    trackingNumber: "1234567890",
-    issue: "Delayed",
-    assignedTo: "Agent A",
-    ticketDate: "2026-09-01",
-    status: "Open",
-    createdBy: "System",
-    modifiedBy: "Agent A",
-    closedBy: "Agent A",
-  },
-  {
-    id: "CTS-1002",
-    courier: "FedEx",
-    trackingNumber: "1234567890",
-    issue: "Lost",
-    assignedTo: "Agent B",
-    ticketDate: "2026-09-03",
-    status: "In progress",
-    createdBy: "Agent A",
-    modifiedBy: "Agent B",
-    closedBy: "Agent B",
-  },
-  {
-    id: "CTS-1003",
-    courier: "UPS",
-    trackingNumber: "1234567890",
-    issue: "Damaged",
-    ticketDate: "2026-09-05",
-    assignedTo: "Agent A",
-    status: "Resolved",
-    createdBy: "Agent B",
-    modifiedBy: "System",
-    closedBy: "System",
-  },
-  {
-    id: "CTS-1004",
-    courier: "Aramex",
-    trackingNumber: "1234567890",
-    issue: "Wrong address",
-    ticketDate: "2026-09-08",
-    assignedTo: "Unassigned",
-    status: "Closed",
-    createdBy: "System",
-    modifiedBy: "System",
-    closedBy: "System",
-  },
-  {
-    id: "CTS-1005",
-    courier: "DHL",
-    trackingNumber: "1234567890",
-    issue: "Lost",
-    ticketDate: "2026-09-08",
-    assignedTo: "Agent B",
-    status: "Open",
-    createdBy: "Agent A",
-    modifiedBy: "Agent B",
-    closedBy: "Agent B",
-  },
-  {
-    id: "CTS-1006",
-    courier: "FedEx",
-    trackingNumber: "1234567890",
-    issue: "Delayed",
-    ticketDate: "2026-09-09",
-    assignedTo: "Agent A",
-    status: "In progress",
-    createdBy: "System",
-    modifiedBy: "Agent A",
-    closedBy: "Agent A",
-  },
-  {
-    id: "CTS-1007",
-    courier: "UPS",
-    trackingNumber: "1234567890",
-    issue: "Wrong address",
-    ticketDate: "2026-09-09",
-    assignedTo: "Unassigned",
-    status: "Resolved",
-    createdBy: "Agent B",
-    modifiedBy: "System",
-    closedBy: "System",
-  },
-  {
-    id: "CTS-1008",
-    courier: "Aramex",
-    trackingNumber: "1234567890",
-    issue: "Damaged",
-    ticketDate: "2026-09-10",
-    assignedTo: "Agent A",
-    status: "Closed",
-    createdBy: "System",
-    modifiedBy: "Agent A",
-    closedBy: "Agent A",
-  },
-];
+import { useTicketOptions, useTickets, useUpdateTicketStatus } from "../../../lib/use-tickets";
+import { getTicketColumns } from "./tickets-table/columns";
+import { DataTable } from "./tickets-table/data-table";
 
 const Tickets = () => {
   const navigate = useNavigate();
   const me = useMe();
+  const [appliedFilters, setAppliedFilters] = useState(EMPTY_TICKET_FILTERS);
+  const ticketsQuery = useTickets(appliedFilters);
+  const optionsQuery = useTicketOptions();
+  const updateStatus = useUpdateTicketStatus();
+  const columns = useMemo(
+    () =>
+      getTicketColumns({
+        statuses: optionsQuery.data?.statuses ?? [],
+        onView: (ticketId) => navigate(`/tracking/${encodeURIComponent(ticketId)}`),
+      }),
+    [navigate, optionsQuery.data?.statuses]
+  );
   const user = me.data?.user ?? getAuthUser();
   const canAdd = hasPermission(user, P.TRACKING_ADD);
   const canAddBulk = hasPermission(user, P.TRACKING_ADD_BULK);
@@ -140,8 +56,35 @@ const Tickets = () => {
           ) : null}
         </div>
       </div>
-      <CTS />
-      <DataTable columns={columns} data={TICKETS} />
+      <CTS
+        onApply={setAppliedFilters}
+        onReset={() => setAppliedFilters(EMPTY_TICKET_FILTERS)}
+      />
+      {ticketsQuery.isLoading ? (
+        <div className="flex flex-row items-center gap-2">
+          <Loader className="h-4 w-4 animate-spin" />
+          <p className="text-sm text-slate-500">Loading tickets...</p>
+        </div>
+      ) : ticketsQuery.isError ? (
+        <div className="flex flex-row items-center gap-2">
+          <Loader className="h-4 w-4 animate-spin" />
+          <p className="text-sm text-red-600">Could not load tickets.</p>
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={ticketsQuery.data ?? []}
+          processRowUpdate={async (updatedRow, originalRow) => {
+            if (updatedRow.status !== originalRow.status) {
+              await updateStatus.mutateAsync({
+                ticketId: updatedRow.id,
+                status: updatedRow.status,
+              });
+            }
+            return updatedRow;
+          }}
+        />
+      )}
     </div >
   );
 };

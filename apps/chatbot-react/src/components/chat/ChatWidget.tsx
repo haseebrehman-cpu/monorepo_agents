@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage, ChatOption } from "@rdx/chat-contract";
 import { useTimedCartNotice } from "@/lib/cart-outcome";
+import { resolveOrderVerification } from "@/lib/order-api";
 import { useCart } from "@/lib/use-cart";
 import { useDialogFocus } from "@/lib/use-dialog-focus";
 import { useSendChat } from "@/lib/use-send-chat";
@@ -104,6 +105,7 @@ export default function ChatWidget({ region }: { region: string }) {
                 escalated: result.escalated,
                 degraded: result.degraded,
                 showMenu: /^m$/i.test(trimmed),
+                order_verification: resolveOrderVerification(result, trimmed),
               },
             ]);
           },
@@ -186,6 +188,9 @@ export default function ChatWidget({ region }: { region: string }) {
                 onListingFailed={handleListingFailed}
                 onCartNotice={setCartNotice}
                 onOptionSelect={handleOptionSelect}
+                onEscalate={() =>
+                  sendUserText("I'd like to speak to someone about my order.")
+                }
                 scrollRef={scrollRef}
               />
 

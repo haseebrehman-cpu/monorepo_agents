@@ -3,8 +3,10 @@ import { cn } from "@rdx/ui";
 import { RequireSuperAdmin } from "../../../routes/guards";
 import UsersManager from "./UsersManager";
 import UserAccessManager from "./UserAccessManager";
+import TicketLookupsManager from "./TicketLookupsManager";
+import DepartmentsManager from "./DepartmentsManager";
 
-type Tab = "users" | "access";
+type Tab = "users" | "access" | "departments" | "lookups";
 
 function AccessControl() {
   const [tab, setTab] = useState<Tab>("users");
@@ -18,12 +20,12 @@ function AccessControl() {
         </p>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => setTab("users")}
           className={cn(
-            "rounded-md px-3 py-1.5 text-sm font-medium",
+            "cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium",
             tab === "users"
               ? "bg-indigo-600 text-white"
               : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50",
@@ -35,7 +37,7 @@ function AccessControl() {
           type="button"
           onClick={() => setTab("access")}
           className={cn(
-            "rounded-md px-3 py-1.5 text-sm font-medium",
+            "cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium",
             tab === "access"
               ? "bg-indigo-600 text-white"
               : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50",
@@ -43,9 +45,41 @@ function AccessControl() {
         >
           User access
         </button>
+        <button
+          type="button"
+          onClick={() => setTab("departments")}
+          className={cn(
+            "cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium",
+            tab === "departments"
+              ? "bg-indigo-600 text-white"
+              : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50",
+          )}
+        >
+          Departments
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("lookups")}
+          className={cn(
+            "cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium",
+            tab === "lookups"
+              ? "bg-indigo-600 text-white"
+              : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50",
+          )}
+        >
+          Ticket options
+        </button>
       </div>
 
-      {tab === "users" ? <UsersManager /> : <UserAccessManager />}
+      {tab === "users" ? (
+        <UsersManager />
+      ) : tab === "access" ? (
+        <UserAccessManager />
+      ) : tab === "departments" ? (
+        <DepartmentsManager />
+      ) : (
+        <TicketLookupsManager />
+      )}
     </div>
   );
 }

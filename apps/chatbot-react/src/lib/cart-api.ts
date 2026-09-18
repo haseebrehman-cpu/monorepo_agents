@@ -12,12 +12,11 @@ import {
   readMarketplace,
   readTenant,
 } from "./chat-api";
+import { getShopperSessionId, isValidSessionId } from "./shopper-session";
 
-const SESSION_STORAGE_KEY = "rdx-shopper-session-id";
-const INVALID_SESSION_IDS = new Set(["", "anon", "string"]);
 const CART_ACTION_ID = /^cact_[0-7][0-9A-HJKMNP-TV-Z]{25}$/;
 
-let memorySessionId: string | null = null;
+export { getShopperSessionId, isValidSessionId };
 
 export const MARKETPLACE_CURRENCY: Record<MarketplaceCode, string> = {
   uk: "GBP",
@@ -34,32 +33,6 @@ export function newCartActionId(): string {
 
 export function isCartActionId(value: string): boolean {
   return CART_ACTION_ID.test(value);
-}
-
-function createShopperId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `shopper_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
-}
-
-export function isValidSessionId(value: string | null | undefined): boolean {
-  const id = value?.trim() ?? "";
-  return !INVALID_SESSION_IDS.has(id.toLowerCase());
-}
-
-export function getShopperSessionId(): string {
-  if (typeof sessionStorage !== "undefined") {
-    const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
-    if (isValidSessionId(stored)) return stored as string;
-    const next = createShopperId();
-    sessionStorage.setItem(SESSION_STORAGE_KEY, next);
-    return next;
-  }
-  if (!isValidSessionId(memorySessionId)) {
-    memorySessionId = createShopperId();
-  }
-  return memorySessionId as string;
 }
 
 export function toMinorUnits(price: string | null | undefined): number | undefined {

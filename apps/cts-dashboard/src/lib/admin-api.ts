@@ -93,6 +93,68 @@ export function listDepartments() {
   return authedApi().request<ListResponse<DepartmentRef[]>>("/api/departments");
 }
 
+export function createDepartment(input: { name: string }) {
+  return authedApi().request<ListResponse<DepartmentRef>>("/api/departments", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateDepartment(id: number, input: { name: string }) {
+  return authedApi().request<ListResponse<DepartmentRef>>(`/api/departments/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteDepartment(id: number) {
+  return authedApi().request<{ success: true }>(`/api/departments/${id}`, {
+    method: "DELETE",
+  });
+}
+
 export function listFeatures() {
   return authedApi().request<ListResponse<FeatureGroup[]>>("/api/roles/features");
+}
+
+export type TicketLookupKind = "courier" | "issue" | "status";
+
+export type TicketLookup = {
+  id: number;
+  kind: TicketLookupKind;
+  label: string;
+  isActive: boolean;
+  isClosed: boolean;
+  sortOrder: number;
+};
+
+export function listTicketLookups() {
+  return authedApi().request<ListResponse<TicketLookup[]>>("/api/ticket-lookups");
+}
+
+export function createTicketLookup(input: {
+  kind: TicketLookupKind;
+  label: string;
+  isClosed?: boolean;
+}) {
+  return authedApi().request<ListResponse<TicketLookup>>("/api/ticket-lookups", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateTicketLookup(
+  id: number,
+  input: { label?: string; isActive?: boolean; isClosed?: boolean },
+) {
+  return authedApi().request<ListResponse<TicketLookup>>(`/api/ticket-lookups/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteTicketLookup(id: number) {
+  return authedApi().request<{ success: true }>(`/api/ticket-lookups/${id}`, {
+    method: "DELETE",
+  });
 }

@@ -138,6 +138,7 @@ export async function streamChatMessage(
         result.products = event.data.products;
         result.cost_usd = event.data.cost_usd;
         result.skill = event.data.skill ?? skill;
+        result.order_verification = event.data.order_verification;
         break;
       case "error":
         throw new ApiError(event.data.message, 500, event.data);

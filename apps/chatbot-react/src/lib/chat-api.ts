@@ -4,6 +4,7 @@ import type {
   ChatStreamEvent,
   MarketplaceCode,
 } from "@rdx/chat-contract";
+import { getShopperSessionId } from "./shopper-session";
 
 export const STAGING_API_URL = "https://backend-staging-1a2f.up.railway.app";
 
@@ -78,6 +79,7 @@ function withScope(input: SendChatInput): ChatRequestBody {
       : {
           tenant: import.meta.env.VITE_TENANT?.trim() || "rdx",
           marketplace,
+          session_id: getShopperSessionId(),
         }),
   };
 }
