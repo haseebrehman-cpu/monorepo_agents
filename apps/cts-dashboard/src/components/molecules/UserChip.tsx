@@ -1,4 +1,4 @@
-import { getAuthUser } from "../../lib/auth";
+import { useMe } from "../../lib/use-me";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -8,7 +8,7 @@ function initials(name: string) {
 }
 
 export default function UserChip() {
-  const user = getAuthUser();
+  const user = useMe().data?.user;
   const name = user?.name ?? "User";
   const subtitle = user?.email ?? "CTS";
 

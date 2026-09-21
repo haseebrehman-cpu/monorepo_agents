@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { Button, DropDown, Input } from "@rdx/ui";
 import { LoaderCircleIcon } from "lucide-react";
-import { getAuthUser } from "../../../lib/auth";
 import { ROLE } from "../../../lib/permissions";
 import type { AdminUser } from "../../../lib/admin-api";
+import { useMe } from "../../../lib/use-me";
 import {
   useAdminDepartments,
   useAdminRoles,
@@ -21,7 +21,7 @@ export default function UsersManager() {
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
-  const currentUserId = getAuthUser()?.id;
+  const currentUserId = useMe().data?.user.id;
   const [departmentId, setDepartmentId] = useState<string | null>(null);
   const [roleId, setRoleId] = useState<string | null>(null);
   const [userToDelete, setUserToDelete] = useState<AdminUser | null>(null);

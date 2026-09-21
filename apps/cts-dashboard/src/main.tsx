@@ -6,6 +6,9 @@ import App from './App.tsx'
 import 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
+import { clearLegacyAuthStorage } from './lib/auth.ts';
+
+clearLegacyAuthStorage();
 
 const queryClient = new QueryClient({
   defaultOptions: {

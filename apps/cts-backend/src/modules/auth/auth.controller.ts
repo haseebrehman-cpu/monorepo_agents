@@ -1,6 +1,11 @@
 import type { Request, Response } from "express";
 import { authService } from "./auth.service.js";
 import { loginSchema, registerSchema } from "./auth.schema.js";
+import {
+    clearSessionCookieOptions,
+    SESSION_COOKIE_NAME,
+    sessionCookieOptions,
+} from "../../core/auth-session.js";
 
 export const authController = {
     async register(req: Request, res: Response) {
@@ -27,7 +32,11 @@ export const authController = {
         };
         try {
             const result = await authService.login(parsed.data);
-            return res.status(200).json({ success: true, data: result });
+            res.cookie(SESSION_COOKIE_NAME, result.token, sessionCookieOptions);
+            return res.status(200).json({
+                success: true,
+                data: { user: result.user },
+            });
         } catch (e: any) {
             if (e.message === "Invalid credentials") {
                 return res.status(401).json({ success: false, error: "INVALID_CREDENTIALS" });
@@ -39,6 +48,7 @@ export const authController = {
     async logout(req: Request, res: Response) {
         try {
             await authService.logout(req.user!.userId);
+            res.clearCookie(SESSION_COOKIE_NAME, clearSessionCookieOptions);
             return res.json({ success: true });
         } catch (e: any) {
             if (e.message === "USER_NOT_FOUND") {

@@ -1,9 +1,7 @@
 import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import {
-  getAuthUser,
   getHomePath,
-  getToken,
   isAdminUser,
   isSuperAdminUser,
 } from "../lib/auth";
@@ -12,15 +10,27 @@ import { useMe } from "../lib/use-me";
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const location = useLocation();
-  if (!getToken()) {
+  const me = useMe();
+
+  if (me.isPending) {
+    return <div className="p-6 text-sm text-slate-500">Checking session...</div>;
+  }
+
+  if (me.isError) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
   return children;
 }
 
 export function GuestOnly({ children }: { children: ReactNode }) {
-  if (getToken()) {
-    return <Navigate to={getHomePath()} replace />;
+  const me = useMe();
+
+  if (me.isPending) {
+    return <div className="p-6 text-sm text-slate-500">Checking session...</div>;
+  }
+
+  if (me.data?.user) {
+    return <Navigate to={getHomePath(me.data.user)} replace />;
   }
   return children;
 }
@@ -28,7 +38,7 @@ export function GuestOnly({ children }: { children: ReactNode }) {
 export function RoleHomeRedirect({ children }: { children: ReactNode }) {
   const location = useLocation();
   const me = useMe();
-  const user = me.data?.user ?? getAuthUser();
+  const user = me.data?.user;
   const roles = user?.roles;
 
   if (me.isLoading && !roles?.length) {
@@ -48,7 +58,7 @@ export function RoleHomeRedirect({ children }: { children: ReactNode }) {
 
 export function RequireSuperAdmin({ children }: { children: ReactNode }) {
   const me = useMe();
-  const user = me.data?.user ?? getAuthUser();
+  const user = me.data?.user;
   const allowed = isSuperAdminUser(user);
 
   if (me.isLoading && !allowed) {
@@ -69,9 +79,9 @@ export function RequireSuperAdmin({ children }: { children: ReactNode }) {
 export function RequireAdmin({ children }: { children: ReactNode }) {
   const me = useMe();
   const roles = me.data?.user.roles;
-  const allowed = roles ? roles.includes("admin") : isAdminUser();
+  const allowed = roles ? roles.includes("admin") : false;
 
-  if (me.isLoading && !isAdminUser()) {
+  if (me.isLoading) {
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-500">
         Checking access...
@@ -94,7 +104,7 @@ export function RequirePermission({
   children: ReactNode;
 }) {
   const me = useMe();
-  const user = me.data?.user ?? getAuthUser();
+  const user = me.data?.user;
 
   if (!code) return children;
 

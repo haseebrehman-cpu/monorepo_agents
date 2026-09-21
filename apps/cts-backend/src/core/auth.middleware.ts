@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { ROLE } from "../config/features.js";
 import { env } from "../config/env.js";
 import { loadUserAccess } from "./access.js";
+import { readSessionToken } from "./auth-session.js";
 
 export type AuthUser = {
   userId: number;
@@ -24,12 +25,11 @@ export async function authenticate(
   res: Response,
   next: NextFunction
 ) {
-  const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) {
+  const token = readSessionToken(req);
+  if (!token) {
     return res.status(401).json({ success: false, error: "NO_TOKEN" });
   }
 
-  const token = header.slice(7);
   let payload: { userId: number; email: string };
   try {
     payload = jwt.verify(token, env.JWT_SECRET) as any;

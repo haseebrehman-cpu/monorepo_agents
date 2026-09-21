@@ -27,11 +27,20 @@ export default defineConfig({
       },
     ],
   },
-  base: '/cts-dashboard',
+  base: '/cts-dashboard/',
   server: {
     fs: {
       allow: [monorepoRoot],
     },
+    proxy: {
+      "/cts-api": {
+        target: "http://localhost:5000",
+        changeOrigin: true,
+        rewrite: (requestPath) => requestPath.replace(/^\/cts-api/, ""),
+      },
+    },
+  },
+  preview: {
     proxy: {
       "/cts-api": {
         target: "http://localhost:5000",

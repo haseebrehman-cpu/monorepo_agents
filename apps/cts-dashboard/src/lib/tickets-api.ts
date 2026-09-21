@@ -1,4 +1,4 @@
-import { authedApi, getToken } from "./auth";
+import { authedApi } from "./auth";
 import { CTS_API_BASE_URL } from "./api";
 import type { Ticket } from "../pages/dashboard/CTS/tickets-table/columns";
 
@@ -168,12 +168,9 @@ export function addTicketReply(ticketId: string, input: CreateReplyInput) {
 }
 
 export async function downloadTicketAttachment(attachmentId: number, fileName: string) {
-  const token = getToken();
   const response = await fetch(
     `${CTS_API_BASE_URL}/api/tickets/attachments/${attachmentId}`,
-    {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    }
+    { credentials: "include" }
   );
   if (!response.ok) {
     throw new Error("DOWNLOAD_FAILED");

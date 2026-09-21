@@ -6,9 +6,6 @@ import {
   isSuperAdminUser as hasSuperAdminRole,
 } from "./permissions";
 
-const TOKEN_KEY = "cts_token";
-const USER_KEY = "cts_user";
-
 export type LoginInput = {
   email: string;
   password: string;
@@ -30,7 +27,6 @@ export type AuthUser = {
 export type LoginResponse = {
   success: true;
   data: {
-    token: string;
     user: AuthUser;
   };
 };
@@ -45,44 +41,47 @@ export type MeResponse = {
   };
 };
 
-export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+export function clearLegacyAuthStorage(): void {
+  localStorage.removeItem("cts_token");
+  localStorage.removeItem("cts_user");
 }
 
-export function getAuthUser(): AuthUser | null {
-  const raw = localStorage.getItem(USER_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as AuthUser;
-  } catch {
-    return null;
-  }
-}
-
-export function isAdminUser(user = getAuthUser()): boolean {
+export function isAdminUser(user?: AuthUser | null): boolean {
   return hasAdminRole(user);
 }
 
-export function isSuperAdminUser(user = getAuthUser()): boolean {
+export function isSuperAdminUser(user?: AuthUser | null): boolean {
   return hasSuperAdminRole(user);
 }
 
-export function getHomePath(user = getAuthUser()): string {
+export function getHomePath(user?: AuthUser | null): string {
   return homePathForUser(user);
 }
 
-export function setSession(token: string, user: AuthUser): void {
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
-}
+let isRedirectingToLogin = false;
 
-export function clearSession(): void {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
+function handleUnauthorized(): void {
+  if (
+    typeof window !== "undefined" &&
+    !isRedirectingToLogin &&
+    !window.location.pathname.endsWith("/login")
+  ) {
+    isRedirectingToLogin = true;
+    window.location.replace(`${import.meta.env.BASE_URL}login`);
+  }
 }
 
 export function authedApi() {
-  return createCtsApi(getToken());
+  const api = createCtsApi();
+  const fetchRequest = api.fetch;
+
+  return createCtsApi(async (input, init) => {
+    const response = await fetchRequest(input, init);
+    if (response.status === 401) {
+      handleUnauthorized();
+    }
+    return response;
+  });
 }
 
 export function login(input: LoginInput): Promise<LoginResponse> {

@@ -85,7 +85,7 @@ function AppRoutes() {
 
 function App() {
   return (
-    <Router basename='/cts-dashboard'>
+    <Router basename='/cts-dashboard/'>
       <AppRoutes />
     </Router>
   )

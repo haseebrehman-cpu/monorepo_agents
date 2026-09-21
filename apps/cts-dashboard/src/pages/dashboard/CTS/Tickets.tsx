@@ -3,7 +3,6 @@ import { Button } from "@rdx/ui";
 import { FileUpIcon, Loader, PlusIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import CTS from "../../../components/atoms/CTS";
-import { getAuthUser } from "../../../lib/auth";
 import { hasPermission, P } from "../../../lib/permissions";
 import { EMPTY_TICKET_FILTERS } from "../../../lib/tickets-api";
 import { useMe } from "../../../lib/use-me";
@@ -26,7 +25,7 @@ const Tickets = () => {
       }),
     [navigate, optionsQuery.data?.statuses]
   );
-  const user = me.data?.user ?? getAuthUser();
+  const user = me.data?.user;
   const canAdd = hasPermission(user, P.TRACKING_ADD);
   const canAddBulk = hasPermission(user, P.TRACKING_ADD_BULK);
   const ADD_TICKETS = "/add-tickets";

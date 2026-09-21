@@ -15,7 +15,7 @@ import {
 } from "@rdx/ui";
 import { LogOutIcon, RefreshCcwIcon, RotateCwIcon, ShieldIcon } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { getAuthUser, isSuperAdminUser } from "../../lib/auth";
+import { isSuperAdminUser } from "../../lib/auth";
 import { filterNavItems } from "../../lib/permissions";
 import { useLogout } from "../../lib/use-logout";
 import { useMe } from "../../lib/use-me";
@@ -53,7 +53,7 @@ export default function Sidebar({
   );
   const me = useMe();
   const logout = useLogout();
-  const user = me.data?.user ?? getAuthUser();
+  const user = me.data?.user;
   const isSuperAdmin = isSuperAdminUser(user);
   const navItems = filterNavItems(NAV_ITEMS, user);
 

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { clearSession, logout } from "./auth";
+import { logout } from "./auth";
 
 export function useLogout() {
   const navigate = useNavigate();
@@ -11,7 +11,6 @@ export function useLogout() {
     mutationFn: logout,
     retry: false,
     onSettled: async () => {
-      clearSession();
       queryClient.clear();
       toast.success("Signed out");
       navigate("/login", { replace: true });
