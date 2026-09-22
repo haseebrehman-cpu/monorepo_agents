@@ -30,6 +30,33 @@ export type TicketListFilters = {
   modifiedBy: string;
 };
 
+export type TicketSortField =
+  | "ticketDate"
+  | "id"
+  | "orderId"
+  | "courier"
+  | "trackingNumber"
+  | "issue"
+  | "status"
+  | "assignedTo"
+  | "createdBy"
+  | "modifiedBy"
+  | "closedBy";
+
+export type TicketListParams = {
+  page: number;
+  pageSize: number;
+  sortBy: TicketSortField;
+  sortDirection: "asc" | "desc";
+};
+
+export type TicketListPage = {
+  items: Ticket[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 export const EMPTY_TICKET_FILTERS: TicketListFilters = {
   courier: "",
   issue: "",
@@ -103,14 +130,20 @@ export type BulkUploadResult = {
   createdCount: number;
 };
 
-export function listTickets(filters: TicketListFilters = EMPTY_TICKET_FILTERS) {
+export function listTickets(
+  filters: TicketListFilters,
+  pagination: TicketListParams
+) {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(compactTicketFilters(filters))) {
     if (value) params.set(key, value);
   }
-  const query = params.toString();
-  return authedApi().request<ApiResponse<CreatedTicket[]>>(
-    `/api/tickets${query ? `?${query}` : ""}`
+  params.set("page", String(pagination.page));
+  params.set("pageSize", String(pagination.pageSize));
+  params.set("sortBy", pagination.sortBy);
+  params.set("sortDirection", pagination.sortDirection);
+  return authedApi().request<ApiResponse<TicketListPage>>(
+    `/api/tickets?${params.toString()}`
   );
 }
 

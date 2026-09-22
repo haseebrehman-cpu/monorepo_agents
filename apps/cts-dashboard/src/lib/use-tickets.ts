@@ -6,7 +6,6 @@ import {
   compactTicketFilters,
   createTicket,
   deleteTicket,
-  EMPTY_TICKET_FILTERS,
   getTicket,
   getTicketOptions,
   listTickets,
@@ -15,6 +14,7 @@ import {
   type CreateReplyInput,
   type CreateTicketInput,
   type TicketListFilters,
+  type TicketListParams,
 } from "./tickets-api";
 
 function ticketErrorMessage(error: unknown, fallback: string) {
@@ -56,11 +56,14 @@ function ticketErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-export function useTickets(filters: TicketListFilters = EMPTY_TICKET_FILTERS) {
+export function useTickets(
+  filters: TicketListFilters,
+  pagination: TicketListParams
+) {
   const applied = compactTicketFilters(filters);
   return useQuery({
-    queryKey: ["tickets", applied],
-    queryFn: async () => (await listTickets(filters)).data,
+    queryKey: ["tickets", applied, pagination],
+    queryFn: async () => (await listTickets(filters, pagination)).data,
     placeholderData: keepPreviousData,
   });
 }

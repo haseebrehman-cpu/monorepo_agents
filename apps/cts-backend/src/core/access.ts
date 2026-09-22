@@ -13,55 +13,67 @@ export type DepartmentRef = {
 };
 
 export type UserAccess = {
+  isActive: boolean;
   roles: string[];
   permissions: string[];
   department: DepartmentRef | null;
 };
 
 export async function loadUserAccess(userId: number): Promise<UserAccess> {
-  const { rows: roleRows } = await pool.query(
-    `SELECT r.code
-     FROM user_roles ur
-     JOIN roles r ON r.id = ur.role_id
-     WHERE ur.user_id = $1`,
-    [userId]
-  );
-  const roles = roleRows.map((row: { code: string }) => row.code);
-
-  const { rows: deptRows } = await pool.query(
-    `SELECT d.id, d.code, d.name
+  const { rows } = await pool.query(
+    `SELECT
+       u.is_active,
+       d.id AS department_id,
+       d.code AS department_code,
+       d.name AS department_name,
+       COALESCE(
+         array_agg(DISTINCT r.code) FILTER (WHERE r.code IS NOT NULL),
+         ARRAY[]::text[]
+       ) AS roles,
+       COALESCE(
+         array_agg(DISTINCT p.code) FILTER (WHERE p.code IS NOT NULL),
+         ARRAY[]::text[]
+       ) AS permissions
      FROM users u
      LEFT JOIN departments d ON d.id = u.department_id
-     WHERE u.id = $1`,
+     LEFT JOIN user_roles ur ON ur.user_id = u.id
+     LEFT JOIN roles r ON r.id = ur.role_id
+     LEFT JOIN user_permissions up ON up.user_id = u.id
+     LEFT JOIN permissions p ON p.id = up.permission_id
+     WHERE u.id = $1
+     GROUP BY u.is_active, d.id, d.code, d.name`,
     [userId]
   );
-  const department = deptRows[0]?.id
+  const row = rows[0];
+  if (!row) {
+    return { isActive: false, roles: [], permissions: [], department: null };
+  }
+  const roles = row.roles as string[];
+  const department = row.department_id
     ? {
-        id: deptRows[0].id as number,
-        code: deptRows[0].code as string,
-        name: deptRows[0].name as string,
+        id: row.department_id as number,
+        code: row.department_code as string,
+        name: row.department_name as string,
       }
     : null;
 
   if (roles.includes(ROLE.SUPER_ADMIN)) {
-    return { roles, permissions: [], department };
+    return { isActive: row.is_active as boolean, roles, permissions: [], department };
   }
 
   if (roles.includes(ROLE.ADMIN)) {
-    return { roles, permissions: [...FEATURE_CODES], department };
+    return {
+      isActive: row.is_active as boolean,
+      roles,
+      permissions: [...FEATURE_CODES],
+      department,
+    };
   }
 
-  const { rows: permRows } = await pool.query(
-    `SELECT p.code
-     FROM user_permissions up
-     JOIN permissions p ON p.id = up.permission_id
-     WHERE up.user_id = $1`,
-    [userId]
-  );
-
   return {
+    isActive: row.is_active as boolean,
     roles,
-    permissions: permRows.map((row: { code: string }) => row.code),
+    permissions: row.permissions as string[],
     department,
   };
 }

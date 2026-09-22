@@ -39,6 +39,9 @@ export async function authenticate(
 
   try {
     const access = await loadUserAccess(payload.userId);
+    if (!access.isActive) {
+      return res.status(401).json({ success: false, error: "USER_INACTIVE" });
+    }
     req.user = {
       userId: payload.userId,
       email: payload.email,

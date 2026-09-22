@@ -36,6 +36,20 @@ const optionalQueryDate = z.preprocess(
   z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date").optional()
 );
 
+export const ticketSortFields = [
+  "ticketDate",
+  "id",
+  "orderId",
+  "courier",
+  "trackingNumber",
+  "issue",
+  "status",
+  "assignedTo",
+  "createdBy",
+  "modifiedBy",
+  "closedBy",
+] as const;
+
 export const listTicketsQuerySchema = z
   .object({
     courier: optionalQueryString,
@@ -46,6 +60,16 @@ export const listTicketsQuerySchema = z
     modifiedBy: optionalQueryString,
     fromDate: optionalQueryDate,
     toDate: optionalQueryDate,
+    page: z.preprocess(queryString, z.coerce.number().int().min(0).default(0)),
+    pageSize: z.preprocess(
+      queryString,
+      z.coerce.number().int().min(1).max(100).default(25)
+    ),
+    sortBy: z.preprocess(queryString, z.enum(ticketSortFields).default("ticketDate")),
+    sortDirection: z.preprocess(
+      queryString,
+      z.enum(["asc", "desc"]).default("desc")
+    ),
   })
   .refine((data) => !data.fromDate || !data.toDate || data.fromDate <= data.toDate, {
     message: "INVALID_DATE_RANGE",

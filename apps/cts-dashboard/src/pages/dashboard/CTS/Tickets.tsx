@@ -4,7 +4,10 @@ import { FileUpIcon, Loader, PlusIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import CTS from "../../../components/atoms/TrackingFiltersPane";
 import { hasPermission, P } from "../../../lib/permissions";
-import { EMPTY_TICKET_FILTERS } from "../../../lib/tickets-api";
+import {
+  EMPTY_TICKET_FILTERS,
+  type TicketSortField,
+} from "../../../lib/tickets-api";
 import { useMe } from "../../../lib/use-me";
 import {
   useDeleteTicket,
@@ -20,7 +23,21 @@ const Tickets = () => {
   const navigate = useNavigate();
   const me = useMe();
   const [appliedFilters, setAppliedFilters] = useState(EMPTY_TICKET_FILTERS);
-  const ticketsQuery = useTickets(appliedFilters);
+  const [paginationModel, setPaginationModel] = useState({
+    page: 0,
+    pageSize: 25,
+  });
+  const [sort, setSort] = useState<{
+    sortBy: TicketSortField;
+    sortDirection: "asc" | "desc";
+  }>({
+    sortBy: "ticketDate",
+    sortDirection: "desc",
+  });
+  const ticketsQuery = useTickets(appliedFilters, {
+    ...paginationModel,
+    ...sort,
+  });
   const optionsQuery = useTicketOptions();
   const updateStatus = useUpdateTicketStatus();
   const deleteTicket = useDeleteTicket();
@@ -67,8 +84,14 @@ const Tickets = () => {
         </div>
       </div>
       <CTS
-        onApply={setAppliedFilters}
-        onReset={() => setAppliedFilters(EMPTY_TICKET_FILTERS)}
+        onApply={(filters) => {
+          setAppliedFilters(filters);
+          setPaginationModel((current) => ({ ...current, page: 0 }));
+        }}
+        onReset={() => {
+          setAppliedFilters(EMPTY_TICKET_FILTERS);
+          setPaginationModel((current) => ({ ...current, page: 0 }));
+        }}
       />
       {ticketsQuery.isLoading ? (
         <div className="flex flex-row items-center gap-2">
@@ -83,7 +106,20 @@ const Tickets = () => {
       ) : (
         <DataTable
           columns={columns}
-          data={ticketsQuery.data ?? []}
+          data={ticketsQuery.data?.items ?? []}
+          loading={ticketsQuery.isFetching}
+          rowCount={ticketsQuery.data?.total ?? 0}
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}
+          sortModel={[{ field: sort.sortBy, sort: sort.sortDirection }]}
+          onSortModelChange={(model) => {
+            const next = model[0];
+            setSort({
+              sortBy: (next?.field as TicketSortField | undefined) ?? "ticketDate",
+              sortDirection: next?.sort === "asc" ? "asc" : "desc",
+            });
+            setPaginationModel((current) => ({ ...current, page: 0 }));
+          }}
           isCellEditable={(params) =>
             params.field !== "status" || params.row.status !== "Completed"
           }

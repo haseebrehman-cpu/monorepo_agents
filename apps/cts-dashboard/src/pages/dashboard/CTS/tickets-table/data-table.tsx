@@ -1,4 +1,3 @@
-import * as React from "react";
 import {
   DataGrid,
   type DataGridProps,
@@ -9,6 +8,14 @@ import {
 interface DataTableProps<TData extends GridValidRowModel & { id: string }> {
   columns: GridColDef<TData>[];
   data: TData[];
+  loading: boolean;
+  rowCount: number;
+  paginationModel: NonNullable<DataGridProps<TData>["paginationModel"]>;
+  onPaginationModelChange: NonNullable<
+    DataGridProps<TData>["onPaginationModelChange"]
+  >;
+  sortModel: NonNullable<DataGridProps<TData>["sortModel"]>;
+  onSortModelChange: NonNullable<DataGridProps<TData>["onSortModelChange"]>;
   isCellEditable?: DataGridProps<TData>["isCellEditable"];
   processRowUpdate?: (newRow: TData, oldRow: TData) => Promise<TData> | TData;
 }
@@ -16,37 +23,40 @@ interface DataTableProps<TData extends GridValidRowModel & { id: string }> {
 export function DataTable<TData extends GridValidRowModel & { id: string }>({
   columns,
   data,
+  loading,
+  rowCount,
+  paginationModel,
+  onPaginationModelChange,
+  sortModel,
+  onSortModelChange,
   isCellEditable,
   processRowUpdate,
 }: DataTableProps<TData>) {
-  const [rows, setRows] = React.useState(data);
-  const [dataSnapshot, setDataSnapshot] = React.useState(data);
-
-  if (data !== dataSnapshot) {
-    setDataSnapshot(data);
-    setRows(data);
-  }
-
   return (
     <DataGrid
-      rows={rows}
+      rows={data}
       columns={columns}
       label="Tickets"
+      loading={loading}
+      rowCount={rowCount}
+      paginationMode="server"
+      paginationModel={paginationModel}
+      onPaginationModelChange={onPaginationModelChange}
+      sortingMode="server"
+      sortModel={sortModel}
+      onSortModelChange={onSortModelChange}
       virtualizeColumnsWithAutoRowHeight={true}
       height="calc(100vh - 200px)"
       getRowId={(row) => row.id}
       checkboxSelection={false}
       cellSelection={false}
       cellSelectionFillHandle={false}
+      slotProps={{ toolbar: { showQuickFilter: false } }}
       isCellEditable={isCellEditable}
       processRowUpdate={async (updatedRow, originalRow) => {
-        const nextRow = processRowUpdate
+        return processRowUpdate
           ? await processRowUpdate(updatedRow, originalRow)
           : updatedRow;
-        setRows((current) =>
-          current.map((row) => (row.id === nextRow.id ? nextRow : row)),
-        );
-        return nextRow;
       }}
       onProcessRowUpdateError={() => undefined}
       sx={{ padding: "10px" }}

@@ -60,6 +60,26 @@ const TICKET_SELECT = `
   LEFT JOIN users closed ON closed.id = t.closed_by_id
 `;
 
+const TICKET_LIST_SELECT = `
+  SELECT
+    t.ticket_number,
+    t.order_id,
+    t.courier,
+    t.tracking_number,
+    t.issue,
+    t.status,
+    t.created_at,
+    COALESCE(assigned_dept.name, 'Unassigned') AS assigned_to,
+    COALESCE(created.name, 'Deleted user') AS created_by,
+    COALESCE(modified.name, '') AS modified_by,
+    COALESCE(closed.name, '') AS closed_by
+  FROM tickets t
+  LEFT JOIN departments assigned_dept ON assigned_dept.id = t.assigned_department_id
+  LEFT JOIN users created ON created.id = t.created_by_id
+  LEFT JOIN users modified ON modified.id = t.modified_by_id
+  LEFT JOIN users closed ON closed.id = t.closed_by_id
+`;
+
 function mapTicket(row: Record<string, unknown>) {
   return {
     id: row.ticket_number as string,
@@ -80,6 +100,22 @@ function mapTicket(row: Record<string, unknown>) {
     closedAt: row.closed_at,
     updatedAt: row.updated_at,
     attachments: parseJsonArray(row.attachments),
+  };
+}
+
+function mapTicketListItem(row: Record<string, unknown>) {
+  return {
+    id: row.ticket_number as string,
+    orderId: row.order_id as string,
+    courier: row.courier as string,
+    trackingNumber: row.tracking_number as string,
+    issue: row.issue as string,
+    status: row.status as string,
+    ticketDate: row.created_at,
+    assignedTo: row.assigned_to as string,
+    createdBy: row.created_by as string,
+    modifiedBy: row.modified_by as string,
+    closedBy: row.closed_by as string,
   };
 }
 
@@ -109,7 +145,7 @@ async function findTicketRow(ticketRef: string) {
   return rows[0] ? mapTicket(rows[0]) : null;
 }
 
-function buildListQuery(filters: TicketListFilters = {}) {
+function buildListQuery(filters: TicketListFilters) {
   const conditions: string[] = [];
   const values: unknown[] = [];
 
@@ -142,9 +178,40 @@ function buildListQuery(filters: TicketListFilters = {}) {
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+  const sortColumns: Record<TicketListFilters["sortBy"], string> = {
+    ticketDate: "t.created_at",
+    id: "t.ticket_number",
+    orderId: "t.order_id",
+    courier: "t.courier",
+    trackingNumber: "t.tracking_number",
+    issue: "t.issue",
+    status: "t.status",
+    assignedTo: "assigned_dept.name",
+    createdBy: "created.name",
+    modifiedBy: "modified.name",
+    closedBy: "closed.name",
+  };
+  const direction = filters.sortDirection === "asc" ? "ASC" : "DESC";
+  const pageSize = filters.pageSize ?? 25;
+  const page = filters.page ?? 0;
+  values.push(pageSize, page * pageSize);
+
   return {
-    sql: `${TICKET_SELECT} ${where} ORDER BY t.created_at DESC`,
+    sql: `${TICKET_LIST_SELECT} ${where}
+      ORDER BY ${sortColumns[filters.sortBy ?? "ticketDate"]} ${direction}, t.id ${direction}
+      LIMIT $${values.length - 1} OFFSET $${values.length}`,
+    countSql: `
+      SELECT COUNT(*)::integer AS total
+      FROM tickets t
+      LEFT JOIN departments assigned_dept ON assigned_dept.id = t.assigned_department_id
+      LEFT JOIN users created ON created.id = t.created_by_id
+      LEFT JOIN users modified ON modified.id = t.modified_by_id
+      ${where}
+    `,
     values,
+    countValues: values.slice(0, -2),
+    page,
+    pageSize,
   };
 }
 
@@ -357,10 +424,17 @@ async function insertTicket(
 }
 
 export const ticketsService = {
-  async list(filters: TicketListFilters = {}) {
-    const { sql, values } = buildListQuery(filters);
+  async list(filters: TicketListFilters) {
+    const { sql, countSql, values, countValues, page, pageSize } =
+      buildListQuery(filters);
+    const countResult = await pool.query(countSql, countValues);
     const { rows } = await pool.query(sql, values);
-    return rows.map(mapTicket);
+    return {
+      items: rows.map(mapTicketListItem),
+      total: Number(countResult.rows[0]?.total ?? 0),
+      page,
+      pageSize,
+    };
   },
 
   async getById(id: number) {

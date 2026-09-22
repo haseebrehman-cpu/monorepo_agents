@@ -16,6 +16,10 @@ const envSchema = z.object({
     JWT_SECRET: z.string(),
     CORS_ORIGIN: z.string().default("http://localhost:5173"),
     COOKIE_SAME_SITE: z.enum(["lax", "strict", "none"]).default("lax"),
+    DB_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
+    DB_IDLE_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+    DB_CONNECTION_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+    DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -41,4 +45,8 @@ export const env: z.infer<typeof envSchema> = {
     CORS_ORIGIN: process.env.CORS_ORIGIN ?? "http://localhost:5173",
     COOKIE_SAME_SITE: (process.env.COOKIE_SAME_SITE ?? "lax") as
         z.infer<typeof envSchema>["COOKIE_SAME_SITE"],
+    DB_POOL_MAX: parsedEnv.data.DB_POOL_MAX,
+    DB_IDLE_TIMEOUT_MS: parsedEnv.data.DB_IDLE_TIMEOUT_MS,
+    DB_CONNECTION_TIMEOUT_MS: parsedEnv.data.DB_CONNECTION_TIMEOUT_MS,
+    DB_STATEMENT_TIMEOUT_MS: parsedEnv.data.DB_STATEMENT_TIMEOUT_MS,
 } satisfies z.infer<typeof envSchema>;
