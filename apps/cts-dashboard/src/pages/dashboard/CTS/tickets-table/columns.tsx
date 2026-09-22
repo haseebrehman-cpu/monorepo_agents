@@ -1,9 +1,10 @@
-import { Copy, Eye } from "lucide-react";
+import { Copy, Eye, Trash2 } from "lucide-react";
 import { GridActionsCellItem, type GridColDef } from "@rdx/ui";
 import { TicketStatusBadge } from "./TicketStatusBadge";
 
 export type Ticket = {
   id: string;
+  orderId: string;
   courier: string;
   trackingNumber: string;
   issue: string;
@@ -18,11 +19,15 @@ export type Ticket = {
 type TicketColumnOptions = {
   statuses: string[];
   onView: (ticketId: string) => void;
+  onDelete: (ticket: Ticket) => void;
+  canDelete: boolean;
 };
 
 export function getTicketColumns({
   statuses,
   onView,
+  onDelete,
+  canDelete,
 }: TicketColumnOptions): GridColDef<Ticket>[] {
   return [
     {
@@ -44,6 +49,7 @@ export function getTicketColumns({
       flex: 1,
       minWidth: 120,
     },
+    { field: "orderId", headerName: "Order ID", width: 150, flex: 1 },
     {
       field: "trackingNumber",
       headerName: "Tracking number",
@@ -86,7 +92,7 @@ export function getTicketColumns({
       valueOptions: statuses,
       renderCell: (params) => {
         const status = String(params.value ?? "");
-        return <TicketStatusBadge status={status} />;
+        return <TicketStatusBadge status = { status } />;
       },
     },
     {
@@ -111,6 +117,17 @@ export function getTicketColumns({
           onClick={() => onView(params.row.id)}
           showInMenu
         />,
+        ...(canDelete
+          ? [
+              <GridActionsCellItem
+                key="delete"
+                icon={<Trash2 className="h-4 w-4" />}
+                label="Delete ticket"
+                onClick={() => onDelete(params.row)}
+                showInMenu
+              />,
+            ]
+          : []),
         // <GridActionsCellItem
         //   key="history"
         //   icon={<History className="h-4 w-4" />}

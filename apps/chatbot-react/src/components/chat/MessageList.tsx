@@ -145,6 +145,10 @@ export default function MessageList({
                     <TrackingForm
                       challenge={message.order_verification}
                       region={region}
+                      hideMessage={
+                        message.content.trim() ===
+                        message.order_verification.message?.trim()
+                      }
                       disabled={
                         isTyping || message.id !== latestVerificationId
                       }

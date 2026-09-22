@@ -2,6 +2,7 @@ export const P = {
   TRACKING_ACCESS: "tracking.access",
   TRACKING_ADD: "tracking.add",
   TRACKING_ADD_BULK: "tracking.add_bulk",
+  TRACKING_DELETE: "tracking.delete",
   REFUND_ACCESS: "refund_resend.access",
   RESEND_ACCESS: "refund_resend.resend_access",
   RETURN_ACCESS: "refund_resend.return_access",

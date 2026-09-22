@@ -5,6 +5,10 @@ import type {
   CreateTicketInput,
   TicketListFilters,
 } from "./tickets.schema.js";
+import type {
+  BulkTicketError,
+  BulkTicketRow,
+} from "./tickets-bulk.parser.js";
 
 export type TicketAttachmentInput = {
   fileName: string;
@@ -28,7 +32,7 @@ const TICKET_SELECT = `
     t.closed_at,
     t.assigned_department_id,
     COALESCE(assigned_dept.name, 'Unassigned') AS assigned_to,
-    created.name AS created_by,
+    COALESCE(created.name, 'Deleted user') AS created_by,
     created_dept.name AS created_by_department,
     COALESCE(modified.name, '') AS modified_by,
     COALESCE(closed.name, '') AS closed_by,
@@ -50,7 +54,7 @@ const TICKET_SELECT = `
     ) AS attachments
   FROM tickets t
   LEFT JOIN departments assigned_dept ON assigned_dept.id = t.assigned_department_id
-  JOIN users created ON created.id = t.created_by_id
+  LEFT JOIN users created ON created.id = t.created_by_id
   LEFT JOIN departments created_dept ON created_dept.id = created.department_id
   LEFT JOIN users modified ON modified.id = t.modified_by_id
   LEFT JOIN users closed ON closed.id = t.closed_by_id
@@ -171,12 +175,12 @@ async function loadHistory(ticket: ReturnType<typeof mapTicket>) {
          r.body_html,
          r.created_at,
          r.assigned_department_id,
-         author.name AS author_name,
+         COALESCE(author.name, 'Deleted user') AS author_name,
          author_dept.name AS author_department,
          assigned_dept.name AS assigned_to_name,
          ${ATTACHMENT_JSON} AS attachments
        FROM ticket_replies r
-       JOIN users author ON author.id = r.created_by_id
+       LEFT JOIN users author ON author.id = r.created_by_id
        LEFT JOIN departments author_dept ON author_dept.id = author.department_id
        LEFT JOIN departments assigned_dept ON assigned_dept.id = r.assigned_department_id
        WHERE r.ticket_id = $1
@@ -190,11 +194,11 @@ async function loadHistory(ticket: ReturnType<typeof mapTicket>) {
          e.from_value,
          e.to_value,
          e.created_at,
-         actor.name AS author_name,
+         COALESCE(actor.name, 'Deleted user') AS author_name,
          actor_dept.name AS author_department,
          assigned_dept.name AS assigned_to_name
        FROM ticket_events e
-       JOIN users actor ON actor.id = e.actor_id
+       LEFT JOIN users actor ON actor.id = e.actor_id
        LEFT JOIN departments actor_dept ON actor_dept.id = actor.department_id
        LEFT JOIN departments assigned_dept ON assigned_dept.id = e.assigned_department_id
        WHERE e.ticket_id = $1
@@ -280,6 +284,78 @@ async function insertAttachments(
   }
 }
 
+type ResolvedTicketInput = CreateTicketInput & {
+  courier: string;
+  issue: string;
+  status: string;
+  isClosed: boolean;
+};
+
+export class BulkTicketValidationError extends Error {
+  constructor(readonly details: BulkTicketError[]) {
+    super("BULK_VALIDATION_FAILED");
+    this.name = "BulkTicketValidationError";
+  }
+}
+
+function ticketUniqueError(error: unknown) {
+  if (!error || typeof error !== "object" || !("code" in error)) return null;
+  const databaseError = error as { code?: string; constraint?: string };
+  if (databaseError.code !== "23505") return null;
+  if (databaseError.constraint === "uniq_tickets_order_id_ci") {
+    return "ORDER_ID_ALREADY_EXISTS";
+  }
+  if (databaseError.constraint === "uniq_tickets_tracking_number_ci") {
+    return "TRACKING_NUMBER_ALREADY_EXISTS";
+  }
+  return null;
+}
+
+async function insertTicket(
+  client: { query: typeof pool.query },
+  input: ResolvedTicketInput,
+  createdById: number
+) {
+  const closedById = input.isClosed ? createdById : null;
+  const closedAt = input.isClosed ? new Date() : null;
+  const { rows } = await client.query(
+    `INSERT INTO tickets (
+       order_id,
+       courier,
+       tracking_number,
+       issue,
+       status,
+       comment_html,
+       assigned_department_id,
+       created_by_id,
+       modified_by_id,
+       closed_by_id,
+       closed_at
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10)
+     RETURNING id`,
+    [
+      input.orderId,
+      input.courier,
+      input.trackingNumber,
+      input.issue,
+      input.status,
+      input.comment ?? "",
+      input.assignedDepartmentId,
+      createdById,
+      closedById,
+      closedAt,
+    ]
+  );
+  const ticketId = rows[0].id as number;
+  await client.query(
+    `INSERT INTO ticket_events (ticket_id, event_type, actor_id, assigned_department_id, to_value)
+     VALUES ($1, 'created', $2, $3, $4)`,
+    [ticketId, createdById, input.assignedDepartmentId, input.status]
+  );
+  return ticketId;
+}
+
 export const ticketsService = {
   async list(filters: TicketListFilters = {}) {
     const { sql, values } = buildListQuery(filters);
@@ -333,53 +409,164 @@ export const ticketsService = {
     const courier = await ticketLookupsService.assertActive("courier", input.courier);
     const issue = await ticketLookupsService.assertActive("issue", input.issue);
     const status = await ticketLookupsService.assertActive("status", input.status);
-    const isClosed = status.isClosed;
-    const closedById = isClosed ? createdById : null;
-    const closedAt = isClosed ? new Date() : null;
+    const resolvedInput: ResolvedTicketInput = {
+      ...input,
+      courier: courier.label,
+      issue: issue.label,
+      status: status.label,
+      isClosed: status.isClosed,
+    };
 
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      const { rows } = await client.query(
-        `INSERT INTO tickets (
-           order_id,
-           courier,
-           tracking_number,
-           issue,
-           status,
-           comment_html,
-           assigned_department_id,
-           created_by_id,
-           modified_by_id,
-           closed_by_id,
-           closed_at
-         )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10)
-         RETURNING id`,
-        [
-          input.orderId,
-          courier.label,
-          input.trackingNumber,
-          issue.label,
-          status.label,
-          input.comment ?? "",
-          input.assignedDepartmentId,
-          createdById,
-          closedById,
-          closedAt,
-        ]
-      );
-      const ticketId = rows[0].id as number;
+      const ticketId = await insertTicket(client, resolvedInput, createdById);
       await insertAttachments(client, ticketId, attachments);
-      await client.query(
-        `INSERT INTO ticket_events (ticket_id, event_type, actor_id, assigned_department_id, to_value)
-         VALUES ($1, 'created', $2, $3, $4)`,
-        [ticketId, createdById, input.assignedDepartmentId, status.label]
-      );
       await client.query("COMMIT");
       return this.getById(ticketId);
     } catch (error) {
       await client.query("ROLLBACK");
+      const uniqueError = ticketUniqueError(error);
+      if (uniqueError) throw new Error(uniqueError);
+      throw error;
+    } finally {
+      client.release();
+    }
+  },
+
+  async bulkCreate(rows: BulkTicketRow[], createdById: number) {
+    const orderKeys = rows.map((row) => row.input.orderId.toLowerCase());
+    const trackingKeys = rows.map((row) => row.input.trackingNumber.toLowerCase());
+    const [
+      lookups,
+      departmentsResult,
+      existingOrdersResult,
+      existingTrackingResult,
+    ] = await Promise.all([
+      ticketLookupsService.listActiveByKind(),
+      pool.query(`SELECT id, name FROM departments`),
+      pool.query(
+        `SELECT lower(btrim(order_id)) AS value
+         FROM tickets
+         WHERE lower(btrim(order_id)) = ANY($1::text[])`,
+        [orderKeys]
+      ),
+      pool.query(
+        `SELECT lower(btrim(tracking_number)) AS value
+         FROM tickets
+         WHERE lower(btrim(tracking_number)) = ANY($1::text[])`,
+        [trackingKeys]
+      ),
+    ]);
+    const canonical = (values: string[]) =>
+      new Map(values.map((value) => [value.toLowerCase(), value]));
+    const couriers = canonical(lookups.couriers);
+    const issues = canonical(lookups.issues);
+    const statuses = canonical(lookups.statuses);
+    const closedStatuses = new Set(
+      [...lookups.closedStatuses].map((value) => value.toLowerCase())
+    );
+    const departmentIds = new Set<number>(
+      departmentsResult.rows.map((row) => Number(row.id))
+    );
+    const departmentsByName = new Map<string, number>(
+      departmentsResult.rows.map((row) => [
+        String(row.name).trim().toLowerCase(),
+        Number(row.id),
+      ])
+    );
+    const existingOrderIds = new Set<string>(
+      existingOrdersResult.rows.map((row) => String(row.value))
+    );
+    const existingTrackingNumbers = new Set<string>(
+      existingTrackingResult.rows.map((row) => String(row.value))
+    );
+    const errors: BulkTicketError[] = [];
+    const resolvedRows: ResolvedTicketInput[] = [];
+
+    for (const row of rows) {
+      const courier = couriers.get(row.input.courier.toLowerCase());
+      const issue = issues.get(row.input.issue.toLowerCase());
+      const requestedStatus =
+        row.input.status.toLowerCase() === "open"
+          ? "not started"
+          : row.input.status.toLowerCase();
+      const status = statuses.get(requestedStatus);
+      const departmentIdFromName = row.assignedDepartmentName
+        ? departmentsByName.get(row.assignedDepartmentName.toLowerCase())
+        : undefined;
+      const resolvedDepartmentId =
+        departmentIdFromName ?? row.input.assignedDepartmentId;
+      let departmentIsValid = true;
+      let identifiersAreUnique = true;
+      if (existingOrderIds.has(row.input.orderId.toLowerCase())) {
+        identifiersAreUnique = false;
+        errors.push({
+          row: row.rowNumber,
+          field: "orderId",
+          message: "Order ID already exists",
+        });
+      }
+      if (existingTrackingNumbers.has(row.input.trackingNumber.toLowerCase())) {
+        identifiersAreUnique = false;
+        errors.push({
+          row: row.rowNumber,
+          field: "trackingNumber",
+          message: "Tracking number already exists",
+        });
+      }
+      if (!courier) {
+        errors.push({ row: row.rowNumber, field: "courier", message: "Invalid courier" });
+      }
+      if (!issue) {
+        errors.push({ row: row.rowNumber, field: "issue", message: "Invalid issue" });
+      }
+      if (!status) {
+        errors.push({ row: row.rowNumber, field: "status", message: "Invalid status" });
+      }
+      if (row.assignedDepartmentName && !departmentIdFromName) {
+        departmentIsValid = false;
+        errors.push({
+          row: row.rowNumber,
+          field: "assignedDepartment",
+          message: "Invalid department name",
+        });
+      } else if (resolvedDepartmentId && !departmentIds.has(resolvedDepartmentId)) {
+        departmentIsValid = false;
+        errors.push({
+          row: row.rowNumber,
+          field: "assignedDepartmentId",
+          message: "Invalid department",
+        });
+      }
+      if (courier && issue && status && departmentIsValid && identifiersAreUnique) {
+        resolvedRows.push({
+          ...row.input,
+          courier,
+          issue,
+          status,
+          assignedDepartmentId: resolvedDepartmentId ?? null,
+          isClosed: closedStatuses.has(status.toLowerCase()),
+        });
+      }
+    }
+
+    if (errors.length) {
+      throw new BulkTicketValidationError(errors);
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      for (const input of resolvedRows) {
+        await insertTicket(client, input, createdById);
+      }
+      await client.query("COMMIT");
+      return { totalRows: rows.length, createdCount: resolvedRows.length };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      const uniqueError = ticketUniqueError(error);
+      if (uniqueError) throw new Error(uniqueError);
       throw error;
     } finally {
       client.release();
@@ -474,6 +661,15 @@ export const ticketsService = {
       [attachmentId]
     );
     return rows[0] ?? null;
+  },
+
+  async remove(ticketRef: string) {
+    const sql = isTicketNumber(ticketRef)
+      ? `DELETE FROM tickets WHERE ticket_number = $1 RETURNING id`
+      : `DELETE FROM tickets WHERE id = $1 RETURNING id`;
+    const value = isTicketNumber(ticketRef) ? ticketRef : Number(ticketRef);
+    const { rowCount } = await pool.query(sql, [value]);
+    return (rowCount ?? 0) > 0;
   },
 };
 

@@ -1,15 +1,22 @@
 import * as React from "react";
-import { DataGrid, type GridColDef, type GridValidRowModel } from "@rdx/ui";
+import {
+  DataGrid,
+  type DataGridProps,
+  type GridColDef,
+  type GridValidRowModel,
+} from "@rdx/ui";
 
 interface DataTableProps<TData extends GridValidRowModel & { id: string }> {
   columns: GridColDef<TData>[];
   data: TData[];
+  isCellEditable?: DataGridProps<TData>["isCellEditable"];
   processRowUpdate?: (newRow: TData, oldRow: TData) => Promise<TData> | TData;
 }
 
 export function DataTable<TData extends GridValidRowModel & { id: string }>({
   columns,
   data,
+  isCellEditable,
   processRowUpdate,
 }: DataTableProps<TData>) {
   const [rows, setRows] = React.useState(data);
@@ -25,8 +32,13 @@ export function DataTable<TData extends GridValidRowModel & { id: string }>({
       rows={rows}
       columns={columns}
       label="Tickets"
+      virtualizeColumnsWithAutoRowHeight={true}
       height="calc(100vh - 200px)"
       getRowId={(row) => row.id}
+      checkboxSelection={false}
+      cellSelection={false}
+      cellSelectionFillHandle={false}
+      isCellEditable={isCellEditable}
       processRowUpdate={async (updatedRow, originalRow) => {
         const nextRow = processRowUpdate
           ? await processRowUpdate(updatedRow, originalRow)

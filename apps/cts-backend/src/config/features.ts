@@ -19,6 +19,7 @@ export const P = {
   TRACKING_ACCESS: "tracking.access",
   TRACKING_ADD: "tracking.add",
   TRACKING_ADD_BULK: "tracking.add_bulk",
+  TRACKING_DELETE: "tracking.delete",
 
   REFUND_RESEND_ACCESS: "refund_resend.access",
   REFUND_CREATE: "refund_resend.create_refund",
@@ -71,6 +72,14 @@ export const FEATURES: FeatureDef[] = [
     kind: "action",
     parentCode: P.TRACKING_ACCESS,
     sortOrder: 12,
+  },
+  {
+    code: P.TRACKING_DELETE,
+    label: "Delete Tracking",
+    group: "Tracking",
+    kind: "action",
+    parentCode: P.TRACKING_ACCESS,
+    sortOrder: 13,
   },
 
   {

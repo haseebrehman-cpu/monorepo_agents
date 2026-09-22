@@ -140,7 +140,7 @@ export default function Sidebar({
           disabled={logout.isPending}
           onClick={() => logout.mutate()}
           className={cn(
-            "flex w-full items-center rounded-lg text-sm font-medium text-slate-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50",
+            "cursor-pointer flex w-full items-center rounded-lg text-sm font-medium text-slate-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50",
             iconOnly ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5",
           )}
         >

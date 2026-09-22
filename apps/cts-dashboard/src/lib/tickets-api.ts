@@ -98,6 +98,11 @@ export type CreateReplyInput = {
   attachments?: File[];
 };
 
+export type BulkUploadResult = {
+  totalRows: number;
+  createdCount: number;
+};
+
 export function listTickets(filters: TicketListFilters = EMPTY_TICKET_FILTERS) {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(compactTicketFilters(filters))) {
@@ -126,7 +131,7 @@ export function createTicket(input: CreateTicketInput) {
   form.append("trackingNumber", input.trackingNumber);
   form.append("issue", input.issue);
   form.append("comment", input.comment ?? "");
-  form.append("status", input.status ?? "Open");
+  form.append("status", input.status ?? "Not Started");
   if (input.assignedDepartmentId) {
     form.append("assignedDepartmentId", String(input.assignedDepartmentId));
   }
@@ -140,6 +145,15 @@ export function createTicket(input: CreateTicketInput) {
   });
 }
 
+export function uploadBulkTickets(file: File) {
+  const form = new FormData();
+  form.append("file", file);
+  return authedApi().request<ApiResponse<BulkUploadResult>>("/api/tickets/bulk", {
+    method: "POST",
+    body: form,
+  });
+}
+
 export function updateTicketStatus(ticketId: string, status: string) {
   return authedApi().request<ApiResponse<CreatedTicket>>(
     `/api/tickets/${encodeURIComponent(ticketId)}`,
@@ -147,6 +161,13 @@ export function updateTicketStatus(ticketId: string, status: string) {
       method: "PATCH",
       body: JSON.stringify({ status }),
     }
+  );
+}
+
+export function deleteTicket(ticketId: string) {
+  return authedApi().request<{ success: true }>(
+    `/api/tickets/${encodeURIComponent(ticketId)}`,
+    { method: "DELETE" }
   );
 }
 

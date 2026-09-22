@@ -1,10 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildOrderVerifyBody,
-  defaultOrderChallenge,
-  looksLikeOrderTracking,
-  resolveOrderVerification,
-  shouldOfferOrderVerification,
+  getOrderVerificationInitialValues,
 } from "./order-api";
 
 function jsonResponse(body: unknown, status = 200) {
@@ -16,49 +13,41 @@ function jsonResponse(body: unknown, status = 200) {
   };
 }
 
-const challenge = defaultOrderChallenge("1001");
+const challenge = {
+  message: "Enter the requested details.",
+  required: true,
+  reason: "verification_required",
+  order_reference: "1001",
+  factors: ["email"],
+  fields: [
+    {
+      name: "order_number",
+      type: "text",
+      label: "Order number",
+      required: true,
+    },
+    {
+      name: "email",
+      type: "email",
+      label: "Email address",
+      required: true,
+    },
+  ],
+  submit: { method: "POST", path: "/v1/orders/verify" },
+};
 
 describe("order verification helpers", () => {
-  it("detects track-your-order button and tracking phrases", () => {
-    expect(looksLikeOrderTracking("Track Your Order")).toBe(true);
-    expect(looksLikeOrderTracking("I want to track my order")).toBe(true);
-    expect(looksLikeOrderTracking("where is my order")).toBe(true);
-    expect(looksLikeOrderTracking("What size are the gloves?")).toBe(false);
-  });
-
-  it("offers a local form for tracking intent or an order skill asking for details", () => {
+  it("prefills values returned by the chat API", () => {
     expect(
-      shouldOfferOrderVerification(
-        { skill: "commerce", answer: "The gloves are £14.99" },
-        "Track Your Order",
-      ),
-    ).toBe(true);
-    expect(
-      shouldOfferOrderVerification(
-        {
-          skill: "order",
-          answer:
-            "To track your order, I need to verify your details first. Could you please provide your order number and the email address associated with the order?",
-        },
-        "can you help with shipping",
-      ),
-    ).toBe(true);
-    expect(
-      shouldOfferOrderVerification(
-        { skill: "order", answer: "Your order is on the way." },
-        "is it shipped yet?",
-      ),
-    ).toBe(false);
-    expect(
-      resolveOrderVerification(
-        {
-          skill: "order",
-          answer:
-            "To track your order, I need to verify your details first. Could you please provide your order number and the email address associated with the order?",
-        },
-        "Track Your Order",
-      )?.fields.map((field) => field.name),
-    ).toEqual(["order_number", "email"]);
+      getOrderVerificationInitialValues({
+        ...challenge,
+        order_reference: "1001",
+        values: { email: "buyer@example.com" },
+      }),
+    ).toEqual({
+      order_number: "1001",
+      email: "buyer@example.com",
+    });
   });
 
   it("sends only the fields the descriptor asked for", () => {

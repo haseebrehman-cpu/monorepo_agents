@@ -17,12 +17,14 @@ type AddReplyDialogProps = {
   assignedDepartmentId: number | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  ticketCompleted: boolean;
 };
 
 function AddReplyForm({
   ticketId,
   assignedDepartmentId,
   onOpenChange,
+  ticketCompleted,
 }: Omit<AddReplyDialogProps, "open">) {
   const optionsQuery = useTicketOptions();
   const addReply = useAddTicketReply(ticketId);
@@ -91,19 +93,20 @@ function AddReplyForm({
       </div>
 
       <div className="space-y-4 px-6 py-5">
-        <div className="space-y-1.5">
-          <label htmlFor="reply-assigned-to" className="text-sm font-medium text-slate-700">
-            Assigned to <span className="text-red-500">*</span>
-          </label>
-          <Filters
-            id="reply-assigned-to"
-            value={assignedTo}
-            onChange={setAssignedTo}
-            options={assigneeOptions}
-            placeholder="Select department"
-          />
-        </div>
-
+        {ticketCompleted ? null : (
+          <div className="space-y-1.5">
+            <label htmlFor="reply-assigned-to" className="text-sm font-medium text-slate-700">
+              Assigned to <span className="text-red-500">*</span>
+            </label>
+            <Filters
+              id="reply-assigned-to"
+              value={assignedTo}
+              onChange={setAssignedTo}
+              options={assigneeOptions}
+              placeholder="Select department"
+            />
+          </div>
+        )}
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-slate-700">
             Description <span className="text-red-500">*</span>
@@ -188,6 +191,7 @@ export default function AddReplyDialog({
   assignedDepartmentId,
   open,
   onOpenChange,
+  ticketCompleted
 }: AddReplyDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -198,6 +202,7 @@ export default function AddReplyDialog({
             ticketId={ticketId}
             assignedDepartmentId={assignedDepartmentId}
             onOpenChange={onOpenChange}
+            ticketCompleted={ticketCompleted}
           />
         ) : null}
       </DialogContent>

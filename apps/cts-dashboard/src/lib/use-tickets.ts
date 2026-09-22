@@ -5,10 +5,12 @@ import {
   addTicketReply,
   compactTicketFilters,
   createTicket,
+  deleteTicket,
   EMPTY_TICKET_FILTERS,
   getTicket,
   getTicketOptions,
   listTickets,
+  uploadBulkTickets,
   updateTicketStatus,
   type CreateReplyInput,
   type CreateTicketInput,
@@ -24,9 +26,30 @@ function ticketErrorMessage(error: unknown, fallback: string) {
     if (error.message === "INVALID_ISSUE") return "Select a valid issue.";
     if (error.message === "INVALID_STATUS") return "Select a valid status.";
     if (error.message === "TICKET_NOT_FOUND") return "Ticket not found.";
+    if (error.message === "ORDER_ID_ALREADY_EXISTS") return "That order ID already exists.";
+    if (error.message === "TRACKING_NUMBER_ALREADY_EXISTS") {
+      return "That tracking number already exists.";
+    }
     if (error.message === "INVALID_ATTACHMENT_TYPE") return "Attachments must be PNG, JPG, or PDF.";
     if (error.message === "ATTACHMENT_TOO_LARGE") return "Each attachment must be 10MB or smaller.";
     if (error.message === "TOO_MANY_ATTACHMENTS") return "You can attach up to 10 files.";
+    if (error.message === "BULK_FILE_REQUIRED") return "Select a spreadsheet to upload.";
+    if (error.message === "INVALID_BULK_FILE_TYPE") return "Upload a CSV, XLS, or XLSX file.";
+    if (error.message === "BULK_FILE_TOO_LARGE") return "The spreadsheet must be 5MB or smaller.";
+    if (error.message === "EMPTY_BULK_FILE") return "The spreadsheet has no ticket rows.";
+    if (error.message === "TOO_MANY_BULK_ROWS") return "Upload no more than 500 tickets at once.";
+    if (
+      error.message === "BULK_VALIDATION_FAILED" ||
+      error.message === "MISSING_BULK_COLUMNS"
+    ) {
+      const body = error.body as {
+        details?: Array<{ row?: number; field?: string; message?: string }>;
+      };
+      const first = body?.details?.[0];
+      return first
+        ? `Row ${first.row}, ${first.field}: ${first.message}`
+        : "Some spreadsheet rows are invalid.";
+    }
     if (error.message === "FORBIDDEN") return "You do not have permission to do that.";
     if (error.message) return error.message;
   }
@@ -71,6 +94,20 @@ export function useCreateTicket() {
   });
 }
 
+export function useBulkUploadTickets() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => uploadBulkTickets(file),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      toast.success(`${result.data.createdCount} tickets created`);
+    },
+    onError: (error) => {
+      toast.error(ticketErrorMessage(error, "Could not upload tickets."));
+    },
+  });
+}
+
 export function useUpdateTicketStatus() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -85,6 +122,21 @@ export function useUpdateTicketStatus() {
     },
     onError: (error) => {
       toast.error(ticketErrorMessage(error, "Could not update status."));
+    },
+  });
+}
+
+export function useDeleteTicket() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ticketId: string) => deleteTicket(ticketId),
+    onSuccess: async (_result, ticketId) => {
+      queryClient.removeQueries({ queryKey: ["ticket", ticketId] });
+      await queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      toast.success("Ticket deleted");
+    },
+    onError: (error) => {
+      toast.error(ticketErrorMessage(error, "Could not delete ticket."));
     },
   });
 }

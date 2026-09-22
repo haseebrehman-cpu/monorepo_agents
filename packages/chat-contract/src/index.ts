@@ -262,6 +262,8 @@ export interface OrderVerificationField {
   max_length?: number;
   required?: boolean;
   autocomplete?: string;
+  /** Optional value supplied by the chat API for form prefilling. */
+  value?: string | null;
 }
 
 export interface OrderVerificationSubmit {
@@ -276,6 +278,8 @@ export interface OrderVerificationChallenge {
   order_reference?: string | null;
   factors: string[];
   fields: OrderVerificationField[];
+  /** Optional values supplied by the chat API, keyed by field name. */
+  values?: Record<string, string | null>;
   submit: OrderVerificationSubmit;
   expires_in_seconds?: number;
 }

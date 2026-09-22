@@ -17,7 +17,10 @@ export const createTicketSchema = z.object({
   issue: z.string().trim().min(1, "Issue is required"),
   comment: z.preprocess(emptyToUndefined, z.string().optional().default("")),
   assignedDepartmentId: z.preprocess(emptyToNull, z.coerce.number().int().positive().nullable()),
-  status: z.preprocess(emptyToUndefined, z.string().trim().optional().default("Open")),
+  status: z.preprocess(
+    emptyToUndefined,
+    z.string().trim().optional().default("Not Started")
+  ),
 });
 
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;

@@ -5,13 +5,21 @@ import {
   MAX_ATTACHMENTS,
 } from "./tickets.constants.js";
 import {
+  BulkTicketFileError,
+  parseBulkTicketFile,
+} from "./tickets-bulk.parser.js";
+import {
   createReplySchema,
   createTicketSchema,
   listTicketsQuerySchema,
   ticketIdParamSchema,
   updateTicketSchema,
 } from "./tickets.schema.js";
-import { ticketsService, type TicketAttachmentInput } from "./tickets.service.js";
+import {
+  BulkTicketValidationError,
+  ticketsService,
+  type TicketAttachmentInput,
+} from "./tickets.service.js";
 
 function filesFromRequest(req: Request): TicketAttachmentInput[] {
   const files = Array.isArray(req.files) ? req.files : [];
@@ -39,6 +47,12 @@ function validateAttachments(files: TicketAttachmentInput[]) {
 }
 
 function lookupErrorStatus(message: string) {
+  if (
+    message === "ORDER_ID_ALREADY_EXISTS" ||
+    message === "TRACKING_NUMBER_ALREADY_EXISTS"
+  ) {
+    return 409;
+  }
   if (
     message === "ASSIGNEE_NOT_FOUND" ||
     message === "DEPARTMENT_NOT_FOUND" ||
@@ -123,8 +137,8 @@ export const ticketsController = {
       return res.json({ success: true, data: ticket });
     } catch (e: any) {
       const status = lookupErrorStatus(e.message);
-      if (status === 400) {
-        return res.status(400).json({ success: false, error: e.message });
+      if (status !== 500) {
+        return res.status(status).json({ success: false, error: e.message });
       }
       console.error("[tickets.update] failed:", e);
       return res.status(500).json({ success: false, error: "INTERNAL_SERVER_ERROR" });
@@ -165,8 +179,8 @@ export const ticketsController = {
       return res.status(201).json({ success: true, data: ticket });
     } catch (e: any) {
       const status = lookupErrorStatus(e.message);
-      if (status === 400) {
-        return res.status(400).json({ success: false, error: e.message });
+      if (status !== 500) {
+        return res.status(status).json({ success: false, error: e.message });
       }
       console.error("[tickets.reply] failed:", e);
       return res.status(500).json({ success: false, error: "INTERNAL_SERVER_ERROR" });
@@ -221,10 +235,64 @@ export const ticketsController = {
       return res.status(201).json({ success: true, data: ticket });
     } catch (e: any) {
       const status = lookupErrorStatus(e.message);
-      if (status === 400) {
-        return res.status(400).json({ success: false, error: e.message });
+      if (status !== 500) {
+        return res.status(status).json({ success: false, error: e.message });
       }
       console.error("[tickets.create] failed:", e);
+      return res.status(500).json({ success: false, error: "INTERNAL_SERVER_ERROR" });
+    }
+  },
+
+  async remove(req: Request, res: Response) {
+    const parsed = ticketIdParamSchema.safeParse(req.params);
+    if (!parsed.success) {
+      return res.status(400).json({ success: false, error: "INVALID_ID" });
+    }
+
+    try {
+      const deleted = await ticketsService.remove(parsed.data.ticketId);
+      if (!deleted) {
+        return res.status(404).json({ success: false, error: "TICKET_NOT_FOUND" });
+      }
+      return res.json({ success: true });
+    } catch (error) {
+      console.error("[tickets.remove] failed:", error);
+      return res.status(500).json({ success: false, error: "INTERNAL_SERVER_ERROR" });
+    }
+  },
+
+  async bulkCreate(req: Request, res: Response) {
+    if (!req.user) {
+      return res.status(401).json({ success: false, error: "UNAUTHENTICATED" });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: "BULK_FILE_REQUIRED" });
+    }
+
+    try {
+      const rows = parseBulkTicketFile(req.file.originalname, req.file.buffer);
+      const result = await ticketsService.bulkCreate(rows, req.user.userId);
+      return res.status(201).json({ success: true, data: result });
+    } catch (error) {
+      if (
+        error instanceof BulkTicketFileError ||
+        error instanceof BulkTicketValidationError
+      ) {
+        const status = error.message === "BULK_VALIDATION_FAILED" ? 422 : 400;
+        return res.status(status).json({
+          success: false,
+          error: error.message,
+          details: error.details,
+        });
+      }
+      if (
+        error instanceof Error &&
+        (error.message === "ORDER_ID_ALREADY_EXISTS" ||
+          error.message === "TRACKING_NUMBER_ALREADY_EXISTS")
+      ) {
+        return res.status(409).json({ success: false, error: error.message });
+      }
+      console.error("[tickets.bulkCreate] failed:", error);
       return res.status(500).json({ success: false, error: "INTERNAL_SERVER_ERROR" });
     }
   },

@@ -2,13 +2,19 @@ import { useMemo, useState } from "react";
 import { Button } from "@rdx/ui";
 import { FileUpIcon, Loader, PlusIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import CTS from "../../../components/atoms/CTS";
+import CTS from "../../../components/atoms/TrackingFiltersPane";
 import { hasPermission, P } from "../../../lib/permissions";
 import { EMPTY_TICKET_FILTERS } from "../../../lib/tickets-api";
 import { useMe } from "../../../lib/use-me";
-import { useTicketOptions, useTickets, useUpdateTicketStatus } from "../../../lib/use-tickets";
-import { getTicketColumns } from "./tickets-table/columns";
+import {
+  useDeleteTicket,
+  useTicketOptions,
+  useTickets,
+  useUpdateTicketStatus,
+} from "../../../lib/use-tickets";
+import { getTicketColumns, type Ticket } from "./tickets-table/columns";
 import { DataTable } from "./tickets-table/data-table";
+import DeleteTicketDialog from "./tickets-table/DeleteTicketDialog";
 
 const Tickets = () => {
   const navigate = useNavigate();
@@ -17,17 +23,22 @@ const Tickets = () => {
   const ticketsQuery = useTickets(appliedFilters);
   const optionsQuery = useTicketOptions();
   const updateStatus = useUpdateTicketStatus();
+  const deleteTicket = useDeleteTicket();
+  const [ticketToDelete, setTicketToDelete] = useState<Ticket | null>(null);
+  const user = me.data?.user;
+  const canAdd = hasPermission(user, P.TRACKING_ADD);
+  const canAddBulk = hasPermission(user, P.TRACKING_ADD_BULK);
+  const canDelete = hasPermission(user, P.TRACKING_DELETE);
   const columns = useMemo(
     () =>
       getTicketColumns({
         statuses: optionsQuery.data?.statuses ?? [],
         onView: (ticketId) => navigate(`/tracking/${encodeURIComponent(ticketId)}`),
+        onDelete: setTicketToDelete,
+        canDelete,
       }),
-    [navigate, optionsQuery.data?.statuses]
+    [canDelete, navigate, optionsQuery.data?.statuses]
   );
-  const user = me.data?.user;
-  const canAdd = hasPermission(user, P.TRACKING_ADD);
-  const canAddBulk = hasPermission(user, P.TRACKING_ADD_BULK);
   const ADD_TICKETS = "/add-tickets";
   const ADD_BULK_TICKETS = "/add-bulk-tickets";
   const handleAddTicket = () => {
@@ -73,6 +84,9 @@ const Tickets = () => {
         <DataTable
           columns={columns}
           data={ticketsQuery.data ?? []}
+          isCellEditable={(params) =>
+            params.field !== "status" || params.row.status !== "Completed"
+          }
           processRowUpdate={async (updatedRow, originalRow) => {
             if (updatedRow.status !== originalRow.status) {
               await updateStatus.mutateAsync({
@@ -84,6 +98,20 @@ const Tickets = () => {
           }}
         />
       )}
+      <DeleteTicketDialog
+        ticket={ticketToDelete}
+        open={ticketToDelete !== null}
+        isDeleting={deleteTicket.isPending}
+        onOpenChange={(open) => {
+          if (!open && !deleteTicket.isPending) setTicketToDelete(null);
+        }}
+        onConfirm={() => {
+          if (!ticketToDelete) return;
+          deleteTicket.mutate(ticketToDelete.id, {
+            onSuccess: () => setTicketToDelete(null),
+          });
+        }}
+      />
     </div >
   );
 };

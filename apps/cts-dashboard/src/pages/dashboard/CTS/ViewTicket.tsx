@@ -9,6 +9,7 @@ import AddReplyDialog from "./ticket-detail/AddReplyDialog";
 import TicketHistory from "./ticket-detail/TicketHistory";
 import { TicketAttachmentChip } from "./ticket-detail/TicketAttachmentChip";
 import { formatTicketDate } from "./ticket-detail/helpers";
+import { useMe } from "../../../lib/use-me";
 
 function DetailField({ label, value }: { label: string; value: string }) {
   return (
@@ -23,6 +24,13 @@ const ViewTicket = () => {
   const { ticketId } = useParams();
   const decodedId = ticketId ? decodeURIComponent(ticketId) : "";
   const ticketQuery = useTicket(decodedId || undefined);
+  const meQuery = useMe();
+  const userDepartment = meQuery.data?.user?.department?.name;
+  const isUserInAssignedDepartment = ticketQuery.data?.assignedTo === userDepartment;
+
+  console.log(ticketQuery.data);
+  const ticketCompleted = ticketQuery.data?.status === "Completed";
+
   const [replyOpen, setReplyOpen] = useState(false);
 
   if (ticketQuery.isLoading) {
@@ -68,10 +76,14 @@ const ViewTicket = () => {
             </p>
           </div>
         </div>
-        <Button size="sm" onClick={() => setReplyOpen(true)}>
-          <MessageSquarePlus className="h-4 w-6" />
-          Add reply
-        </Button>
+        {isUserInAssignedDepartment ? (
+          <Button size="sm" onClick={() => setReplyOpen(true)}>
+            <MessageSquarePlus className="h-4 w-6" />
+            Add reply
+          </Button>
+        ) :
+          null
+        }
       </div>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -104,6 +116,7 @@ const ViewTicket = () => {
         assignedDepartmentId={ticket.assignedDepartmentId}
         open={replyOpen}
         onOpenChange={setReplyOpen}
+        ticketCompleted={ticketCompleted}
       />
     </div>
   );

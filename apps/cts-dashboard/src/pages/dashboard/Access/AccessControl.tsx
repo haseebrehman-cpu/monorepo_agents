@@ -4,9 +4,8 @@ import { RequireSuperAdmin } from "../../../routes/guards";
 import UsersManager from "./UsersManager";
 import UserAccessManager from "./UserAccessManager";
 import TicketLookupsManager from "./TicketLookupsManager";
-import DepartmentsManager from "./DepartmentsManager";
 
-type Tab = "users" | "access" | "departments" | "lookups";
+type Tab = "users" | "access" | "lookups";
 
 function AccessControl() {
   const [tab, setTab] = useState<Tab>("users");
@@ -47,18 +46,6 @@ function AccessControl() {
         </button>
         <button
           type="button"
-          onClick={() => setTab("departments")}
-          className={cn(
-            "cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium",
-            tab === "departments"
-              ? "bg-indigo-600 text-white"
-              : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50",
-          )}
-        >
-          Departments
-        </button>
-        <button
-          type="button"
           onClick={() => setTab("lookups")}
           className={cn(
             "cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium",
@@ -75,8 +62,6 @@ function AccessControl() {
         <UsersManager />
       ) : tab === "access" ? (
         <UserAccessManager />
-      ) : tab === "departments" ? (
-        <DepartmentsManager />
       ) : (
         <TicketLookupsManager />
       )}

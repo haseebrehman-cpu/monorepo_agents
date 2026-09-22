@@ -14,14 +14,14 @@ const AddNewTicket = () => {
     const [issue, setIssue] = useState("");
     const [content, setContent] = useState("");
     const [assignedTo, setAssignedTo] = useState("");
-    const [status, setStatus] = useState("Open");
+    const [status, setStatus] = useState("Not Started");
     const [attachments, setAttachments] = useState<File[]>([]);
     const [error, setError] = useState("");
 
     const options = optionsQuery.data;
     const statuses = options?.statuses ?? [];
     const selectedStatus =
-        statuses.length > 0 && !statuses.includes(status) ? statuses[0] : status;
+        statuses.length > 0 && !statuses.includes(status) ? "Not Started" : status;
     const assigneeOptions = (options?.departments ?? []).map((department) => ({
         label: department.name,
         value: String(department.id),
@@ -42,7 +42,7 @@ const AddNewTicket = () => {
                 issue,
                 comment: content,
                 assignedDepartmentId: assignedTo ? Number(assignedTo) : null,
-                status: selectedStatus || "Open",
+                status: selectedStatus || "Not Started",
                 attachments,
             },
             {
@@ -251,14 +251,14 @@ const AddNewTicket = () => {
                     <button
                         type="button"
                         onClick={() => navigate(-1)}
-                        className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition"
+                        className="cursor-pointer px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition"
                     >
                         Cancel
                     </button>
                     <button
                         type="submit"
                         disabled={createTicket.isPending}
-                        className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-60"
+                        className="cursor-pointer px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition disabled:opacity-60"
                     >
                         {createTicket.isPending ? "Creating..." : "Create Ticket"}
                     </button>

@@ -2,29 +2,14 @@ import { useMemo, useState, type FormEvent } from "react";
 import { ApiError } from "@rdx/api-client";
 import type {
   OrderVerificationChallenge,
-  OrderVerificationField,
   OrderVerifyResponse,
 } from "@rdx/chat-contract";
-import { buildOrderVerifyBody } from "@/lib/order-api";
+import {
+  buildOrderVerifyBody,
+  getOrderVerificationInitialValues,
+} from "@/lib/order-api";
 import { useVerifyOrder } from "@/lib/use-order-verify";
 import { isAllowedChatHref } from "@/lib/url-allowlist";
-
-function fieldInputType(field: OrderVerificationField): string {
-  return field.type === "email" ? "email" : "text";
-}
-
-function initialValues(
-  challenge: OrderVerificationChallenge,
-): Record<string, string> {
-  const values: Record<string, string> = {};
-  for (const field of challenge.fields) {
-    values[field.name] =
-      field.name === "order_number" && challenge.order_reference
-        ? challenge.order_reference
-        : "";
-  }
-  return values;
-}
 
 function formatStatus(value?: string | null): string {
   if (!value) return "";
@@ -129,23 +114,24 @@ export default function TrackingForm({
   challenge,
   region,
   disabled = false,
+  hideMessage = false,
   onEscalate,
 }: {
   challenge: OrderVerificationChallenge;
   region: string;
   disabled?: boolean;
+  hideMessage?: boolean;
   onEscalate?: () => void;
 }) {
   const [descriptor, setDescriptor] = useState(challenge);
-  const [values, setValues] = useState(() => initialValues(challenge));
+  const [values, setValues] = useState(() =>
+    getOrderVerificationInitialValues(challenge),
+  );
   const [result, setResult] = useState<OrderVerifyResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const verify = useVerifyOrder(region);
 
-  const fields = useMemo(
-    () => descriptor.fields.filter((field) => field.type !== "password"),
-    [descriptor.fields],
-  );
+  const fields = useMemo(() => descriptor.fields, [descriptor.fields]);
 
   if (result?.verified) {
     return <OrderStatusCard result={result} />;
@@ -166,7 +152,10 @@ export default function TrackingForm({
       setResult(next);
       if (next.challenge) {
         setDescriptor(next.challenge);
-        setValues((prev) => ({ ...initialValues(next.challenge!), ...prev }));
+        setValues((prev) => ({
+          ...getOrderVerificationInitialValues(next.challenge!),
+          ...prev,
+        }));
       }
     } catch (caught) {
       setError(
@@ -182,7 +171,7 @@ export default function TrackingForm({
       onSubmit={(event) => void handleSubmit(event)}
       className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left"
     >
-      {descriptor.message && (
+      {descriptor.message && !hideMessage && (
         <p className="mb-2 text-[12px] text-slate-700">{descriptor.message}</p>
       )}
       {result?.message && (
@@ -211,7 +200,7 @@ export default function TrackingForm({
             </span>
             <input
               name={field.name}
-              type={fieldInputType(field)}
+              type={field.type || "text"}
               required={field.required}
               maxLength={field.max_length}
               autoComplete={field.autocomplete}
