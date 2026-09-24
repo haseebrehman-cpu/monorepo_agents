@@ -1,5 +1,6 @@
 export const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard" },
+  { id: "live_chat", label: "Live Chat" },
   {
     id: "tracking",
     label: "Tracking",
@@ -10,7 +11,7 @@ export const NAV_ITEMS = [
   { id: "courier_invoices", label: "Courier Invoices", children: [
     { id: "invoices", label: "Invoices" },
     { id: "prices", label: "Prices" },
-    { id: "reports", label: "Reports" },
+    { id: "courier_reports", label: "Reports" },
   ] },
   { id: "performance", label: "Performance", children: [
     { id: "overall_details", label: "Overall Details" },
@@ -22,8 +23,9 @@ export const NAV_ITEMS = [
   ] },
   { id: "manual_performance", label: "Manual Performance" },
   { id: "reports", label: "Reports", children: [
-    { id: "refund", label: "Refund" },
-    { id: "resend", label: "Resend" },
+    { id: "reports_refund", label: "Refund" },
+    { id: "reports_resend", label: "Resend" },
+    { id: "reports_return", label: "Return" },
     { id: "frequency", label: "Frequency" },
   ] },
 ] as const;

@@ -289,12 +289,36 @@ export interface OrderItem {
   quantity: number;
 }
 
+export interface OrderTracking {
+  carrier?: string | null;
+  number?: string | null;
+  url?: string | null;
+  link_status?: string | null;
+}
+
 export interface OrderShipment {
   carrier?: string | null;
+  tracking_number?: string | null;
   tracking_url?: string | null;
   status?: string | null;
   estimated_delivery?: string | null;
   source_of_truth?: string | null;
+  position?: number | null;
+  of?: number | null;
+  reference?: string | null;
+  state?: string | null;
+  state_label?: string | null;
+  items?: OrderItem[];
+  tracking?: OrderTracking[];
+  link_status?: string | null;
+  shipped_at?: string | null;
+  in_transit_at?: string | null;
+  delivered_at?: string | null;
+  last_update_at?: string | null;
+  estimate_passed?: boolean | null;
+  stale?: boolean | null;
+  attention?: string | null;
+  courier_unavailable?: boolean | null;
 }
 
 export interface VerifiedOrder {
@@ -304,7 +328,15 @@ export interface VerifiedOrder {
   fulfillment_status?: string | null;
   placed_at?: string | null;
   items?: OrderItem[];
+  cancelled?: boolean | null;
+  cancelled_at?: string | null;
+  overall_state?: string | null;
+  overall_label?: string | null;
   shipments?: OrderShipment[];
+  unshipped_items?: OrderItem[];
+  cancelled_shipments?: number | null;
+  tracking_available?: boolean | null;
+  needs_attention?: boolean | null;
 }
 
 export interface OrderVerifyRequest {

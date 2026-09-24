@@ -3,12 +3,12 @@ export const P = {
   TRACKING_ADD: "tracking.add",
   TRACKING_ADD_BULK: "tracking.add_bulk",
   TRACKING_DELETE: "tracking.delete",
-  REFUND_ACCESS: "refund_resend.access",
-  RESEND_ACCESS: "refund_resend.resend_access",
-  RETURN_ACCESS: "refund_resend.return_access",
-  REFUND_CREATE: "refund_resend.create_refund",
-  RETURN_CREATE: "refund_resend.create_return",
-  RESEND_CREATE: "refund_resend.create_resend",
+  REFUND_ACCESS: "refund.access",
+  REFUND_CREATE: "refund.create",
+  RESEND_ACCESS: "resend.access",
+  RESEND_CREATE: "resend.create",
+  RETURN_ACCESS: "return.access",
+  RETURN_CREATE: "return.create",
   COURIER_INVOICES_ACCESS: "courier_invoices.access",
   COURIER_INVOICES_INVOICES: "courier_invoices.invoices",
   COURIER_INVOICES_PRICES: "courier_invoices.prices",
@@ -24,7 +24,12 @@ export const P = {
   REPORTS_ACCESS: "reports.access",
   REPORTS_REFUND: "reports.refund",
   REPORTS_RESEND: "reports.resend",
+  REPORTS_RETURN: "reports.return",
   REPORTS_FREQUENCY: "reports.frequency",
+  LIVE_CHAT_ACCESS: "live_chat.access",
+  LIVE_CHAT_REPLY: "live_chat.reply",
+  LIVE_CHAT_ASSIGN: "live_chat.assign",
+  LIVE_CHAT_RESOLVE: "live_chat.resolve",
 } as const;
 
 export type PermissionCode = (typeof P)[keyof typeof P];
@@ -69,7 +74,7 @@ const NAV_PERMISSION: Record<string, string> = {
   return: P.RETURN_ACCESS,
   invoices: P.COURIER_INVOICES_INVOICES,
   prices: P.COURIER_INVOICES_PRICES,
-  reports: P.COURIER_INVOICES_REPORTS,
+  courier_reports: P.COURIER_INVOICES_REPORTS,
   overall_details: P.PERFORMANCE_OVERALL,
   on_time_delivery_ratio: P.PERFORMANCE_OTDR,
   in_transit_details: P.PERFORMANCE_IN_TRANSIT,
@@ -77,7 +82,11 @@ const NAV_PERMISSION: Record<string, string> = {
   country_courier_specific: P.PERFORMANCE_COUNTRY_COURIER,
   warehouse_pending: P.PERFORMANCE_WAREHOUSE,
   manual_performance: P.MANUAL_PERFORMANCE_ACCESS,
+  reports_refund: P.REPORTS_REFUND,
+  reports_resend: P.REPORTS_RESEND,
+  reports_return: P.REPORTS_RETURN,
   frequency: P.REPORTS_FREQUENCY,
+  live_chat: P.LIVE_CHAT_ACCESS,
 };
 
 export function canAccessNav(user: AuthLike | null | undefined, navId: string): boolean {

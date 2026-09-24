@@ -23,6 +23,12 @@ const TICKET_CREATE_PERMISSION: Record<string, string> = {
   resend: P.RESEND_CREATE,
 };
 
+const TICKET_VIEW_PERMISSION: Record<string, string> = {
+  refund: P.REFUND_ACCESS,
+  return: P.RETURN_ACCESS,
+  resend: P.RESEND_ACCESS,
+};
+
 export const meService = {
   async getConfig(userId: number) {
     const userQ = await pool.query(
@@ -56,8 +62,9 @@ export const meService = {
 
       const allowedActions: string[] = [];
       const createPerm = TICKET_CREATE_PERMISSION[tt.code];
+      const viewPerm = TICKET_VIEW_PERMISSION[tt.code] ?? P.TRACKING_ACCESS;
       if (createPerm && permissions.includes(createPerm)) allowedActions.push("create");
-      if (permissions.includes(P.REFUND_RESEND_ACCESS) || permissions.includes(P.TRACKING_ACCESS)) {
+      if (permissions.includes(viewPerm)) {
         allowedActions.push("view");
       }
 

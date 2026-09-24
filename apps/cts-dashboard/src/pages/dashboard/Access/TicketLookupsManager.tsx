@@ -1,6 +1,18 @@
 import { useState, type FormEvent } from "react";
-import { Button, Input } from "@rdx/ui";
-import { LoaderCircleIcon } from "lucide-react";
+import { Button, Input, cn } from "@rdx/ui";
+import {
+  LoaderCircleIcon,
+  Building2Icon,
+  TruckIcon,
+  AlertCircleIcon,
+  CircleDotIcon,
+  PlusIcon,
+  Trash2Icon,
+  EyeIcon,
+  EyeOffIcon,
+  LockIcon,
+  UnlockIcon,
+} from "lucide-react";
 import type { TicketLookup, TicketLookupKind } from "../../../lib/admin-api";
 import {
   useAdminDepartments,
@@ -12,6 +24,47 @@ import {
   useUpdateTicketLookup,
 } from "../../../lib/use-admin";
 
+/* ─────────────────────────────────────────────
+   Shared Toggle
+───────────────────────────────────────────── */
+function Toggle({
+  checked,
+  disabled,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  onChange: () => void;
+  label?: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onChange}
+      className={cn(
+        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2",
+        checked ? "bg-indigo-600" : "bg-slate-200",
+        disabled && "cursor-not-allowed opacity-50",
+      )}
+    >
+      <span
+        className={cn(
+          "inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform",
+          checked ? "translate-x-[18px]" : "translate-x-[3px]",
+        )}
+      />
+    </button>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Departments
+───────────────────────────────────────────── */
 function DepartmentsManager() {
   const departments = useAdminDepartments();
   const createDepartment = useCreateDepartment();
@@ -24,39 +77,59 @@ function DepartmentsManager() {
     if (!value) return;
     createDepartment.mutate(
       { name: value },
-      {
-        onSuccess: () => setName(""),
-      },
+      { onSuccess: () => setName("") },
     );
   };
 
   if (departments.isLoading) {
-    return <p className="text-sm text-slate-500">Loading departments...</p>;
+    return (
+      <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-16 text-sm text-slate-500">
+        <LoaderCircleIcon className="h-4 w-4 animate-spin" />
+        Loading departments...
+      </div>
+    );
   }
 
   if (departments.isError) {
-    return <p className="text-sm text-red-600">Could not load departments.</p>;
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-6 text-center text-sm text-red-600">
+        Could not load departments.
+      </div>
+    );
   }
 
   const items = departments.data ?? [];
 
   return (
-    <div className="flex flex-col rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200">
-      <div className="mb-1">
-        <h2 className="text-base font-semibold tracking-tight text-slate-900">
-          Departments ({items.length})
-        </h2>
-        <p className="text-xs leading-relaxed text-slate-500">
-          These departments appear in Assigned to when adding or replying to a ticket, and when creating users.
-        </p>
+    <div className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      {/* Header */}
+      <div className="border-b border-slate-100 px-5 py-4">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+            <Building2Icon className="h-4 w-4" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900">
+              Departments
+              <span className="ml-1.5 text-xs font-normal text-slate-400">
+                ({items.length})
+              </span>
+            </h2>
+            <p className="text-xs text-slate-500">
+              Used in ticket assignment & user creation
+            </p>
+          </div>
+        </div>
       </div>
 
-      <form onSubmit={onAdd} className="mt-5 flex items-center gap-2">
+      {/* Add form */}
+      <form onSubmit={onAdd} className="flex gap-2 border-b border-slate-100 px-5 py-3">
         <Input
           value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Add department"
+          onChange={(e) => setName(e.target.value)}
+          placeholder="New department name"
           required
+          className="flex-1"
         />
         <Button
           type="submit"
@@ -65,36 +138,44 @@ function DepartmentsManager() {
           className="shrink-0"
         >
           {createDepartment.isPending ? (
-            <LoaderCircleIcon className="mr-1.5 h-4 w-4 animate-spin" />
-          ) : null}
-          Add
+            <LoaderCircleIcon className="h-4 w-4 animate-spin" />
+          ) : (
+            <PlusIcon className="h-4 w-4" />
+          )}
         </Button>
       </form>
 
-      {items.length === 0 ? (
-        <p className="mt-5 rounded-lg border border-dashed border-slate-200 px-3.5 py-6 text-center text-xs text-slate-400">
-          No departments yet.
-        </p>
-      ) : (
-        <ul className="mt-5 flex max-h-[480px] flex-col gap-2.5 overflow-y-auto pr-1">
-          {items.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/50 px-3.5 py-2.5"
-            >
-              <p className="truncate text-sm font-medium text-slate-800">{item.name}</p>
-              <button
-                type="button"
-                disabled={deleteDepartment.isPending}
-                onClick={() => deleteDepartment.mutate(item.id)}
-                className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+      {/* List */}
+      <div className="flex-1 overflow-y-auto">
+        {items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 px-5 py-12 text-center">
+            <Building2Icon className="h-8 w-8 text-slate-300" />
+            <p className="text-sm text-slate-400">No departments yet</p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {items.map((item) => (
+              <li
+                key={item.id}
+                className="group flex items-center justify-between gap-3 px-5 py-3 transition-colors hover:bg-slate-50/80"
               >
-                Delete
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+                <p className="truncate text-sm font-medium text-slate-800">
+                  {item.name}
+                </p>
+                <button
+                  type="button"
+                  disabled={deleteDepartment.isPending}
+                  onClick={() => deleteDepartment.mutate(item.id)}
+                  className="rounded-md p-1.5 text-slate-400 opacity-0 transition-all hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Delete department"
+                >
+                  <Trash2Icon className="h-3.5 w-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
@@ -104,24 +185,36 @@ const GROUPS: {
   title: string;
   singular: string;
   hint: string;
+  icon: typeof TruckIcon;
+  iconBg: string;
+  iconColor: string;
 }[] = [
   {
     kind: "courier",
     title: "Couriers",
     singular: "courier",
-    hint: "Shown in the Courier dropdown when adding a ticket.",
+    hint: "Shown when adding a ticket",
+    icon: TruckIcon,
+    iconBg: "bg-sky-50",
+    iconColor: "text-sky-600",
   },
   {
     kind: "issue",
     title: "Issues",
     singular: "issue",
-    hint: "Shown in the Issue dropdown when adding a ticket.",
+    hint: "Shown when adding a ticket",
+    icon: AlertCircleIcon,
+    iconBg: "bg-amber-50",
+    iconColor: "text-amber-600",
   },
   {
     kind: "status",
     title: "Statuses",
     singular: "status",
-    hint: "Mark a status as closed if it should stamp closed-by and closed-at.",
+    hint: "Closed statuses stamp closed-by / closed-at",
+    icon: CircleDotIcon,
+    iconBg: "bg-emerald-50",
+    iconColor: "text-emerald-600",
   },
 ];
 
@@ -131,12 +224,18 @@ function LookupColumn({
   singular,
   hint,
   items,
+  icon: Icon,
+  iconBg,
+  iconColor,
 }: {
   kind: TicketLookupKind;
   title: string;
   singular: string;
   hint: string;
   items: TicketLookup[];
+  icon: typeof TruckIcon;
+  iconBg: string;
+  iconColor: string;
 }) {
   const createLookup = useCreateTicketLookup();
   const updateLookup = useUpdateTicketLookup();
@@ -160,21 +259,43 @@ function LookupColumn({
   };
 
   return (
-    <div className="flex flex-col rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200">
-      <div className="mb-1">
-        <h2 className="text-base font-semibold tracking-tight text-slate-900">
-          {title} ({items.length})
-        </h2>
-        <p className="text-xs leading-relaxed text-slate-500">{hint}</p>
+    <div className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm max-h-[700px] p-3 ">
+      {/* Header */}
+      <div className="border-b border-slate-100 px-5 py-4">
+        <div className="flex items-center gap-2.5">
+          <div
+            className={cn(
+              "flex h-8 w-8 items-center justify-center rounded-lg",
+              iconBg,
+              iconColor,
+            )}
+          >
+            <Icon className="h-4 w-4" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900">
+              {title}
+              <span className="ml-1.5 text-xs font-normal text-slate-400">
+                ({items.length})
+              </span>
+            </h2>
+            <p className="text-xs text-slate-500">{hint}</p>
+          </div>
+        </div>
       </div>
 
-      <form onSubmit={onAdd} className="mt-5 flex flex-col gap-2.5">
-        <div className="flex items-center gap-2">
+      {/* Add form */}
+      <form
+        onSubmit={onAdd}
+        className="flex flex-col gap-2.5 border-b border-slate-100 px-5 py-3"
+      >
+        <div className="flex gap-2">
           <Input
             value={label}
-            onChange={(event) => setLabel(event.target.value)}
+            onChange={(e) => setLabel(e.target.value)}
             placeholder={`Add ${singular}`}
             required
+            className="flex-1"
           />
           <Button
             type="submit"
@@ -183,95 +304,137 @@ function LookupColumn({
             className="shrink-0"
           >
             {createLookup.isPending ? (
-              <LoaderCircleIcon className="mr-1.5 h-4 w-4 animate-spin" />
-            ) : null}
-            Add
+              <LoaderCircleIcon className="h-4 w-4 animate-spin" />
+            ) : (
+              <PlusIcon className="h-4 w-4" />
+            )}
           </Button>
         </div>
-        {kind === "status" ? (
-          <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-slate-600">
-            <input
-              type="checkbox"
+
+        {kind === "status" && (
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
+            <Toggle
               checked={isClosed}
-              onChange={(event) => setIsClosed(event.target.checked)}
-              className="h-3.5 w-3.5 cursor-pointer rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              onChange={() => setIsClosed((v) => !v)}
+              label="Marks ticket as closed"
             />
             Marks ticket as closed
           </label>
-        ) : null}
+        )}
       </form>
 
-      {items.length === 0 ? (
-        <p className="mt-5 rounded-lg border border-dashed border-slate-200 px-3.5 py-6 text-center text-xs text-slate-400">
-          No {title.toLowerCase()} yet.
-        </p>
-      ) : (
-        <ul className="mt-5 flex max-h-[400px] flex-col gap-2.5 overflow-y-auto pr-1">
-          {items.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/50 px-3.5 py-2.5 transition-colors hover:border-slate-200 hover:bg-white hover:shadow-sm"
-            >
-              <div className="min-w-0">
-                <p
-                  className={
-                    item.isActive
-                      ? "truncate text-sm font-medium text-slate-800"
-                      : "truncate text-sm text-slate-400 line-through"
-                  }
-                >
-                  {item.label}
-                </p>
-                <p className="mt-0.5 text-xs text-slate-400">
-                  {!item.isActive
-                    ? "Hidden from add ticket"
-                    : kind === "status" && item.isClosed
-                      ? "Closes ticket"
-                      : "Active"}
-                </p>
-              </div>
+      {/* List */}
+      <div className="flex-1 overflow-y-auto">
+        {items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 px-5 py-12 text-center">
+            <Icon className="h-8 w-8 text-slate-300" />
+            <p className="text-sm text-slate-400">No {title.toLowerCase()} yet</p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {items.map((item) => (
+              <li
+                key={item.id}
+                className="group flex items-center gap-3 px-5 py-3 transition-colors hover:bg-slate-50/80"
+              >
+                <div className="min-w-0 flex-1">
+                  <p
+                    className={cn(
+                      "truncate text-sm font-medium",
+                      item.isActive
+                        ? "text-slate-800"
+                        : "text-slate-400 line-through",
+                    )}
+                  >
+                    {item.label}
+                  </p>
 
-              <div className="flex shrink-0 items-center gap-0.5">
-                <button
-                  type="button"
-                  disabled={updateLookup.isPending}
-                  onClick={() =>
-                    updateLookup.mutate({ id: item.id, isActive: !item.isActive })
-                  }
-                  className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-50 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {item.isActive ? "Hide" : "Show"}
-                </button>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    {!item.isActive && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                        <EyeOffIcon className="h-2.5 w-2.5" />
+                        Hidden
+                      </span>
+                    )}
+                    {kind === "status" && item.isClosed && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                        <LockIcon className="h-2.5 w-2.5" />
+                        Closes ticket
+                      </span>
+                    )}
+                    {item.isActive &&
+                      !(kind === "status" && item.isClosed) && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-600">
+                          Active
+                        </span>
+                      )}
+                  </div>
+                </div>
 
-                {kind === "status" ? (
+                {/* Actions */}
+                <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  {/* Active / Hidden toggle */}
                   <button
                     type="button"
+                    title={item.isActive ? "Hide from dropdown" : "Show in dropdown"}
                     disabled={updateLookup.isPending}
                     onClick={() =>
                       updateLookup.mutate({
                         id: item.id,
-                        isClosed: !item.isClosed,
+                        isActive: !item.isActive,
                       })
                     }
-                    className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 disabled:opacity-40"
                   >
-                    {item.isClosed ? "Not closed" : "Mark closed"}
+                    {item.isActive ? (
+                      <EyeIcon className="h-3.5 w-3.5" />
+                    ) : (
+                      <EyeOffIcon className="h-3.5 w-3.5" />
+                    )}
                   </button>
-                ) : null}
 
-                <button
-                  type="button"
-                  disabled={deleteLookup.isPending}
-                  onClick={() => deleteLookup.mutate(item.id)}
-                  className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+                  {/* Closed toggle (status only) */}
+                  {kind === "status" && (
+                    <button
+                      type="button"
+                      title={
+                        item.isClosed
+                          ? "Don't close tickets"
+                          : "Mark as closing status"
+                      }
+                      disabled={updateLookup.isPending}
+                      onClick={() =>
+                        updateLookup.mutate({
+                          id: item.id,
+                          isClosed: !item.isClosed,
+                        })
+                      }
+                      className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-40"
+                    >
+                      {item.isClosed ? (
+                        <LockIcon className="h-3.5 w-3.5" />
+                      ) : (
+                        <UnlockIcon className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  )}
+
+                  {/* Delete */}
+                  <button
+                    type="button"
+                    title="Delete"
+                    disabled={deleteLookup.isPending}
+                    onClick={() => deleteLookup.mutate(item.id)}
+                    className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                  >
+                    <Trash2Icon className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
@@ -280,19 +443,26 @@ export default function TicketLookupsManager() {
   const lookups = useTicketLookups();
 
   if (lookups.isLoading) {
-    return <p className="text-sm text-slate-500">Loading ticket options...</p>;
+    return (
+      <div className="flex items-center justify-center gap-2 py-24 text-sm text-slate-500">
+        <LoaderCircleIcon className="h-4 w-4 animate-spin" />
+        Loading ticket options...
+      </div>
+    );
   }
 
   if (lookups.isError) {
     return (
-      <p className="text-sm text-red-600">Could not load ticket options.</p>
+      <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-8 text-center text-sm text-red-600">
+        Could not load ticket options.
+      </div>
     );
   }
 
   const items = lookups.data ?? [];
 
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
       <DepartmentsManager />
       {GROUPS.map((group) => (
         <LookupColumn
@@ -302,6 +472,9 @@ export default function TicketLookupsManager() {
           singular={group.singular}
           hint={group.hint}
           items={items.filter((item) => item.kind === group.kind)}
+          icon={group.icon}
+          iconBg={group.iconBg}
+          iconColor={group.iconColor}
         />
       ))}
     </div>

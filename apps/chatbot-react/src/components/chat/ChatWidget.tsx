@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage, ChatOption } from "@rdx/chat-contract";
 import { useTimedCartNotice } from "@/lib/cart-outcome";
+import {
+  resolveOrderVerification,
+  shouldOfferOrderVerification,
+} from "@/lib/order-api";
 import { useCart } from "@/lib/use-cart";
 import { useDialogFocus } from "@/lib/use-dialog-focus";
 import { useSendChat } from "@/lib/use-send-chat";
@@ -20,7 +24,8 @@ export default function ChatWidget({ region }: { region: string }) {
   ]);
   const sendChat = useSendChat();
   const cart = useCart(region, isOpen);
-  const isTyping = sendChat.isPending;
+  const [isOrderChallengePending, setIsOrderChallengePending] = useState(false);
+  const isTyping = sendChat.isPending || isOrderChallengePending;
   const [cartOpen, setCartOpen] = useState(false);
   const [cartNotice, setCartNotice] = useTimedCartNotice();
   const [failedListingIds, setFailedListingIds] = useState<Set<string>>(
@@ -58,6 +63,7 @@ export default function ChatWidget({ region }: { region: string }) {
     generationRef.current += 1;
     conversationIdRef.current = null;
     sendChat.reset();
+    setIsOrderChallengePending(false);
     setInput("");
     setCartOpen(false);
     setCartNotice(null);
@@ -90,22 +96,46 @@ export default function ChatWidget({ region }: { region: string }) {
           region,
         },
         {
-          onSuccess: (result) => {
+          onSuccess: async (result) => {
             if (generation !== generationRef.current) return;
             conversationIdRef.current = result.conversation_id;
 
+            if (shouldOfferOrderVerification(result, trimmed)) {
+              setIsOrderChallengePending(true);
+            }
+
+            let orderVerification = null;
+            try {
+              orderVerification = await resolveOrderVerification(
+                result,
+                trimmed,
+                region,
+              );
+            } catch {
+              // Keep the chat reply usable when the challenge endpoint is unavailable.
+            } finally {
+              if (generation === generationRef.current) {
+                setIsOrderChallengePending(false);
+              }
+            }
+
+            if (generation !== generationRef.current) return;
+            const verificationPrompt = orderVerification?.message?.trim();
             setMessages((prev) => [
               ...prev,
               {
                 id: createMessageId(),
                 role: "assistant",
-                content: result.answer,
+                content: orderVerification
+                  ? verificationPrompt ||
+                    "Before I can look at an order I need to check it belongs to you. Please fill in the form below."
+                  : result.answer,
                 products: result.products,
                 citations: result.citations,
                 escalated: result.escalated,
                 degraded: result.degraded,
                 showMenu: /^m$/i.test(trimmed),
-                order_verification: result.order_verification,
+                order_verification: orderVerification,
               },
             ]);
           },

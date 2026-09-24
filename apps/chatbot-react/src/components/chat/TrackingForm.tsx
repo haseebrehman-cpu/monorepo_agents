@@ -8,16 +8,20 @@ import {
   buildOrderVerifyBody,
   getOrderVerificationInitialValues,
 } from "@/lib/order-api";
+import { buildOrderStatusView, type OrderProductLine } from "@/lib/order-status";
 import { useVerifyOrder } from "@/lib/use-order-verify";
 import { isAllowedChatHref } from "@/lib/url-allowlist";
 
-function formatStatus(value?: string | null): string {
-  if (!value) return "";
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+function ProductLines({ items }: { items: OrderProductLine[] }) {
+  return (
+    <ul className="mt-1.5 space-y-1">
+      {items.map((item, index) => (
+        <li key={`${item.title}-${index}`} className="break-words">
+          {item.quantity} × {item.title}
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 function OrderStatusCard({ result }: { result: OrderVerifyResponse }) {
@@ -35,61 +39,45 @@ function OrderStatusCard({ result }: { result: OrderVerifyResponse }) {
     );
   }
 
+  const view = buildOrderStatusView(order);
+  const facts = [
+    view.payment ? `Payment ${view.payment}` : null,
+    view.placed ? `Placed ${view.placed}` : null,
+  ].filter(Boolean);
+
   return (
     <article className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left">
       <p className="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
-        Order {order.order_number}
+        Order {view.orderNumber}
       </p>
-      <p className="mt-1 text-[13px] font-semibold text-slate-900">
-        {formatStatus(order.status) || "Verified"}
-      </p>
-      <dl className="mt-1.5 space-y-0.5 text-[12px] text-slate-600">
-        {order.financial_status && (
-          <div>
-            <dt className="inline text-slate-500">Payment: </dt>
-            <dd className="inline">{formatStatus(order.financial_status)}</dd>
-          </div>
-        )}
-        {order.fulfillment_status && (
-          <div>
-            <dt className="inline text-slate-500">Fulfilment: </dt>
-            <dd className="inline">{formatStatus(order.fulfillment_status)}</dd>
-          </div>
-        )}
-        {order.placed_at && (
-          <div>
-            <dt className="inline text-slate-500">Placed: </dt>
-            <dd className="inline">{order.placed_at}</dd>
-          </div>
-        )}
-      </dl>
-      {order.items && order.items.length > 0 && (
-        <ul className="mt-2 space-y-0.5 border-t border-slate-200/80 pt-2 text-[12px] text-slate-700">
-          {order.items.map((item, index) => (
-            <li key={`${item.title}-${index}`}>
-              {item.quantity} × {item.title}
-            </li>
-          ))}
-        </ul>
+      <p className="mt-1 text-[13px] font-semibold text-slate-900">{view.headline}</p>
+      {view.summary && (
+        <p className="mt-1 text-[12px] leading-relaxed text-slate-700">{view.summary}</p>
       )}
-      {order.shipments?.map((shipment, index) => {
-        const href = isAllowedChatHref(shipment.tracking_url ?? undefined)
-          ? shipment.tracking_url
+      {facts.length > 0 && (
+        <p className="mt-1 text-[12px] text-slate-500">{facts.join(" · ")}</p>
+      )}
+
+      {view.shipments.map((shipment, index) => {
+        const href = isAllowedChatHref(shipment.trackingUrl ?? undefined)
+          ? shipment.trackingUrl
           : null;
         return (
-          <div
-            key={`${shipment.carrier ?? "shipment"}-${index}`}
+          <section
+            key={`${shipment.heading}-${index}`}
             className="mt-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[12px] text-slate-700"
           >
             <p className="font-medium text-slate-900">
-              {shipment.carrier || "Shipment"}
-              {shipment.status ? ` · ${formatStatus(shipment.status)}` : ""}
+              {shipment.heading}
+              {shipment.carrier ? ` · ${shipment.carrier}` : ""}
             </p>
-            {shipment.estimated_delivery && (
-              <p className="mt-0.5 text-slate-500">
-                Est. delivery {shipment.estimated_delivery}
+            {shipment.items.length > 0 && <ProductLines items={shipment.items} />}
+            {shipment.trackingNumbers.map((number) => (
+              <p key={number} className="mt-1.5 break-all text-slate-600">
+                Tracking number{" "}
+                <span className="font-medium text-slate-900">{number}</span>
               </p>
-            )}
+            ))}
             {href && (
               <a
                 href={href}
@@ -100,9 +88,30 @@ function OrderStatusCard({ result }: { result: OrderVerifyResponse }) {
                 Track shipment
               </a>
             )}
-          </div>
+            {shipment.detail && (
+              <p className="mt-1 leading-relaxed text-slate-500">{shipment.detail}</p>
+            )}
+          </section>
         );
       })}
+
+      {view.unshipped.length > 0 && (
+        <section className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[12px] text-amber-950">
+          <p className="font-medium">Not shipped yet</p>
+          <ProductLines items={view.unshipped} />
+          {view.unshippedNote && (
+            <p className="mt-1.5 leading-relaxed text-amber-800">{view.unshippedNote}</p>
+          )}
+        </section>
+      )}
+
+      {view.otherItems.length > 0 && (
+        <div className="mt-2 border-t border-slate-200/80 pt-2 text-[12px] text-slate-700">
+          <p className="font-medium text-slate-900">Items</p>
+          <ProductLines items={view.otherItems} />
+        </div>
+      )}
+
       {result.note && (
         <p className="mt-2 text-[11px] text-slate-500">{result.note}</p>
       )}

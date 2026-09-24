@@ -53,11 +53,41 @@ async function seedFeatures() {
     );
   }
 
+  await remapLegacyRefundResendPermissions();
+
   const keepCodes = FEATURES.map((feature) => feature.code);
   await pool.query(`DELETE FROM permissions WHERE NOT (code = ANY($1::text[]))`, [
     keepCodes,
   ]);
   console.log(`   ✓ ${FEATURES.length} features`);
+}
+
+async function remapLegacyRefundResendPermissions() {
+  const remaps: Array<{ from: string; to: string[] }> = [
+    {
+      from: "refund_resend.access",
+      to: ["refund.access", "resend.access", "return.access"],
+    },
+    { from: "refund_resend.resend_access", to: ["resend.access"] },
+    { from: "refund_resend.return_access", to: ["return.access"] },
+    { from: "refund_resend.create_refund", to: ["refund.create"] },
+    { from: "refund_resend.create_resend", to: ["resend.create"] },
+    { from: "refund_resend.create_return", to: ["return.create"] },
+  ];
+
+  for (const { from, to } of remaps) {
+    for (const next of to) {
+      await pool.query(
+        `INSERT INTO user_permissions (user_id, permission_id)
+         SELECT up.user_id, dest.id
+         FROM user_permissions up
+         JOIN permissions src ON src.id = up.permission_id AND src.code = $1
+         JOIN permissions dest ON dest.code = $2
+         ON CONFLICT DO NOTHING`,
+        [from, next]
+      );
+    }
+  }
 }
 
 async function seedRoles() {

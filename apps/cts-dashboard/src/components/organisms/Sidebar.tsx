@@ -13,7 +13,7 @@ import {
   TeamIcon,
   cn,
 } from "@rdx/ui";
-import { LogOutIcon, RefreshCcwIcon, RotateCwIcon, ShieldIcon } from "lucide-react";
+import { LogOutIcon, MessageCircleIcon, RefreshCcwIcon, RotateCwIcon, ShieldIcon } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { isSuperAdminUser } from "../../lib/auth";
 import { filterNavItems } from "../../lib/permissions";
@@ -22,6 +22,7 @@ import { useMe } from "../../lib/use-me";
 
 const NAV_ICONS: Record<NavId, ReactNode> = {
   dashboard: <HomeIcon />,
+  live_chat: <MessageCircleIcon className="h-5 w-5" />,
   tracking: <IntegrationIcon />,
   refund: <BookIcon />,
   resend: <RefreshCcwIcon />,

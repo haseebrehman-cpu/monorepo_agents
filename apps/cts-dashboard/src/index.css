@@ -39,3 +39,13 @@ body {
   height: 0;
   width: 0;
 }
+
+/* Unlayered so this wins over Tailwind's button cursor reset. */
+.live-chat :is(button, a[href], [role="option"], [role="tab"]):not(:disabled) {
+  cursor: pointer;
+}
+
+.live-chat button:disabled {
+  cursor: not-allowed;
+  pointer-events: auto;
+}
