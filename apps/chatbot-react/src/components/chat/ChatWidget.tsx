@@ -218,9 +218,8 @@ export default function ChatWidget({ region }: { region: string }) {
                 onListingFailed={handleListingFailed}
                 onCartNotice={setCartNotice}
                 onOptionSelect={handleOptionSelect}
-                onEscalate={() =>
-                  sendUserText("I'd like to speak to someone about my order.")
-                }
+                onNotSatisfied={sendUserText}
+                onTalkToPerson={sendUserText}
                 scrollRef={scrollRef}
               />
 

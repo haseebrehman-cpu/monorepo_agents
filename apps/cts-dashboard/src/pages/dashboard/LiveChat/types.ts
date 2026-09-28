@@ -34,7 +34,7 @@ export type LiveConversation = {
   messages: ChatMessage[];
 };
 
-export type QueueFilter = "queued" | "mine" | "team" | "closed";
+export type QueueFilter = "user_queue" | "active" | "team" | "closed";
 
 export type ComposerMode = "reply" | "note";
 

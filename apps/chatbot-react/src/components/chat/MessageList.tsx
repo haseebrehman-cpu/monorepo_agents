@@ -21,7 +21,8 @@ interface MessageListProps {
   onListingFailed: (listingId: string) => void;
   onCartNotice: (notice: CartNotice) => void;
   onOptionSelect: (option: ChatOption) => void;
-  onEscalate: () => void;
+  onNotSatisfied: (message: string) => void;
+  onTalkToPerson: (message: string) => void;
   scrollRef: RefObject<HTMLDivElement | null>;
 }
 
@@ -57,7 +58,8 @@ export default function MessageList({
   onListingFailed,
   onCartNotice,
   onOptionSelect,
-  onEscalate,
+  onNotSatisfied,
+  onTalkToPerson,
   scrollRef,
 }: MessageListProps) {
   const showMenuHint = messages.filter((m) => m.role === "user").length >= 1;
@@ -152,7 +154,8 @@ export default function MessageList({
                       disabled={
                         isTyping || message.id !== latestVerificationId
                       }
-                      onEscalate={onEscalate}
+                      onNotSatisfied={onNotSatisfied}
+                      onTalkToPerson={onTalkToPerson}
                     />
                   )}
                 </>

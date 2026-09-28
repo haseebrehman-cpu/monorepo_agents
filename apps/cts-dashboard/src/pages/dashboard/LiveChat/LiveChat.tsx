@@ -77,7 +77,7 @@ export default function LiveChatPage() {
   const [memberState, setMembers] = useState<SupportMember[]>(() => createSupportTeam(agentName));
   const [conversations, setConversations] = useState(() => rebalance(createSampleConversations(), createSupportTeam(agentName)));
   const [selectedId, setSelectedId] = useState<string | null>("lc-10482");
-  const [filter, setFilter] = useState<QueueFilter>("queued");
+  const [filter, setFilter] = useState<QueueFilter>("user_queue");
   const [query, setQuery] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [showThreadOnMobile, setShowThreadOnMobile] = useState(false);
@@ -91,7 +91,7 @@ export default function LiveChatPage() {
     () => syncSupportTeam(memberState, agentName, isDeskAdmin),
     [memberState, agentName, isDeskAdmin],
   );
-  const queueFilter: QueueFilter = !isDeskAdmin && filter === "team" ? "queued" : filter;
+  const queueFilter: QueueFilter = !isDeskAdmin && filter === "team" ? "user_queue" : filter;
   const viewer = members.find((member) => member.id === VIEWER_ID);
   const queueLimit = viewer?.limit ?? 6;
   const accepting = viewer?.accepting ?? true;
@@ -152,7 +152,7 @@ export default function LiveChatPage() {
       ),
       true,
     );
-    setFilter("mine");
+    setFilter("active");
     setDeskView("chats");
     announce(`You took the conversation with ${visibleSelected.customerName}. Only you can see it now.`);
   };
@@ -175,7 +175,7 @@ export default function LiveChatPage() {
         },
       ),
     );
-    setFilter(isDeskAdmin ? "team" : "mine");
+    setFilter(isDeskAdmin ? "team" : "active");
     announce(`Chat with ${visibleSelected.customerName} transferred to ${target.name}.`);
   };
 
@@ -199,7 +199,7 @@ export default function LiveChatPage() {
     setConversations(next);
     const placed = next.find((conversation) => conversation.id === released.id);
     const queuedName = memberName(members, placed?.queuedForId ?? null);
-    setFilter("queued");
+    setFilter("user_queue");
     announce(
       queuedName
         ? `You released ${visibleSelected.customerName}. The handoff is now queued for ${queuedName}.`
@@ -243,7 +243,7 @@ export default function LiveChatPage() {
         },
       ),
     );
-    setFilter("mine");
+    setFilter("active");
     announce(`Conversation with ${visibleSelected.customerName} reopened. Only you can see it.`);
   };
 
@@ -293,7 +293,7 @@ export default function LiveChatPage() {
     setConversations(next);
     const placed = next.find((conversation) => conversation.id === incoming.id);
     const queuedName = memberName(members, placed?.queuedForId ?? null);
-    setFilter("queued");
+    setFilter("user_queue");
     setDeskView("chats");
     if (placed && (isDeskAdmin || placed.queuedForId === VIEWER_ID)) setSelectedId(placed.id);
     announce(

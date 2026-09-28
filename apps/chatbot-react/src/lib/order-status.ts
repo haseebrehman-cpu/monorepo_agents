@@ -5,13 +5,27 @@ export interface OrderProductLine {
   quantity: number;
 }
 
+export interface OrderTrackingEventView {
+  label: string;
+  text: string | null;
+  location: string | null;
+  when: string | null;
+}
+
 export interface OrderShipmentView {
   heading: string;
   carrier: string | null;
+  handledBy: string | null;
+  service: string | null;
+  reference: string | null;
   items: OrderProductLine[];
   trackingNumbers: string[];
+  otherNumbers: string[];
   trackingUrl: string | null;
+  trackingLinkNote: string | null;
+  signedFor: boolean;
   detail: string | null;
+  events: OrderTrackingEventView[];
 }
 
 export interface OrderStatusView {
@@ -19,7 +33,11 @@ export interface OrderStatusView {
   headline: string;
   summary: string | null;
   payment: string | null;
+  fulfillment: string | null;
   placed: string | null;
+  cancelledOn: string | null;
+  checkedAt: string | null;
+  cancelledShipmentsNote: string | null;
   shipments: OrderShipmentView[];
   unshipped: OrderProductLine[];
   unshippedNote: string | null;
@@ -45,6 +63,51 @@ export function formatOrderDate(value?: string | null): string | null {
     year: "numeric",
     timeZone: "UTC",
   }).format(date);
+}
+
+function formatOrderStamp(value?: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return formatOrderDate(value);
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+/** Formats a courier local timestamp without shifting its clock time. */
+function formatWallClock(value?: string | null): string | null {
+  if (!value) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(value.trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = match[4];
+  const minute = match[5];
+  const date = new Date(
+    Date.UTC(year, month - 1, day, hour ? Number(hour) : 0, minute ? Number(minute) : 0),
+  );
+  if (Number.isNaN(date.getTime())) return null;
+  const datePart = new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+  if (!hour) return datePart;
+  return `${datePart}, ${hour}:${minute}`;
+}
+
+function deliveredSentence(when: string): string {
+  const split = when.indexOf(", ");
+  if (split === -1) return `Delivered on ${when}.`;
+  return `Delivered on ${when.slice(0, split)} at ${when.slice(split + 2)}.`;
 }
 
 function itemQuantity(items: OrderItem[]): number {
@@ -85,6 +148,20 @@ function trackingNumbers(shipment: OrderShipment): string[] {
   return numbers;
 }
 
+function uniqueText(values: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    const text = value?.trim();
+    if (!text) continue;
+    const key = text.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(text);
+  }
+  return result;
+}
+
 function trackingUrl(shipment: OrderShipment): string | null {
   const candidates = [
     shipment.tracking_url,
@@ -95,6 +172,67 @@ function trackingUrl(shipment: OrderShipment): string | null {
     if (url) return url;
   }
   return null;
+}
+
+function handledBy(shipment: OrderShipment): string | null {
+  const carrier = shipment.carrier?.trim().toLowerCase();
+  const names = uniqueText(
+    (shipment.tracking ?? []).map((entry) => entry.handled_by),
+  ).filter((name) => name.toLowerCase() !== carrier);
+  return names.length > 0 ? names.join(", ") : null;
+}
+
+function trackingService(shipment: OrderShipment): string | null {
+  const services = uniqueText((shipment.tracking ?? []).map((entry) => entry.service));
+  return services.length > 0 ? services.join(", ") : null;
+}
+
+function otherNumbers(shipment: OrderShipment): string[] {
+  const primary = new Set(trackingNumbers(shipment).map((number) => number.toLowerCase()));
+  return uniqueText(
+    (shipment.tracking ?? []).flatMap((entry) => entry.other_numbers ?? []),
+  ).filter((number) => !primary.has(number.toLowerCase()));
+}
+
+function trackingLinkNote(shipment: OrderShipment, url: string | null): string | null {
+  if (url) return null;
+  const statuses = [
+    shipment.link_status,
+    ...(shipment.tracking ?? []).map((entry) => entry.link_status),
+  ];
+  const missing = statuses.some((status) => {
+    const value = status?.trim().toLowerCase();
+    return value === "missing" || value === "unavailable";
+  });
+  if (!missing || trackingNumbers(shipment).length === 0) return null;
+  return "A courier tracking link is not available.";
+}
+
+function sameLabel(left?: string | null, right?: string | null): boolean {
+  const a = left?.trim().toLowerCase();
+  const b = right?.trim().toLowerCase();
+  return Boolean(a && b && a === b);
+}
+
+function trackingEvents(shipment: OrderShipment): OrderTrackingEventView[] {
+  return (shipment.events ?? []).flatMap((event) => {
+    const label = event.label?.trim() || formatOrderStatus(event.state) || "Update";
+    const text = event.text?.trim() || null;
+    const location = event.location?.trim() || null;
+    const when =
+      event.has_time === false
+        ? formatOrderDate(event.local ?? event.at)
+        : formatWallClock(event.local) ?? formatOrderStamp(event.at);
+    if (!label && !text && !when) return [];
+    return [
+      {
+        label,
+        text: text && !sameLabel(text, label) ? text : null,
+        location,
+        when,
+      },
+    ];
+  });
 }
 
 function shipmentHeading(shipment: OrderShipment): string {
@@ -112,14 +250,35 @@ function shipmentHeading(shipment: OrderShipment): string {
 
 function shipmentDetail(shipment: OrderShipment): string | null {
   const sentences: string[] = [];
-  const delivered = formatOrderDate(shipment.delivered_at);
+  const hasEvents = (shipment.events?.length ?? 0) > 0;
+  const deliveredWhen =
+    formatWallClock(shipment.delivered_at_local) ?? formatOrderDate(shipment.delivered_at);
   const shipped = formatOrderDate(shipment.shipped_at);
+  const inTransit = formatOrderDate(shipment.in_transit_at);
+  const outForDelivery = formatOrderDate(shipment.out_for_delivery_at);
+  const pickup = formatOrderDate(shipment.available_for_pickup_at);
+  const failed = formatOrderDate(shipment.failed_attempt_at);
   const estimate = formatOrderDate(shipment.estimated_delivery);
 
-  if (delivered) sentences.push(`Delivered on ${delivered}.`);
-  else if (shipped) sentences.push(`Shipped on ${shipped}.`);
+  if (deliveredWhen) {
+    sentences.push(deliveredSentence(deliveredWhen));
+  } else if (hasEvents) {
+    if (shipped) sentences.push(`Shipped on ${shipped}.`);
+  } else {
+    if (shipped) sentences.push(`Shipped on ${shipped}.`);
+    if (inTransit && inTransit !== shipped) {
+      sentences.push(`In transit since ${inTransit}.`);
+    }
+    if (outForDelivery) sentences.push(`Out for delivery on ${outForDelivery}.`);
+    if (pickup) sentences.push(`Available for pickup since ${pickup}.`);
+  }
 
-  if (!delivered && estimate) {
+  if (failed) sentences.push(`A delivery attempt failed on ${failed}.`);
+  if (pickup && deliveredWhen == null && hasEvents) {
+    sentences.push(`Available for pickup since ${pickup}.`);
+  }
+
+  if (!deliveredWhen && estimate) {
     sentences.push(
       shipment.estimate_passed
         ? `The estimated delivery date of ${estimate} has passed.`
@@ -128,7 +287,7 @@ function shipmentDetail(shipment: OrderShipment): string | null {
   }
 
   const stale = shipment.stale === true || shipment.attention === "no_recent_update";
-  if (stale && !delivered) {
+  if (stale && !deliveredWhen) {
     const since = formatOrderDate(shipment.last_update_at);
     if (shipped && since && since !== shipped) {
       sentences.push(`There has been no tracking update since ${since}.`);
@@ -145,7 +304,23 @@ function shipmentDetail(shipment: OrderShipment): string | null {
     sentences.push("Live courier tracking is not available.");
   }
 
+  if (shipment.conflict) {
+    const store = formatOrderStatus(shipment.store_state);
+    const courier = formatOrderStatus(shipment.courier_state);
+    if (store && courier && store.toLowerCase() !== courier.toLowerCase()) {
+      sentences.push(`The store shows ${store}, while the courier shows ${courier}.`);
+    } else {
+      sentences.push("The store and courier statuses do not match.");
+    }
+  }
+
   return sentences.length > 0 ? sentences.join(" ") : null;
+}
+
+function cancelledShipmentsNote(count: number): string | null {
+  if (count === 1) return "1 shipment on this order was cancelled.";
+  if (count > 1) return `${count} shipments on this order were cancelled.`;
+  return null;
 }
 
 function summaryFor(input: {
@@ -183,14 +358,24 @@ function summaryFor(input: {
 
 export function buildOrderStatusView(order: VerifiedOrder): OrderStatusView {
   const shipments = order.shipments ?? [];
-  const shipmentViews = shipments.map((shipment) => ({
-    heading: shipmentHeading(shipment),
-    carrier: shipment.carrier?.trim() || null,
-    items: productLines(shipment.items),
-    trackingNumbers: trackingNumbers(shipment),
-    trackingUrl: trackingUrl(shipment),
-    detail: shipmentDetail(shipment),
-  }));
+  const shipmentViews = shipments.map((shipment) => {
+    const url = trackingUrl(shipment);
+    return {
+      heading: shipmentHeading(shipment),
+      carrier: shipment.carrier?.trim() || null,
+      handledBy: handledBy(shipment),
+      service: trackingService(shipment),
+      reference: shipment.reference?.trim() || null,
+      items: productLines(shipment.items),
+      trackingNumbers: trackingNumbers(shipment),
+      otherNumbers: otherNumbers(shipment),
+      trackingUrl: url,
+      trackingLinkNote: trackingLinkNote(shipment, url),
+      signedFor: (shipment.tracking ?? []).some((entry) => entry.signed_for === true),
+      detail: shipmentDetail(shipment),
+      events: trackingEvents(shipment),
+    };
+  });
   const knowsUnshipped = Array.isArray(order.unshipped_items);
   const unshipped = productLines(order.unshipped_items);
   const shippedQty = shipmentViews.reduce(
@@ -216,6 +401,10 @@ export function buildOrderStatusView(order: VerifiedOrder): OrderStatusView {
     headline = formatOrderStatus(order.status);
   }
 
+  const fulfillment = order.fulfillment_status
+    ? formatOrderStatus(order.fulfillment_status)
+    : null;
+
   return {
     orderNumber: order.order_number,
     headline,
@@ -229,7 +418,14 @@ export function buildOrderStatusView(order: VerifiedOrder): OrderStatusView {
     payment: order.financial_status
       ? formatOrderStatus(order.financial_status)
       : null,
+    fulfillment:
+      fulfillment && fulfillment.toLowerCase() !== headline.toLowerCase()
+        ? fulfillment
+        : null,
     placed: formatOrderDate(order.placed_at),
+    cancelledOn: order.cancelled ? formatOrderDate(order.cancelled_at) : null,
+    checkedAt: formatOrderStamp(order.as_of),
+    cancelledShipmentsNote: cancelledShipmentsNote(order.cancelled_shipments ?? 0),
     shipments: shipmentViews,
     unshipped,
     unshippedNote:

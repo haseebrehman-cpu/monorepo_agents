@@ -289,11 +289,34 @@ export interface OrderItem {
   quantity: number;
 }
 
+export interface OrderTrackingEvent {
+  state?: string | null;
+  label?: string | null;
+  text?: string | null;
+  location?: string | null;
+  at?: string | null;
+  local?: string | null;
+  has_time?: boolean | null;
+}
+
+export interface OrderCourierSnapshot {
+  provider?: string | null;
+  status?: string | null;
+  as_of?: string | null;
+  cached?: boolean | null;
+}
+
 export interface OrderTracking {
   carrier?: string | null;
   number?: string | null;
   url?: string | null;
   link_status?: string | null;
+  courier_status?: string | null;
+  state?: string | null;
+  handled_by?: string | null;
+  service?: string | null;
+  signed_for?: boolean | null;
+  other_numbers?: string[] | null;
 }
 
 export interface OrderShipment {
@@ -308,17 +331,28 @@ export interface OrderShipment {
   reference?: string | null;
   state?: string | null;
   state_label?: string | null;
+  store_state?: string | null;
+  carrier_state?: string | null;
+  carrier_state_at?: string | null;
+  courier_state?: string | null;
+  conflict?: boolean | null;
   items?: OrderItem[];
   tracking?: OrderTracking[];
   link_status?: string | null;
   shipped_at?: string | null;
   in_transit_at?: string | null;
+  out_for_delivery_at?: string | null;
+  available_for_pickup_at?: string | null;
+  failed_attempt_at?: string | null;
   delivered_at?: string | null;
+  delivered_at_local?: string | null;
   last_update_at?: string | null;
   estimate_passed?: boolean | null;
   stale?: boolean | null;
   attention?: string | null;
   courier_unavailable?: boolean | null;
+  courier?: OrderCourierSnapshot | null;
+  events?: OrderTrackingEvent[] | null;
 }
 
 export interface VerifiedOrder {
@@ -337,6 +371,7 @@ export interface VerifiedOrder {
   cancelled_shipments?: number | null;
   tracking_available?: boolean | null;
   needs_attention?: boolean | null;
+  as_of?: string | null;
 }
 
 export interface OrderVerifyRequest {

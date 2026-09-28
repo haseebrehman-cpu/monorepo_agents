@@ -7,14 +7,14 @@ import { avatarColor, formatQueueTime, formatQueueTimeLabel, initials } from "./
 import type { LiveConversation, QueueFilter, SupportMember } from "./types";
 
 const AGENT_FILTERS: { id: QueueFilter; label: string }[] = [
-  { id: "queued", label: "Queued" },
-  { id: "mine", label: "Mine" },
+  { id: "user_queue", label: "User Queue" },
+  { id: "active", label: "Active" },
   { id: "closed", label: "Closed" },
 ];
 
 const ADMIN_FILTERS: { id: QueueFilter; label: string }[] = [
-  { id: "queued", label: "Incoming" },
-  { id: "mine", label: "Mine" },
+  { id: "user_queue", label: "User Queue" },
+  { id: "active", label: "Active" },
   { id: "team", label: "Team" },
   { id: "closed", label: "Closed" },
 ];
@@ -28,10 +28,10 @@ function matchesFilter(
   viewerId: string,
   isDeskAdmin: boolean,
 ) {
-  if (filter === "queued") {
+  if (filter === "user_queue") {
     return conversation.status === "waiting" && (isDeskAdmin || conversation.queuedForId === viewerId);
   }
-  if (filter === "mine") return conversation.status === "active" && conversation.ownerId === viewerId;
+  if (filter === "active") return conversation.status === "active" && conversation.ownerId === viewerId;
   if (filter === "team") return isDeskAdmin && conversation.status === "active" && conversation.ownerId !== viewerId;
   return conversation.status === "resolved" && (isDeskAdmin || conversation.ownerId === viewerId);
 }
@@ -85,8 +85,8 @@ export default function ConversationList({
   const filters = isDeskAdmin ? ADMIN_FILTERS : AGENT_FILTERS;
   const listRef = useRef<HTMLDivElement>(null);
   const counts = {
-    queued: conversations.filter((item) => matchesFilter(item, "queued", viewerId, isDeskAdmin)).length,
-    mine: conversations.filter((item) => matchesFilter(item, "mine", viewerId, isDeskAdmin)).length,
+    user_queue: conversations.filter((item) => matchesFilter(item, "user_queue", viewerId, isDeskAdmin)).length,
+    active: conversations.filter((item) => matchesFilter(item, "active", viewerId, isDeskAdmin)).length,
     team: conversations.filter((item) => matchesFilter(item, "team", viewerId, isDeskAdmin)).length,
     closed: conversations.filter((item) => matchesFilter(item, "closed", viewerId, isDeskAdmin)).length,
   };
@@ -106,7 +106,7 @@ export default function ConversationList({
       );
     })
     .sort((left, right) => {
-      if (filter === "queued") {
+      if (filter === "user_queue") {
         return new Date(left.handedOffAt).getTime() - new Date(right.handedOffAt).getTime();
       }
       return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
@@ -166,18 +166,18 @@ export default function ConversationList({
             )}
           >
             <span
-              className={cn("h-1.5 w-1.5 rounded-full", accepting ? "bg-emerald-500" : "bg-slate-400")}
+              className={cn("h-1.5 w-1.5 rounded-full", accepting ? "bg-emerald-500" : "bg-red-400")}
               aria-hidden="true"
             />
-            {accepting ? "Accepting" : "Not accepting"}
+            {accepting ? "Online" : "Offline"}
           </button>
         </div>
         <p className="mt-1 text-xs leading-5 text-slate-600">
           {isDeskAdmin
             ? "Every new handoff is listed here. Your own queue still stops at your limit."
-            : counts.queued === 0
+            : counts.user_queue === 0
               ? `No handoffs in your queue. Your limit is ${queueLimit}.`
-              : `${counts.queued} of ${queueLimit} queue ${counts.queued === 1 ? "slot is" : "slots are"} filled. Longest wait is first.`}
+              : `${counts.user_queue} of ${queueLimit} queue ${counts.user_queue === 1 ? "slot is" : "slots are"} filled. Longest wait is first.`}
         </p>
         <label className="mt-3 flex items-center justify-between gap-3 text-xs font-medium text-slate-700">
           Your queue limit
@@ -253,7 +253,7 @@ export default function ConversationList({
                 )}
               >
                 {item.label}
-                <span className={selected ? "text-indigo-700" : "text-slate-500"}>{counts[item.id]}</span>
+                <span className={selected ? "text-indigo-700" : "text-slate-500"}>{counts[item.id as keyof typeof counts]}</span>
               </button>
             );
           })}

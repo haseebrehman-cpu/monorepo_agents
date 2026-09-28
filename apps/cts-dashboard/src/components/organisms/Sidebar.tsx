@@ -57,6 +57,13 @@ export default function Sidebar({
   const user = me.data?.user;
   const isSuperAdmin = isSuperAdminUser(user);
   const navItems = filterNavItems(NAV_ITEMS, user);
+  const userDepartment = me.data?.user?.department?.name;
+  console.log(userDepartment);
+  
+  const isCustomerSupport = userDepartment === "Customer Support";
+  const isSupplyChain = userDepartment === "Supply Chain Management";
+  const isCompliance = userDepartment === "Compliance";
+
 
   const toggleExpanded = (id: NavId) => {
     setExpandedIds((current) => ({ ...current, [id]: !current[id] }));
@@ -68,7 +75,7 @@ export default function Sidebar({
       className={cn(
         "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-slate-950 text-slate-300 transition-transform duration-200 md:static md:translate-x-0 md:transition-[width]",
         mobileOpen ? "translate-x-0" : "-translate-x-full",
-        collapsed ? "md:w-20" : "md:w-64",
+        collapsed ? "md:w-20" : "md:w-72",
       )}
     >
       <div
@@ -81,8 +88,8 @@ export default function Sidebar({
           CTS
         </div>
         <div className={cn("min-w-0 flex-1", iconOnly && "hidden")}>
-          <p className="truncate text-sm font-semibold text-white">CTS</p>
-          <p className="truncate text-xs text-slate-400">Courier Dashboard</p>
+          {/* <p className="truncate text-sm font-semibold text-white">CTS</p> */}
+          <p className="truncate text-xs text-slate-400">{isCustomerSupport && "Customer Support Dashboard" || isSupplyChain && "Supply Chain Dashboard" || isCompliance && "Compliance Dashboard" || "CTS Dashboard"}</p>
         </div>
         <Button
           size="sm"
