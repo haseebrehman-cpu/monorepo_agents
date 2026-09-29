@@ -141,6 +141,9 @@ function OrderStatusCard({ result }: { result: OrderVerifyResponse }) {
     view.cancelledOn ? `Cancelled ${view.cancelledOn}` : null,
   ].filter(Boolean);
 
+
+  console.log(view);
+
   return (
     <article className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left">
       <p className="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">

@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent } from "react";
+import { useState, useRef, type KeyboardEvent } from "react";
 import { cn } from "@rdx/ui";
 import { InboxIcon, SearchIcon } from "lucide-react";
 import { memberName } from "./assignment";
@@ -54,6 +54,7 @@ function optionLabel(conversation: LiveConversation) {
 export default function ConversationList({
   conversations,
   selectedId,
+  openChatIds = [],
   filter,
   query,
   accepting,
@@ -66,9 +67,12 @@ export default function ConversationList({
   onAccepting,
   onLimit,
   onSelect,
+  dockInset = false,
 }: {
   conversations: LiveConversation[];
   selectedId: string | null;
+  /** IDs currently open in the main panel or a side window */
+  openChatIds?: string[];
   filter: QueueFilter;
   query: string;
   accepting: boolean;
@@ -81,9 +85,17 @@ export default function ConversationList({
   onAccepting: (accepting: boolean) => void;
   onLimit: (limit: number) => void;
   onSelect: (id: string, options?: { openThread?: boolean; focusThread?: boolean }) => void;
+  /** Leave room so the last rows stay above side-chat pills. */
+  dockInset?: boolean;
 }) {
   const filters = isDeskAdmin ? ADMIN_FILTERS : AGENT_FILTERS;
   const listRef = useRef<HTMLDivElement>(null);
+  const [cursorId, setCursorId] = useState<string | null>(selectedId);
+  const [cursorOwner, setCursorOwner] = useState(selectedId);
+  if (selectedId !== cursorOwner) {
+    setCursorOwner(selectedId);
+    setCursorId(selectedId);
+  }
   const counts = {
     user_queue: conversations.filter((item) => matchesFilter(item, "user_queue", viewerId, isDeskAdmin)).length,
     active: conversations.filter((item) => matchesFilter(item, "active", viewerId, isDeskAdmin)).length,
@@ -112,10 +124,17 @@ export default function ConversationList({
       return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
     });
 
-  const moveSelection = (nextIndex: number) => {
+  const activeId =
+    cursorId && visible.some((item) => item.id === cursorId)
+      ? cursorId
+      : visible.some((item) => item.id === selectedId)
+        ? selectedId
+        : (visible[0]?.id ?? null);
+
+  const moveCursor = (nextIndex: number) => {
     const next = visible[nextIndex];
     if (!next) return;
-    onSelect(next.id, { openThread: false });
+    setCursorId(next.id);
     listRef.current?.querySelector<HTMLElement>(`#conversation-${next.id}`)?.scrollIntoView({
       block: "nearest",
     });
@@ -123,19 +142,19 @@ export default function ConversationList({
 
   const onListKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (visible.length === 0) return;
-    const index = visible.findIndex((item) => item.id === selectedId);
+    const index = visible.findIndex((item) => item.id === activeId);
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      moveSelection(index === -1 ? 0 : Math.min(visible.length - 1, index + 1));
+      moveCursor(index === -1 ? 0 : Math.min(visible.length - 1, index + 1));
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
-      moveSelection(index === -1 ? 0 : Math.max(0, index - 1));
+      moveCursor(index === -1 ? 0 : Math.max(0, index - 1));
     } else if (event.key === "Home") {
       event.preventDefault();
-      moveSelection(0);
+      moveCursor(0);
     } else if (event.key === "End") {
       event.preventDefault();
-      moveSelection(visible.length - 1);
+      moveCursor(visible.length - 1);
     } else if (event.key === "Enter" && index >= 0) {
       event.preventDefault();
       onSelect(visible[index].id, { openThread: true, focusThread: true });
@@ -265,12 +284,14 @@ export default function ConversationList({
         id="live-chat-conversation-list"
         role="listbox"
         aria-label="Conversations"
-        aria-activedescendant={
-          selectedId && visible.some((item) => item.id === selectedId) ? `conversation-${selectedId}` : undefined
-        }
+        aria-activedescendant={activeId ? `conversation-${activeId}` : undefined}
         tabIndex={0}
         onKeyDown={onListKeyDown}
-        className={cn("min-h-0 flex-1 overflow-y-auto p-2 outline-none", focusRing)}
+        onBlur={(event) => {
+          if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+          setCursorId(selectedId);
+        }}
+        className={cn("min-h-0 flex-1 overflow-y-auto p-2 outline-none", dockInset && "pb-16", focusRing)}
       >
         {visible.length === 0 ? (
           <div className="flex flex-col items-center px-4 py-16 text-center">
@@ -282,6 +303,8 @@ export default function ConversationList({
           <div className="flex flex-col gap-1">
             {visible.map((conversation) => {
               const selected = conversation.id === selectedId;
+              const active = conversation.id === activeId;
+              const isOpen = openChatIds.includes(conversation.id);
               const waited = formatQueueTime(conversation.handedOffAt);
               const tags = conversation.tags.map((id) => tagById(id)).filter((tag) => tag !== null);
               return (
@@ -296,7 +319,10 @@ export default function ConversationList({
                     "flex w-full cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 text-left transition-colors",
                     selected
                       ? "border-indigo-200 bg-indigo-50/70"
-                      : "border-transparent hover:bg-slate-50",
+                      : isOpen
+                        ? "border-indigo-100 bg-indigo-50/40"
+                        : "border-transparent hover:bg-slate-50",
+                    active && !selected && "ring-2 ring-indigo-400 ring-inset",
                   )}
                 >
                   <span
@@ -311,6 +337,8 @@ export default function ConversationList({
                       <span className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-white" />
                     ) : conversation.typing ? (
                       <span className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                    ) : isOpen && !selected ? (
+                      <span className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full bg-indigo-500 ring-2 ring-white" />
                     ) : null}
                   </span>
                   <span className="min-w-0 flex-1">
@@ -325,6 +353,9 @@ export default function ConversationList({
                     </span>
                     <span className="mt-2 flex flex-wrap items-center gap-1.5">
                       <StatusChip status={conversation.status} />
+                      {isOpen && !selected ? (
+                        <span className="text-[10px] font-medium text-indigo-700">Open</span>
+                      ) : null}
                       {conversation.status === "waiting" ? (
                         <span className="text-[11px] font-medium text-amber-800">
                           {waited === "now" ? "Just queued" : `${waited} in queue`}

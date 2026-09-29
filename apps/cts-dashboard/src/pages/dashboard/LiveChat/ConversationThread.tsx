@@ -11,8 +11,10 @@ import {
   RotateCcwIcon,
   SendIcon,
   StickyNoteIcon,
+  XIcon,
 } from "lucide-react";
 import { CANNED, fillCanned } from "./catalog";
+import { MAX_OPEN_CHATS } from "./open-chats";
 import { StatusChip } from "./ConversationList";
 import { avatarColor, formatMessageTime, formatQueueTime, initials } from "./format";
 import type { ChatMessage, ComposerMode, LiveConversation } from "./types";
@@ -40,6 +42,7 @@ export default function ConversationThread({
   onOpenTransfer,
   onBack,
   onOpenDetails,
+  onCloseChat,
 }: {
   conversation: LiveConversation | null;
   agentName: string;
@@ -60,6 +63,8 @@ export default function ConversationThread({
   onOpenTransfer: () => void;
   onBack: () => void;
   onOpenDetails: () => void;
+  /** Close this chat from the open slots (main + floating). */
+  onCloseChat?: () => void;
 }) {
   if (!conversation) {
     return (
@@ -68,6 +73,7 @@ export default function ConversationThread({
         <h2 className="mt-3 text-sm font-semibold text-slate-900">Select a chat</h2>
         <p className="mt-1 max-w-sm text-sm leading-6 text-slate-600">
           Queued chats are customers the assistant has already passed to a person. Take one, reply, or transfer it.
+          Open up to {MAX_OPEN_CHATS} chats at once. This panel keeps the one you are working in, and the others sit in windows along the bottom.
         </p>
       </section>
     );
@@ -94,6 +100,7 @@ export default function ConversationThread({
       onOpenTransfer={onOpenTransfer}
       onBack={onBack}
       onOpenDetails={onOpenDetails}
+      onCloseChat={onCloseChat}
     />
   );
 }
@@ -118,6 +125,7 @@ function ThreadView({
   onOpenTransfer,
   onBack,
   onOpenDetails,
+  onCloseChat,
 }: {
   conversation: LiveConversation;
   agentName: string;
@@ -138,6 +146,7 @@ function ThreadView({
   onOpenTransfer: () => void;
   onBack: () => void;
   onOpenDetails: () => void;
+  onCloseChat?: () => void;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const ownsChat = conversation.ownerId === viewerId && conversation.status === "active";
@@ -255,6 +264,19 @@ function ThreadView({
               <RotateCcwIcon className="h-3.5 w-3.5" aria-hidden="true" />
               Reopen
             </Button>
+          ) : null}
+          {onCloseChat ? (
+            <button
+              type="button"
+              aria-label="Close this chat window"
+              onClick={onCloseChat}
+              className={cn(
+                "inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-slate-500 ring-1 ring-slate-200 hover:bg-red-50 hover:text-red-700",
+                focusRing,
+              )}
+            >
+              <XIcon className="h-4 w-4" />
+            </button>
           ) : null}
         </div>
       </header>

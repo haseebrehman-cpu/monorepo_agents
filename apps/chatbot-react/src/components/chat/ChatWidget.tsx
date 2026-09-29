@@ -17,6 +17,7 @@ import { createMessageId, createWelcomeMessage } from "./messages";
 import { PANEL_ID, STORE_NAME } from "./constants";
 
 export default function ChatWidget({ region }: { region: string }) {
+  const elementRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
@@ -184,6 +185,7 @@ export default function ChatWidget({ region }: { region: string }) {
       {isOpen && (
         <div
           id={PANEL_ID}
+          ref={elementRef}
           role="dialog"
           aria-modal="true"
           aria-label={`${STORE_NAME} Assistant`}
@@ -198,6 +200,7 @@ export default function ChatWidget({ region }: { region: string }) {
             cartOpen={cartOpen}
             cartCount={cart.data?.lines?.length ?? 0}
             region={region}
+            elementRef={elementRef as React.RefObject<HTMLDivElement>}
           />
 
           {cartOpen ? (

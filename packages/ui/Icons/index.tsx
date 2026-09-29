@@ -108,6 +108,30 @@ export function FullScreenIcon({
   );
 }
 
+export function ExitFullScreenIcon({
+  className = "h-6 w-6",
+}: {
+  className?: string;
+}): React.ReactElement {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M9 3v6H3" />
+      <path d="M15 3v6h6" />
+      <path d="M9 21v-6H3" />
+      <path d="M15 21v-6h6" />
+    </svg>
+  );
+}
+
 export function SendIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
     <svg

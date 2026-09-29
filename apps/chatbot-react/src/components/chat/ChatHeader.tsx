@@ -1,6 +1,13 @@
-import { Button, CrossCircleIcon, PlusIcon } from "@rdx/ui";
+import {
+  Button,
+  CrossCircleIcon,
+  ExitFullScreenIcon,
+  FullScreenIcon,
+  PlusIcon,
+} from "@rdx/ui";
 import { useHealthz } from "@/lib/use-healthz";
 import { CHATBOT_ICON_SRC, STORE_NAME } from "./constants";
+import { useEffect, useState } from "react";
 
 interface ChatHeaderProps {
   isTyping: boolean;
@@ -10,6 +17,7 @@ interface ChatHeaderProps {
   cartOpen: boolean;
   cartCount: number;
   region: string;
+  elementRef: React.RefObject<HTMLDivElement>;
 }
 
 export default function ChatHeader({
@@ -20,9 +28,37 @@ export default function ChatHeader({
   cartOpen,
   cartCount,
   region,
+  elementRef,
 }: ChatHeaderProps) {
   const health = useHealthz();
   const isOnline = health.data?.web === "ok";
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  useEffect(() => {
+    const onFullScreenChange = () => {
+      setIsFullScreen(Boolean(document.fullscreenElement));
+    }
+
+    document.addEventListener("fullscreenchange", onFullScreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullScreenChange);
+    };
+  }, []);
+
+
+  const toggleFullScreen = async () => {
+    if (!elementRef.current) return;
+
+    try {
+      if (!document.fullscreenElement) {
+        await elementRef.current.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   return (
     <div className="relative flex items-center gap-3 bg-rdx-black px-4 py-3.5 text-white">
@@ -77,6 +113,20 @@ export default function ChatHeader({
           <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rdx-red px-1 text-[9px] font-bold text-white">
             {cartCount > 99 ? "99+" : cartCount}
           </span>
+        )}
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="text-white hover:bg-white/10 hover:text-white"
+        onClick={toggleFullScreen}
+        aria-label={isFullScreen ? "Exit full screen" : "Full screen"}
+        aria-pressed={isFullScreen}
+      >
+        {isFullScreen ? (
+          <ExitFullScreenIcon className="h-4 w-4" />
+        ) : (
+          <FullScreenIcon className="h-4 w-4" />
         )}
       </Button>
       <Button

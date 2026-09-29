@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@rdx/ui";
 import { hasPermission, isAdminUser, P } from "../../../lib/permissions";
 import { useMe } from "../../../lib/use-me";
@@ -17,9 +17,24 @@ import ConversationList from "./ConversationList";
 import TransferDialog from "./TransferDialog";
 import ConversationThread from "./ConversationThread";
 import CustomerContext from "./CustomerContext";
+import FloatingChatWindow from "./FloatingChatWindow";
+import {
+  CUSTOMER_PANEL_WIDTH,
+  MAX_OPEN_CHATS,
+  closeOpenChat,
+  collapseFloat,
+  createOpenChatSession,
+  expandFloat,
+  floatingIds as sessionFloatingIds,
+  layoutFloats,
+  openChat,
+  pruneOpenChats,
+  type OpenChatSession,
+} from "./open-chats";
 import { createIncomingHandoff, createSampleConversations } from "./sample-conversations";
 import TeamAnalytics from "./TeamAnalytics";
 import type { ChatMessage, ComposerMode, LiveConversation, QueueFilter, SupportMember } from "./types";
+import { toast } from "react-toastify";
 
 function withMessage(conversation: LiveConversation, message: ChatMessage): LiveConversation {
   return {
@@ -28,6 +43,16 @@ function withMessage(conversation: LiveConversation, message: ChatMessage): Live
     typing: false,
     messages: [...conversation.messages, message],
   };
+}
+
+function markWatchedRead(conversations: LiveConversation[], watching: ReadonlySet<string>): LiveConversation[] {
+  let changed = false;
+  const next = conversations.map((conversation) => {
+    if (!watching.has(conversation.id) || conversation.unread === 0) return conversation;
+    changed = true;
+    return { ...conversation, unread: 0 };
+  });
+  return changed ? next : conversations;
 }
 
 function clampLimit(value: number) {
@@ -76,16 +101,29 @@ export default function LiveChatPage() {
 
   const [memberState, setMembers] = useState<SupportMember[]>(() => createSupportTeam(agentName));
   const [conversations, setConversations] = useState(() => rebalance(createSampleConversations(), createSupportTeam(agentName)));
-  const [selectedId, setSelectedId] = useState<string | null>("lc-10482");
+  const [storedSession, setChatSession] = useState<OpenChatSession>(() => createOpenChatSession("lc-10482"));
+  const [showThreadOnMobile, setShowThreadOnMobile] = useState(false);
+  const chatSession = pruneOpenChats(storedSession, (id) => {
+    const conv = conversations.find((item) => item.id === id);
+    return Boolean(conv && canSeeConversation(conv, isDeskAdmin, VIEWER_ID));
+  });
+  if (chatSession !== storedSession) {
+    setChatSession(chatSession);
+    if (chatSession.mainId === null) setShowThreadOnMobile(false);
+  }
+  const selectedId = chatSession.mainId;
+  const openChatIds = chatSession.openIds;
   const [filter, setFilter] = useState<QueueFilter>("user_queue");
   const [query, setQuery] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [showThreadOnMobile, setShowThreadOnMobile] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(isWide);
   const [threadFocusToken, setThreadFocusToken] = useState(0);
   const [announcement, setAnnouncement] = useState({ id: 0, text: "" });
   const [deskView, setDeskView] = useState<"chats" | "team">("chats");
   const [transferOpen, setTransferOpen] = useState(false);
+  /** When transferring from a floating chat, track which conversation is being transferred. */
+  const [transferTargetId, setTransferTargetId] = useState<string | null>(null);
+  const [seenWatchingKey, setSeenWatchingKey] = useState<string | null>(null);
 
   const members = useMemo(
     () => syncSupportTeam(memberState, agentName, isDeskAdmin),
@@ -103,6 +141,11 @@ export default function LiveChatPage() {
   const visibleSelected = selected && canSeeConversation(selected, isDeskAdmin, VIEWER_ID) ? selected : null;
   const selectedAssignee = visibleSelected ? memberName(members, assigneeId(visibleSelected)) : null;
 
+  const floatingIds = useMemo(() => sessionFloatingIds(chatSession), [chatSession]);
+  const deskRef = useRef<HTMLDivElement>(null);
+  const [deskWidth, setDeskWidth] = useState(() => window.innerWidth);
+  const narrowDesk = deskWidth < 768;
+
   const announce = (text: string) => {
     setAnnouncement((current) => ({ id: current.id + 1, text }));
   };
@@ -113,35 +156,70 @@ export default function LiveChatPage() {
     );
   };
 
+  const closeChat = (id: string) => {
+    const next = closeOpenChat(chatSession, id);
+    setChatSession(next);
+    if (chatSession.mainId === id && next.mainId === null) setShowThreadOnMobile(false);
+    if (chatSession.mainId === id && next.mainId) setThreadFocusToken((token) => token + 1);
+    setTransferOpen(false);
+    if (transferTargetId === id) setTransferTargetId(null);
+  };
+
   const openConversation = (id: string, options?: { openThread?: boolean; focusThread?: boolean }) => {
-    setSelectedId(id);
     setTransferOpen(false);
     setDeskView("chats");
-    if (options?.openThread !== false) {
-      setShowThreadOnMobile(true);
-      const narrow = window.matchMedia("(max-width: 767px)").matches;
-      if (options?.focusThread || narrow) {
-        setThreadFocusToken((token) => token + 1);
-      }
+
+    const promote =
+      narrowDesk ||
+      options?.focusThread === true ||
+      chatSession.openIds.includes(id) ||
+      chatSession.mainId === null;
+    const result = openChat(chatSession, id, { promote });
+    if (result.status === "limit") {
+      const text = `You can have at most ${MAX_OPEN_CHATS} chats open. Close one to open another.`;
+      announce(text);
+      toast.info(text);
+      return;
     }
-    updateSelected(id, (conversation) =>
-      conversation.unread === 0 ? conversation : { ...conversation, unread: 0 },
-    );
+
+    setChatSession(result.session);
+    if (result.status === "floated") {
+      const conv = conversations.find((conversation) => conversation.id === id);
+      announce(`${conv?.customerName ?? "Chat"} is open in a side window.`);
+      return;
+    }
+
+    if (result.session.mainId === id && options?.openThread !== false) {
+      setShowThreadOnMobile(true);
+      if (options?.focusThread || narrowDesk) setThreadFocusToken((token) => token + 1);
+    }
+  };
+
+  /** Move a side window into the main panel. The previous main chat becomes a side window. */
+  const focusChat = (id: string) => {
+    setChatSession(openChat(chatSession, id, { promote: true }).session);
+    setDeskView("chats");
+    setShowThreadOnMobile(true);
+    setThreadFocusToken((token) => token + 1);
   };
 
   const replaceConversation = (id: string, next: LiveConversation, thenRebalance = false) => {
-    const mapped = conversations.map((conversation) => (conversation.id === id ? next : conversation));
-    setConversations(thenRebalance ? rebalance(mapped, members) : mapped);
+    setConversations((current) => {
+      const mapped = current.map((conversation) => (conversation.id === id ? next : conversation));
+      return thenRebalance ? rebalance(mapped, members) : mapped;
+    });
   };
 
-  const takeChat = () => {
-    if (!visibleSelected || !canAssign || visibleSelected.status !== "waiting") return;
-    if (visibleSelected.queuedForId !== VIEWER_ID) return;
+  const takeChat = (id: string) => {
+    const conv = conversations.find((c) => c.id === id);
+    if (!conv || !canAssign || conv.status !== "waiting") return;
+    if (conv.queuedForId !== VIEWER_ID) return;
+    if (!canSeeConversation(conv, isDeskAdmin, VIEWER_ID)) return;
     const at = new Date().toISOString();
     replaceConversation(
-      visibleSelected.id,
+      id,
       withMessage(
-        { ...visibleSelected, status: "active", ownerId: VIEWER_ID, queuedForId: null },
+        { ...conv, status: "active", ownerId: VIEWER_ID, queuedForId: null },
         {
           id: `join-${at}`,
           author: "system",
@@ -154,18 +232,21 @@ export default function LiveChatPage() {
     );
     setFilter("active");
     setDeskView("chats");
-    announce(`You took the conversation with ${visibleSelected.customerName}. Only you can see it now.`);
+    announce(`You took the conversation with ${conv.customerName}. Only you can see it now.`);
   };
 
-  const transferChat = (memberId: string) => {
-    if (!visibleSelected || !canAssign || visibleSelected.status !== "active" || visibleSelected.ownerId !== VIEWER_ID) return;
+  const transferChat = (memberId: string, conversationId?: string) => {
+    const id = conversationId ?? transferTargetId ?? selectedId;
+    if (!id) return;
+    const conv = conversations.find((c) => c.id === id);
+    if (!conv || !canAssign || conv.status !== "active" || conv.ownerId !== VIEWER_ID) return;
     const target = members.find((member) => member.id === memberId);
     if (!target || target.id === VIEWER_ID) return;
     const at = new Date().toISOString();
     replaceConversation(
-      visibleSelected.id,
+      id,
       withMessage(
-        { ...visibleSelected, ownerId: target.id, queuedForId: null },
+        { ...conv, ownerId: target.id, queuedForId: null },
         {
           id: `xfer-${at}`,
           author: "system",
@@ -176,14 +257,17 @@ export default function LiveChatPage() {
       ),
     );
     setFilter(isDeskAdmin ? "team" : "active");
-    announce(`Chat with ${visibleSelected.customerName} transferred to ${target.name}.`);
+    announce(`Chat with ${conv.customerName} transferred to ${target.name}.`);
+    setTransferOpen(false);
+    setTransferTargetId(null);
   };
 
-  const leaveChat = () => {
-    if (!visibleSelected || !canAssign || visibleSelected.ownerId !== VIEWER_ID || visibleSelected.status !== "active") return;
+  const leaveChat = (id: string) => {
+    const conv = conversations.find((c) => c.id === id);
+    if (!conv || !canAssign || conv.ownerId !== VIEWER_ID || conv.status !== "active") return;
     const at = new Date().toISOString();
     const released = withMessage(
-      { ...visibleSelected, status: "waiting", ownerId: null, queuedForId: null },
+      { ...conv, status: "waiting", ownerId: null, queuedForId: null },
       {
         id: `left-${at}`,
         author: "system",
@@ -192,28 +276,31 @@ export default function LiveChatPage() {
         at,
       },
     );
-    const next = rebalance(
-      conversations.map((conversation) => (conversation.id === released.id ? released : conversation)),
-      members,
-    );
-    setConversations(next);
-    const placed = next.find((conversation) => conversation.id === released.id);
-    const queuedName = memberName(members, placed?.queuedForId ?? null);
+    setConversations((current) => {
+      const next = rebalance(
+        current.map((conversation) => (conversation.id === released.id ? released : conversation)),
+        members,
+      );
+      const placed = next.find((conversation) => conversation.id === released.id);
+      const queuedName = memberName(members, placed?.queuedForId ?? null);
+      announce(
+        queuedName
+          ? `You released ${conv.customerName}. The handoff is now queued for ${queuedName}.`
+          : `You released ${conv.customerName}. No one has an open queue slot.`,
+      );
+      return next;
+    });
     setFilter("user_queue");
-    announce(
-      queuedName
-        ? `You released ${visibleSelected.customerName}. The handoff is now queued for ${queuedName}.`
-        : `You released ${visibleSelected.customerName}. No one has an open queue slot.`,
-    );
   };
 
-  const resolveChat = () => {
-    if (!visibleSelected || !canResolve || visibleSelected.status !== "active" || visibleSelected.ownerId !== VIEWER_ID) return;
+  const resolveChat = (id: string) => {
+    const conv = conversations.find((c) => c.id === id);
+    if (!conv || !canResolve || conv.status !== "active" || conv.ownerId !== VIEWER_ID) return;
     const at = new Date().toISOString();
     replaceConversation(
-      visibleSelected.id,
+      id,
       withMessage(
-        { ...visibleSelected, status: "resolved" },
+        { ...conv, status: "resolved" },
         {
           id: `resolved-${at}`,
           author: "system",
@@ -224,16 +311,17 @@ export default function LiveChatPage() {
       ),
     );
     setFilter("closed");
-    announce(`Conversation with ${visibleSelected.customerName} closed.`);
+    announce(`Conversation with ${conv.customerName} closed.`);
   };
 
-  const reopenChat = () => {
-    if (!visibleSelected || !canAssign || visibleSelected.status !== "resolved" || visibleSelected.ownerId !== VIEWER_ID) return;
+  const reopenChat = (id: string) => {
+    const conv = conversations.find((c) => c.id === id);
+    if (!conv || !canAssign || conv.status !== "resolved" || conv.ownerId !== VIEWER_ID) return;
     const at = new Date().toISOString();
     replaceConversation(
-      visibleSelected.id,
+      id,
       withMessage(
-        { ...visibleSelected, status: "active", ownerId: VIEWER_ID, queuedForId: null },
+        { ...conv, status: "active", ownerId: VIEWER_ID, queuedForId: null },
         {
           id: `reopen-${at}`,
           author: "system",
@@ -244,16 +332,17 @@ export default function LiveChatPage() {
       ),
     );
     setFilter("active");
-    announce(`Conversation with ${visibleSelected.customerName} reopened. Only you can see it.`);
+    announce(`Conversation with ${conv.customerName} reopened. Only you can see it.`);
   };
 
-  const sendReply = (mode: ComposerMode) => {
-    if (!visibleSelected || !canReply || visibleSelected.status === "resolved") return;
-    if (mode === "reply" && visibleSelected.ownerId !== VIEWER_ID) return;
-    const body = (drafts[visibleSelected.id] ?? "").trim();
+  const sendReply = (id: string, mode: ComposerMode) => {
+    const conv = conversations.find((c) => c.id === id);
+    if (!conv || !canReply || conv.status === "resolved") return;
+    if (mode === "reply" && conv.ownerId !== VIEWER_ID) return;
+    const body = (drafts[id] ?? "").trim();
     if (!body || body.startsWith("/")) return;
     const at = new Date().toISOString();
-    updateSelected(visibleSelected.id, (conversation) =>
+    updateSelected(id, (conversation) =>
       withMessage(conversation, {
         id: `${mode}-${at}`,
         author: mode === "note" ? "note" : "agent",
@@ -262,9 +351,9 @@ export default function LiveChatPage() {
         at,
       }),
     );
-    setDrafts((current) => ({ ...current, [visibleSelected.id]: "" }));
+    setDrafts((current) => ({ ...current, [id]: "" }));
     announce(
-      mode === "note" ? `Private note saved on ${visibleSelected.customerName}.` : `Reply sent to ${visibleSelected.customerName}.`,
+      mode === "note" ? `Private note saved on ${conv.customerName}.` : `Reply sent to ${conv.customerName}.`,
     );
   };
 
@@ -295,7 +384,10 @@ export default function LiveChatPage() {
     const queuedName = memberName(members, placed?.queuedForId ?? null);
     setFilter("user_queue");
     setDeskView("chats");
-    if (placed && (isDeskAdmin || placed.queuedForId === VIEWER_ID)) setSelectedId(placed.id);
+    if (placed && (isDeskAdmin || placed.queuedForId === VIEWER_ID)) {
+      // Prefer opening as floating if already at capacity of open chats; otherwise openConversation handles it
+      openConversation(placed.id, { openThread: true });
+    }
     announce(
       queuedName
         ? `${incoming.customerName} was handed off and queued for ${queuedName}.`
@@ -312,8 +404,52 @@ export default function LiveChatPage() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [detailsOpen, isWide]);
 
+  useLayoutEffect(() => {
+    const node = deskRef.current;
+    if (!node) return;
+    const measure = () => setDeskWidth(node.getBoundingClientRect().width);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const transferConversation =
+    (transferTargetId
+      ? conversations.find((c) => c.id === transferTargetId)
+      : visibleSelected) ?? null;
+
+  const detailsDocked = deskView === "chats" && detailsOpen && isWide && Boolean(visibleSelected);
+  const detailsModal = deskView === "chats" && detailsOpen && !isWide && Boolean(visibleSelected);
+  const floatWidth = Math.max(0, deskWidth - (detailsDocked ? CUSTOMER_PANEL_WIDTH : 0) - 24);
+  const floatLayout = layoutFloats(floatingIds, new Set(chatSession.collapsedIds), floatWidth, narrowDesk);
+  const mainVisible = deskView === "chats" && (!narrowDesk || showThreadOnMobile);
+  const floatsVisible = deskView === "chats" && !detailsModal && !transferOpen;
+  const watchingKey = [
+    mainVisible ? selectedId : null,
+    ...(floatsVisible ? floatLayout.filter((item) => !item.minimized).map((item) => item.id) : []),
+  ]
+    .filter((id): id is string => Boolean(id))
+    .join("|");
+  if (seenWatchingKey !== watchingKey) {
+    setSeenWatchingKey(watchingKey);
+    const watching = new Set(watchingKey.split("|").filter(Boolean));
+    const read = markWatchedRead(conversations, watching);
+    if (read !== conversations) setConversations(read);
+  }
+
+  const toggleFloat = (id: string) => {
+    const item = floatLayout.find((entry) => entry.id === id);
+    if (!item || narrowDesk) return;
+    setChatSession(
+      item.minimized
+        ? expandFloat(chatSession, id, floatWidth, false)
+        : collapseFloat(chatSession, id),
+    );
+  };
+
   return (
-    <div className="live-chat relative -m-4 flex h-[calc(100dvh-3.5rem)] min-h-0 overflow-hidden bg-white">
+    <div ref={deskRef} className="live-chat relative -m-4 flex h-[calc(100dvh-3.5rem)] min-h-0 overflow-hidden bg-white">
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
         <span key={announcement.id}>{announcement.text}</span>
       </div>
@@ -344,25 +480,27 @@ export default function LiveChatPage() {
             </div>
           )}
           <div className="min-h-0 flex-1">
-          <ConversationList
-            conversations={conversations}
-            selectedId={visibleSelected?.id ?? null}
-            filter={queueFilter}
-            query={query}
-            accepting={accepting}
-            isDeskAdmin={isDeskAdmin}
-            viewerId={VIEWER_ID}
-            members={members}
-            queueLimit={queueLimit}
-            onFilter={(next) => {
-              setFilter(next);
-              setDeskView("chats");
-            }}
-            onQuery={setQuery}
-            onAccepting={changeAccepting}
-            onLimit={(limit) => changeLimit(VIEWER_ID, limit)}
-            onSelect={openConversation}
-          />
+            <ConversationList
+              conversations={conversations}
+              selectedId={visibleSelected?.id ?? null}
+              openChatIds={openChatIds}
+              filter={queueFilter}
+              query={query}
+              accepting={accepting}
+              isDeskAdmin={isDeskAdmin}
+              viewerId={VIEWER_ID}
+              members={members}
+              queueLimit={queueLimit}
+              onFilter={(next) => {
+                setFilter(next);
+                setDeskView("chats");
+              }}
+              onQuery={setQuery}
+              onAccepting={changeAccepting}
+              onLimit={(limit) => changeLimit(VIEWER_ID, limit)}
+              dockInset={floatLayout.length > 0}
+              onSelect={openConversation}
+            />
           </div>
         </div>
       </div>
@@ -386,14 +524,34 @@ export default function LiveChatPage() {
               if (!visibleSelected) return;
               setDrafts((current) => ({ ...current, [visibleSelected.id]: value }));
             }}
-            onSend={sendReply}
-            onTake={takeChat}
-            onResolve={resolveChat}
-            onLeave={leaveChat}
-            onReopen={reopenChat}
-            onOpenTransfer={() => setTransferOpen(true)}
+            onSend={(mode) => {
+              if (visibleSelected) sendReply(visibleSelected.id, mode);
+            }}
+            onTake={() => {
+              if (visibleSelected) takeChat(visibleSelected.id);
+            }}
+            onResolve={() => {
+              if (visibleSelected) resolveChat(visibleSelected.id);
+            }}
+            onLeave={() => {
+              if (visibleSelected) leaveChat(visibleSelected.id);
+            }}
+            onReopen={() => {
+              if (visibleSelected) reopenChat(visibleSelected.id);
+            }}
+            onOpenTransfer={() => {
+              if (visibleSelected) {
+                setTransferTargetId(visibleSelected.id);
+                setTransferOpen(true);
+              }
+            }}
             onBack={() => setShowThreadOnMobile(false)}
             onOpenDetails={() => setDetailsOpen((open) => !open)}
+            onCloseChat={
+              visibleSelected
+                ? () => closeChat(visibleSelected.id)
+                : undefined
+            }
           />
         )}
       </div>
@@ -420,16 +578,64 @@ export default function LiveChatPage() {
         </>
       ) : null}
 
-      {transferOpen && visibleSelected ? (
+      {transferOpen && transferConversation ? (
         <TransferDialog
-          customerName={visibleSelected.customerName}
+          customerName={transferConversation.customerName}
           members={members.filter((member) => member.id !== VIEWER_ID)}
-          onClose={() => setTransferOpen(false)}
-          onTransfer={(memberId) => {
+          onClose={() => {
             setTransferOpen(false);
-            transferChat(memberId);
+            setTransferTargetId(null);
+          }}
+          onTransfer={(memberId) => {
+            transferChat(memberId, transferConversation.id);
           }}
         />
+      ) : null}
+
+      {deskView === "chats" && !detailsModal && !transferOpen && floatLayout.length > 0 ? (
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-end px-3 pb-3"
+          style={detailsDocked ? { right: CUSTOMER_PANEL_WIDTH } : undefined}
+        >
+          <div
+            className="pointer-events-auto flex w-max max-w-full items-end gap-3 overflow-x-auto overscroll-x-contain"
+            role="region"
+            aria-label="Side chats"
+          >
+          {floatLayout.map((item) => {
+            const conv = conversations.find((conversation) => conversation.id === item.id);
+            if (!conv || !canSeeConversation(conv, isDeskAdmin, VIEWER_ID)) return null;
+            return (
+              <FloatingChatWindow
+                key={conv.id}
+                conversation={conv}
+                agentName={agentName}
+                draft={drafts[conv.id] ?? ""}
+                canReply={canReply}
+                canAssign={canAssign}
+                canResolve={canResolve}
+                viewerId={VIEWER_ID}
+                assigneeName={memberName(members, assigneeId(conv))}
+                minimized={item.minimized}
+                compactOnly={narrowDesk}
+                onDraft={(value) => setDrafts((current) => ({ ...current, [conv.id]: value }))}
+                onSend={(mode) => sendReply(conv.id, mode)}
+                onTake={() => takeChat(conv.id)}
+                onResolve={() => resolveChat(conv.id)}
+                onLeave={() => leaveChat(conv.id)}
+                onReopen={() => reopenChat(conv.id)}
+                onOpenTransfer={() => {
+                  setTransferTargetId(conv.id);
+                  setTransferOpen(true);
+                }}
+                onFocus={() => focusChat(conv.id)}
+                onToggleMinimized={() => toggleFloat(conv.id)}
+                onClose={() => closeChat(conv.id)}
+              />
+            );
+          })}
+          </div>
+        </div>
       ) : null}
     </div>
   );
