@@ -53,6 +53,41 @@ export function openChat(
   return { session: withId, status: "floated" };
 }
 
+/** Open a chat in the main panel. Only chats that pass canFloat stay as side windows. */
+export function openChatInMain(
+  session: OpenChatSession,
+  id: string,
+  canFloat: (id: string) => boolean,
+): OpenChatSession {
+  const previous = session.mainId;
+  const floats = session.openIds.filter((chatId) => chatId !== id && chatId !== previous && canFloat(chatId));
+  const keptPrevious = previous && previous !== id && canFloat(previous) ? [previous] : [];
+  let openIds = [...floats, ...keptPrevious];
+  while (openIds.length >= MAX_OPEN_CHATS) openIds.shift();
+  openIds = [...openIds, id];
+  return {
+    openIds,
+    mainId: id,
+    collapsedIds: session.collapsedIds.filter((chatId) => openIds.includes(chatId) && chatId !== id),
+  };
+}
+
+/** Drop side windows that are no longer allowed to float. The main panel stays. */
+export function retainFloats(session: OpenChatSession, canFloat: (id: string) => boolean): OpenChatSession {
+  const mainId = session.mainId;
+  const floats = session.openIds.filter((id) => id !== mainId && canFloat(id));
+  const openIds = mainId && session.openIds.includes(mainId) ? [...floats, mainId] : floats;
+  const same =
+    openIds.length === session.openIds.length && openIds.every((id, index) => id === session.openIds[index]);
+  if (same) return session;
+  const nextMain = mainId && openIds.includes(mainId) ? mainId : (openIds.at(-1) ?? null);
+  return {
+    openIds,
+    mainId: nextMain,
+    collapsedIds: session.collapsedIds.filter((id) => openIds.includes(id) && id !== nextMain),
+  };
+}
+
 export function closeOpenChat(session: OpenChatSession, id: string): OpenChatSession {
   if (!session.openIds.includes(id)) return session;
   const openIds = session.openIds.filter((chatId) => chatId !== id);

@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage, ChatOption } from "@rdx/chat-contract";
 import { useTimedCartNotice } from "@/lib/cart-outcome";
-import {
-  resolveOrderVerification,
-  shouldOfferOrderVerification,
-} from "@/lib/order-api";
+import { orderTrackingForm } from "@/lib/order-api";
 import { useCart } from "@/lib/use-cart";
 import { useDialogFocus } from "@/lib/use-dialog-focus";
 import { useSendChat } from "@/lib/use-send-chat";
@@ -25,8 +22,7 @@ export default function ChatWidget({ region }: { region: string }) {
   ]);
   const sendChat = useSendChat();
   const cart = useCart(region, isOpen);
-  const [isOrderChallengePending, setIsOrderChallengePending] = useState(false);
-  const isTyping = sendChat.isPending || isOrderChallengePending;
+  const isTyping = sendChat.isPending;
   const [cartOpen, setCartOpen] = useState(false);
   const [cartNotice, setCartNotice] = useTimedCartNotice();
   const [failedListingIds, setFailedListingIds] = useState<Set<string>>(
@@ -64,7 +60,6 @@ export default function ChatWidget({ region }: { region: string }) {
     generationRef.current += 1;
     conversationIdRef.current = null;
     sendChat.reset();
-    setIsOrderChallengePending(false);
     setInput("");
     setCartOpen(false);
     setCartNotice(null);
@@ -97,41 +92,21 @@ export default function ChatWidget({ region }: { region: string }) {
           region,
         },
         {
-          onSuccess: async (result) => {
+          onSuccess: (result) => {
             if (generation !== generationRef.current) return;
-            conversationIdRef.current = result.conversation_id;
-
-            if (shouldOfferOrderVerification(result, trimmed)) {
-              setIsOrderChallengePending(true);
+            const nextConversationId = result.conversation_id?.trim();
+            if (nextConversationId) {
+              conversationIdRef.current = nextConversationId;
             }
+            const orderVerification = orderTrackingForm(result, trimmed);
 
-            let orderVerification = null;
-            try {
-              orderVerification = await resolveOrderVerification(
-                result,
-                trimmed,
-                region,
-              );
-            } catch {
-              // Keep the chat reply usable when the challenge endpoint is unavailable.
-            } finally {
-              if (generation === generationRef.current) {
-                setIsOrderChallengePending(false);
-              }
-            }
-
-            if (generation !== generationRef.current) return;
-            const verificationPrompt = orderVerification?.message?.trim();
             setMessages((prev) => [
               ...prev,
               {
                 id: createMessageId(),
                 role: "assistant",
-                content: orderVerification
-                  ? verificationPrompt ||
-                    "Before I can look at an order I need to check it belongs to you. Please fill in the form below."
-                  : result.answer,
-                products: result.products,
+                content: result.answer,
+                products: result.products, 
                 citations: result.citations,
                 escalated: result.escalated,
                 degraded: result.degraded,
@@ -190,7 +165,7 @@ export default function ChatWidget({ region }: { region: string }) {
           aria-modal="true"
           aria-label={`${STORE_NAME} Assistant`}
           tabIndex={-1}
-          className="fixed right-5 bottom-32 z-50 flex h-[600px] max-h-[calc(100vh-8.5rem)] w-[380px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-white shadow-[0_24px_60px_rgba(0,0,0,0.45)]"
+          className="rdx-chat-panel fixed right-5 bottom-32 z-50 flex h-[600px] max-h-[calc(100vh-8.5rem)] w-[380px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-white shadow-[0_24px_60px_rgba(0,0,0,0.45)]"
         >
           <ChatHeader
             isTyping={isTyping}
@@ -228,20 +203,22 @@ export default function ChatWidget({ region }: { region: string }) {
 
               {cartNotice && (
                 <p
-                  className="mx-4 mb-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] text-slate-800"
+                  className="rdx-chat-thread mx-4 mb-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] text-slate-800"
                   role="status"
                 >
                   {cartNotice.text}
                 </p>
               )}
 
-              <ChatComposer
-                value={input}
-                isTyping={isTyping}
-                inputRef={inputRef}
-                onChange={setInput}
-                onSubmit={handleSubmit}
-              />
+              <div className="rdx-chat-composer border-neutral-200 bg-neutral-50">
+                <ChatComposer
+                  value={input}
+                  isTyping={isTyping}
+                  inputRef={inputRef}
+                  onChange={setInput}
+                  onSubmit={handleSubmit}
+                />
+              </div>
             </>
           )}
         </div>

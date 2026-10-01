@@ -79,10 +79,11 @@ export default function MessageList({
   return (
     <div
       ref={scrollRef}
-      className="flex-1 space-y-3 overflow-y-auto bg-neutral-100 px-4 py-4"
+      className="rdx-chat-scroll flex-1 overflow-y-auto bg-neutral-100 px-4 py-4"
       aria-live="polite"
       aria-busy={isTyping}
     >
+      <div className="rdx-chat-thread w-full space-y-3">
       {messages.length === 0 && !isTyping && (
         <div className="flex min-h-48 flex-col items-center justify-center gap-2 px-4 text-center">
           <p className="text-sm font-medium text-neutral-700">
@@ -108,8 +109,8 @@ export default function MessageList({
             <div
               className={
                 message.role === "user"
-                  ? "ml-auto w-fit max-w-[88%] rounded-2xl rounded-br-md bg-rdx-red px-3.5 py-2.5 text-left text-sm leading-relaxed text-white"
-                  : "mr-auto w-full max-w-[95%] rounded-2xl rounded-bl-md border border-neutral-200 bg-white px-3.5 py-3 text-left shadow-sm"
+                  ? "rdx-chat-user ml-auto w-fit max-w-[88%] rounded-2xl rounded-br-md bg-rdx-red px-3.5 py-2.5 text-left text-sm leading-relaxed text-white"
+                  : "rdx-chat-assistant mr-auto w-full max-w-[95%] rounded-2xl rounded-bl-md border border-neutral-200 bg-white px-3.5 py-3 text-left shadow-sm"
               }
             >
               {message.role === "assistant" ? (
@@ -122,16 +123,20 @@ export default function MessageList({
                       A person is taking over this conversation.
                     </p>
                   )}
-                  {products.map((product) => (
-                    <ProductCard
-                      key={`${message.id}-${product.listing_id ?? product.handle}`}
-                      product={product}
-                      region={region}
-                      failedListingIds={failedListingIds}
-                      onListingFailed={onListingFailed}
-                      onNotice={onCartNotice}
-                    />
-                  ))}
+                  {products.length > 0 && (
+                    <div className="rdx-product-grid">
+                      {products.map((product) => (
+                        <ProductCard
+                          key={`${message.id}-${product.listing_id ?? product.handle}`}
+                          product={product}
+                          region={region}
+                          failedListingIds={failedListingIds}
+                          onListingFailed={onListingFailed}
+                          onNotice={onCartNotice}
+                        />
+                      ))}
+                    </div>
+                  )}
                   {/* {citations.length > 0 && (
                     <CitationList citations={citations} />
                   )} */}
@@ -160,7 +165,7 @@ export default function MessageList({
                   )}
                 </>
               ) : (
-                message.content
+                <p className="text-sm">{message.content}</p>
               )}
             </div>
 
@@ -182,6 +187,7 @@ export default function MessageList({
       })}
 
       {isTyping && <TypingIndicator />}
+      </div>
     </div>
   );
 }

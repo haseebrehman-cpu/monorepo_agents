@@ -50,6 +50,28 @@ describe("sendChatMessage", () => {
     });
     expect(typeof body.session_id).toBe("string");
     expect(String(body.session_id).length).toBeGreaterThan(0);
+    expect(body).not.toHaveProperty("conversation_id");
+  });
+
+  it("omits a blank conversation_id", async () => {
+    vi.stubEnv("VITE_CHAT_API_URL", "https://api.example.com");
+    vi.stubEnv("VITE_TENANT", "rdx");
+    const fetchMock = vi.fn().mockResolvedValue(mockChatResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { sendChatMessage } = await import("./chat-api");
+    await sendChatMessage({
+      message: "yes",
+      conversation_id: "",
+      client_message_id: "msg-1",
+      region: "uk",
+    });
+
+    const body = JSON.parse(
+      String(fetchMock.mock.calls[0]?.[1]?.body),
+    ) as Record<string, unknown>;
+    expect(body).not.toHaveProperty("conversation_id");
+    expect(body.client_message_id).toBe("msg-1");
   });
 
   it("uses the selected region as marketplace instead of VITE_MARKETPLACE", async () => {

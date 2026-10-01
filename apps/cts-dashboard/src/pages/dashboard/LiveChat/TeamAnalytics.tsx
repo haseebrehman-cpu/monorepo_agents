@@ -1,5 +1,5 @@
 import { cn } from "@rdx/ui";
-import { activeFor, MAX_QUEUE_LIMIT, MIN_QUEUE_LIMIT, queuedFor } from "./assignment";
+import { activeFor, MAX_QUEUE_LIMIT, MIN_QUEUE_LIMIT, queuedFor, workloadFor } from "./assignment";
 import type { LiveConversation, SupportMember } from "./types";
 
 export default function TeamAnalytics({
@@ -24,7 +24,7 @@ export default function TeamAnalytics({
           Customer support
         </h2>
         <p className="mt-1 text-sm text-slate-600">
-          New handoffs fill the open queue slots of people who are accepting chats. Taken chats stay with the person who took them.
+          Active fills up to each person's limit with chats they own and waiting chats assigned to them. User Queue lists every waiting handoff. Taken chats stay with the person who took them over.
         </p>
       </header>
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
@@ -43,14 +43,15 @@ export default function TeamAnalytics({
                 <th className="px-4 py-2 font-semibold">Status</th>
                 <th className="px-4 py-2 font-semibold">Queued</th>
                 <th className="px-4 py-2 font-semibold">Taken</th>
-                <th className="px-4 py-2 font-semibold">Queue limit</th>
+                <th className="px-4 py-2 font-semibold">Active limit</th>
               </tr>
             </thead>
             <tbody>
               {members.map((member) => {
                 const queued = queuedFor(conversations, member.id);
                 const taken = activeFor(conversations, member.id);
-                const full = member.accepting && queued >= member.limit;
+                const load = workloadFor(conversations, member.id);
+                const full = member.accepting && load >= member.limit;
                 return (
                   <tr key={member.id} className="border-t border-slate-100">
                     <td className="px-4 py-3">
@@ -73,12 +74,15 @@ export default function TeamAnalytics({
                     </td>
                     <td className="px-4 py-3 text-slate-800">
                       {queued}
-                      <span className="text-slate-400"> / {member.limit}</span>
+                      <span className="text-slate-400">
+                        {" "}
+                        · {load}/{member.limit}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-slate-800">{taken}</td>
                     <td className="px-4 py-3">
                       <label className="sr-only" htmlFor={`limit-${member.id}`}>
-                        Queue limit for {member.name}
+                        Active limit for {member.name}
                       </label>
                       <input
                         id={`limit-${member.id}`}

@@ -6,6 +6,24 @@ import type {
 import { ApiError, type ApiClient } from "./http";
 import { throwIfErrorPayload, withRetry } from "./errors";
 
+/** Blank ids are invalid. Omit the field so the server can start a conversation. */
+export function presentId(value: string | null | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+export function chatRequestBody(
+  request: ChatRequestBody,
+  message: string,
+): ChatRequestBody {
+  return {
+    ...request,
+    message,
+    conversation_id: presentId(request.conversation_id),
+    client_message_id: presentId(request.client_message_id),
+  };
+}
+
 export async function sendChatMessage(
   client: ApiClient,
   request: ChatRequestBody,
@@ -15,10 +33,7 @@ export async function sendChatMessage(
     throw new ApiError("Message cannot be empty.", 400);
   }
 
-  const body: ChatRequestBody = {
-    ...request,
-    message: trimmed,
-  };
+  const body = chatRequestBody(request, trimmed);
 
   const payload = await withRetry(() =>
     client.request<ChatSuccessResponse>("/v1/chat", {

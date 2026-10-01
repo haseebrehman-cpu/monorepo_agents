@@ -1,21 +1,14 @@
-import type {
-  OrderVerificationChallenge,
-  OrderVerifyRequest,
-  OrderVerifyResponse,
-} from "@rdx/chat-contract";
+import type { OrderVerifyRequest, OrderVerifyResponse } from "@rdx/chat-contract";
 import type { CartScope } from "./cart";
 import { type ApiClient } from "./http";
 import { throwIfErrorPayload, withRetry } from "./errors";
 
-export type OrderScope = CartScope & {
-  orderNumber?: string | null;
-};
+export type OrderScope = CartScope;
 
 function orderQuery(scope: OrderScope): string {
   const params = new URLSearchParams();
   if (scope.tenant) params.set("tenant", scope.tenant);
   if (scope.marketplace) params.set("marketplace", scope.marketplace);
-  if (scope.orderNumber) params.set("order_number", scope.orderNumber);
   const query = params.toString();
   return query ? `?${query}` : "";
 }
@@ -24,20 +17,6 @@ function orderHeaders(scope: OrderScope): Record<string, string> {
   const headers: Record<string, string> = {};
   if (scope.sessionId) headers["X-Session-Id"] = scope.sessionId;
   return headers;
-}
-
-export async function getOrderChallenge(
-  client: ApiClient,
-  scope: OrderScope = {},
-): Promise<OrderVerificationChallenge> {
-  const payload = await withRetry(() =>
-    client.request<OrderVerificationChallenge>(
-      `/v1/orders/challenge${orderQuery(scope)}`,
-      { headers: orderHeaders(scope) },
-    ),
-  );
-  throwIfErrorPayload(payload);
-  return payload;
 }
 
 export async function verifyOrder(
@@ -57,7 +36,6 @@ export async function verifyOrder(
 }
 
 export type OrdersApi = {
-  getChallenge: (scope?: OrderScope) => Promise<OrderVerificationChallenge>;
   verify: (
     body: OrderVerifyRequest,
     scope?: OrderScope,
@@ -66,7 +44,6 @@ export type OrdersApi = {
 
 export function createOrdersApi(client: ApiClient): OrdersApi {
   return {
-    getChallenge: (scope) => getOrderChallenge(client, scope),
     verify: (body, scope) => verifyOrder(client, body, scope),
   };
 }

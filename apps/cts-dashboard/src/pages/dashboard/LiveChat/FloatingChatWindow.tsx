@@ -22,6 +22,7 @@ export default function FloatingChatWindow({
   canReply,
   canAssign,
   canResolve,
+  allowTake = false,
   viewerId,
   assigneeName,
   minimized,
@@ -30,7 +31,6 @@ export default function FloatingChatWindow({
   onSend,
   onTake,
   onResolve,
-  onLeave,
   onReopen,
   onOpenTransfer,
   onFocus,
@@ -43,6 +43,8 @@ export default function FloatingChatWindow({
   canReply: boolean;
   canAssign: boolean;
   canResolve: boolean;
+  /** Side windows of chats assigned in Active can be taken over. */
+  allowTake?: boolean;
   viewerId: string;
   assigneeName: string | null;
   minimized: boolean;
@@ -52,7 +54,6 @@ export default function FloatingChatWindow({
   onSend: (mode: ComposerMode) => void;
   onTake: () => void;
   onResolve: () => void;
-  onLeave: () => void;
   onReopen: () => void;
   onOpenTransfer: () => void;
   onFocus: () => void;
@@ -76,9 +77,9 @@ export default function FloatingChatWindow({
   const setMode = (next: ComposerMode) => {
     setModeChoice({ conversationId: conversation.id, ownsChat, mode: next });
   };
-  const canTake = conversation.status === "waiting" && canAssign && conversation.queuedForId === viewerId;
+  const canTake =
+    allowTake && conversation.status === "waiting" && canAssign && conversation.queuedForId === viewerId;
   const canTransfer = ownsChat && canAssign;
-  const canLeave = ownsChat && canAssign;
   const canClose = ownsChat && canResolve;
   const canReopen = conversation.status === "resolved" && conversation.ownerId === viewerId && canAssign;
   const noteMode = mode === "note";
@@ -230,10 +231,12 @@ export default function FloatingChatWindow({
               </div>
             ) : conversation.status === "waiting" ? (
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] text-amber-950">In the queue. Take it before you reply.</p>
+                <p className="text-[11px] text-amber-950">
+                  {canTake ? "Assigned to you. Take it over before you reply." : "Waiting. Take over from Active when it is assigned to you."}
+                </p>
                 {canTake ? (
                   <Button size="sm" variant="primary" className="h-7 cursor-pointer px-2 text-xs" onClick={onTake}>
-                    Take
+                    Take over
                   </Button>
                 ) : null}
               </div>
@@ -244,11 +247,6 @@ export default function FloatingChatWindow({
                     {canTransfer ? (
                       <Button size="sm" variant="outline" className="h-6 cursor-pointer px-1.5 text-[10px]" onClick={onOpenTransfer}>
                         Transfer
-                      </Button>
-                    ) : null}
-                    {canLeave ? (
-                      <Button size="sm" variant="outline" className="h-6 cursor-pointer px-1.5 text-[10px]" onClick={onLeave}>
-                        Leave
                       </Button>
                     ) : null}
                     {canClose ? (

@@ -69,10 +69,10 @@ export default function ChatHeader({
         height={80}
         decoding="sync"
         draggable={false}
-        className="h-11 w-11 shrink-0 rounded-full bg-[#e7e7e9] object-contain ring-1 ring-white/20"
+        className="rdx-chat-header-mark h-11 w-11 shrink-0 rounded-full bg-[#e7e7e9] object-contain ring-1 ring-white/20"
       />
       <div className="min-w-0 flex-1">
-        <p className="truncate font-display text-sm font-semibold tracking-[0.14em] uppercase">
+        <p className="rdx-chat-header-title truncate font-display text-sm font-semibold tracking-[0.14em] uppercase">
           {STORE_NAME} {region}
         </p>
         <p className="flex items-center gap-1.5 text-xs text-neutral-300">

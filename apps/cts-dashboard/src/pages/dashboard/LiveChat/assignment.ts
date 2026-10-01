@@ -1,4 +1,4 @@
-import type { LiveConversation, SupportMember } from "./types";
+import type { LiveConversation, QueueFilter, SupportMember } from "./types";
 
 export const VIEWER_ID = "you";
 export const SUPPORT_ADMIN_ID = "support-admin";
@@ -32,23 +32,48 @@ export function activeFor(conversations: LiveConversation[], memberId: string) {
   ).length;
 }
 
+export function workloadFor(conversations: LiveConversation[], memberId: string) {
+  return queuedFor(conversations, memberId) + activeFor(conversations, memberId);
+}
+
 export function canSeeConversation(conversation: LiveConversation, isAdmin: boolean, viewerId: string) {
   if (isAdmin) return true;
-  if (conversation.status === "waiting") return conversation.queuedForId === viewerId;
+  if (conversation.status === "waiting") return true;
   return conversation.ownerId === viewerId;
+}
+
+export function matchesInbox(
+  conversation: LiveConversation,
+  filter: QueueFilter,
+  viewerId: string,
+  isDeskAdmin: boolean,
+) {
+  if (filter === "user_queue") return conversation.status === "waiting";
+  if (filter === "active") {
+    return (
+      (conversation.status === "active" && conversation.ownerId === viewerId) ||
+      (conversation.status === "waiting" && conversation.queuedForId === viewerId)
+    );
+  }
+  if (filter === "team") return isDeskAdmin && conversation.status === "active" && conversation.ownerId !== viewerId;
+  return conversation.status === "resolved" && (isDeskAdmin || conversation.ownerId === viewerId);
 }
 
 export function assigneeId(conversation: LiveConversation) {
   return conversation.status === "waiting" ? conversation.queuedForId : conversation.ownerId;
 }
 
-/** Keep the oldest queued chats inside each accepting member's limit, then fill open slots. */
+/**
+ * Fill each accepting member's Active tab up to their limit.
+ * Owned active chats occupy slots first and are never moved.
+ * Remaining slots receive the oldest waiting chats, one at a time.
+ */
 export function rebalance(conversations: LiveConversation[], members: SupportMember[]): LiveConversation[] {
   const waiting = conversations
     .filter((conversation) => conversation.status === "waiting")
     .sort((left, right) => new Date(left.handedOffAt).getTime() - new Date(right.handedOffAt).getTime());
   const rest = conversations.filter((conversation) => conversation.status !== "waiting");
-  const counts = new Map(members.map((member) => [member.id, 0]));
+  const counts = new Map(members.map((member) => [member.id, activeFor(conversations, member.id)]));
 
   const hasRoom = (id: string) => {
     const member = members.find((entry) => entry.id === id);

@@ -1,7 +1,7 @@
 import { useState, useRef, type KeyboardEvent } from "react";
 import { cn } from "@rdx/ui";
 import { InboxIcon, SearchIcon } from "lucide-react";
-import { memberName } from "./assignment";
+import { matchesInbox, memberName, workloadFor } from "./assignment";
 import { tagById } from "./catalog";
 import { avatarColor, formatQueueTime, formatQueueTimeLabel, initials } from "./format";
 import type { LiveConversation, QueueFilter, SupportMember } from "./types";
@@ -28,12 +28,7 @@ function matchesFilter(
   viewerId: string,
   isDeskAdmin: boolean,
 ) {
-  if (filter === "user_queue") {
-    return conversation.status === "waiting" && (isDeskAdmin || conversation.queuedForId === viewerId);
-  }
-  if (filter === "active") return conversation.status === "active" && conversation.ownerId === viewerId;
-  if (filter === "team") return isDeskAdmin && conversation.status === "active" && conversation.ownerId !== viewerId;
-  return conversation.status === "resolved" && (isDeskAdmin || conversation.ownerId === viewerId);
+  return matchesInbox(conversation, filter, viewerId, isDeskAdmin);
 }
 
 function lastPreview(conversation: LiveConversation) {
@@ -121,6 +116,14 @@ export default function ConversationList({
       if (filter === "user_queue") {
         return new Date(left.handedOffAt).getTime() - new Date(right.handedOffAt).getTime();
       }
+      if (filter === "active") {
+        const leftWaiting = left.status === "waiting" ? 0 : 1;
+        const rightWaiting = right.status === "waiting" ? 0 : 1;
+        if (leftWaiting !== rightWaiting) return leftWaiting - rightWaiting;
+        if (left.status === "waiting") {
+          return new Date(left.handedOffAt).getTime() - new Date(right.handedOffAt).getTime();
+        }
+      }
       return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
     });
 
@@ -192,20 +195,18 @@ export default function ConversationList({
           </button>
         </div>
         <p className="mt-1 text-xs leading-5 text-slate-600">
-          {isDeskAdmin
-            ? "Every new handoff is listed here. Your own queue still stops at your limit."
-            : counts.user_queue === 0
-              ? `No handoffs in your queue. Your limit is ${queueLimit}.`
-              : `${counts.user_queue} of ${queueLimit} queue ${counts.user_queue === 1 ? "slot is" : "slots are"} filled. Longest wait is first.`}
+          {accepting
+            ? `Active holds ${workloadFor(conversations, viewerId)} of ${queueLimit}, counting chats you own and waiting chats assigned to you. User Queue lists every waiting chat.`
+            : "You are offline, so Active is not receiving new chats. User Queue still lists every waiting chat."}
         </p>
         <label className="mt-3 flex items-center justify-between gap-3 text-xs font-medium text-slate-700">
-          Your queue limit
+          Active limit
           <input
             type="number"
             min={1}
             max={12}
             value={queueLimit}
-            aria-label="Your queue limit"
+            aria-label="Active chat limit"
             onChange={(event) => {
               const next = Number(event.target.value);
               if (!Number.isFinite(next)) return;
@@ -359,7 +360,10 @@ export default function ConversationList({
                       {conversation.status === "waiting" ? (
                         <span className="text-[11px] font-medium text-amber-800">
                           {waited === "now" ? "Just queued" : `${waited} in queue`}
-                          {isDeskAdmin ? ` · ${memberName(members, conversation.queuedForId) ?? "Unassigned"}` : ""}
+                          {" · "}
+                          {conversation.queuedForId === viewerId
+                            ? "Assigned to you"
+                            : (memberName(members, conversation.queuedForId) ?? "Unassigned")}
                         </span>
                       ) : conversation.status === "active" && conversation.ownerId !== viewerId ? (
                         <span className="truncate text-[11px] text-slate-500">

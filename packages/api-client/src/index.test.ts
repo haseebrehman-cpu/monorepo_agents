@@ -48,6 +48,37 @@ describe("createRdxApiClient", () => {
     );
   });
 
+  it("omits a blank conversation_id so the server can start a conversation", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers(),
+      text: async () => JSON.stringify(chatResponse),
+    });
+
+    const api = createRdxApiClient({
+      baseUrl: "https://api.example.com",
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await api.chat.send({
+      message: "yes",
+      conversation_id: "",
+      client_message_id: "msg-1",
+      tenant: "rdx",
+      marketplace: "uk",
+      session_id: "dae45601-3da6-4269-a7db-f181c150b20c",
+    });
+
+    const body = JSON.parse(
+      String(fetchMock.mock.calls[0]?.[1]?.body),
+    ) as Record<string, unknown>;
+    expect(body).not.toHaveProperty("conversation_id");
+    expect(body).toMatchObject({
+      message: "yes",
+      client_message_id: "msg-1",
+    });
+  });
+
   it("reads FastAPI nested error messages", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
@@ -194,48 +225,23 @@ describe("createRdxApiClient", () => {
     );
   });
 
-  it("reads and submits order verification with shopper headers", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        headers: new Headers(),
-        text: async () =>
-          JSON.stringify({
-            required: true,
-            reason: "verification_required",
-            factors: ["email"],
-            fields: [
-              { name: "order_number", type: "text", label: "Order number" },
-            ],
-            submit: { method: "POST", path: "/v1/orders/verify" },
-          }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        headers: new Headers(),
-        text: async () =>
-          JSON.stringify({
-            verified: true,
-            locked: false,
-            order_reference: "1001",
-            order: { order_number: "1001", status: "PAID" },
-          }),
-      });
+  it("submits order verification with shopper headers", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers(),
+      text: async () =>
+        JSON.stringify({
+          verified: true,
+          locked: false,
+          order_reference: "1001",
+          order: { order_number: "1001", status: "PAID" },
+        }),
+    });
 
     const api = createRdxApiClient({
       baseUrl: "https://api.example.com",
       fetch: fetchMock as unknown as typeof fetch,
     });
-
-    await expect(
-      api.orders.getChallenge({
-        tenant: "rdx",
-        marketplace: "uk",
-        sessionId: "shopper-1",
-        orderNumber: "1001",
-      }),
-    ).resolves.toMatchObject({ required: true });
 
     await expect(
       api.orders.verify(
@@ -246,11 +252,6 @@ describe("createRdxApiClient", () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      "https://api.example.com/v1/orders/challenge?tenant=rdx&marketplace=uk&order_number=1001",
-      expect.any(Object),
-    );
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
       "https://api.example.com/v1/orders/verify?tenant=rdx&marketplace=uk",
       expect.objectContaining({
         method: "POST",
@@ -260,7 +261,7 @@ describe("createRdxApiClient", () => {
         }),
       }),
     );
-    const verifyHeaders = fetchMock.mock.calls[1]?.[1]?.headers as Headers;
+    const verifyHeaders = fetchMock.mock.calls[0]?.[1]?.headers as Headers;
     expect(verifyHeaders.get("X-Session-Id")).toBe("shopper-1");
   });
 });

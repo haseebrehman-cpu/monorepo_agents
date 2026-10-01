@@ -4,6 +4,7 @@ import type {
   ChatSuccessResponse,
   StreamEventType,
 } from "@rdx/chat-contract";
+import { chatRequestBody } from "./chat";
 import { ApiError, joinUrl, parseApiErrorMessage, type ApiClient } from "./http";
 import { throwIfErrorPayload } from "./errors";
 
@@ -86,7 +87,7 @@ export async function streamChatMessage(
   const response = await client.fetch(joinUrl(client.baseUrl, "/v1/chat/stream"), {
     method: "POST",
     headers,
-    body: JSON.stringify({ ...request, message: trimmed }),
+    body: JSON.stringify(chatRequestBody(request, trimmed)),
   });
 
   if (!response.ok) {

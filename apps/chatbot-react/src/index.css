@@ -35,3 +35,119 @@ body {
 .rdx-launcher-pulse {
   animation: rdx-launcher-pulse 2.4s ease-out infinite;
 }
+
+/* Fullscreen forces the panel to the viewport. Use a wide column so
+   messages and product cards fill the screen, and size images and type
+   for that column. */
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) {
+  border-radius: 0;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-chat-scroll {
+  padding: 2rem 1.5rem;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-chat-thread {
+  width: min(100%, 80rem);
+  margin-inline: auto;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-chat-composer {
+  padding-inline: 1.5rem;
+  border-top: 1px solid #e5e5e5;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-chat-composer form {
+  width: min(100%, 80rem);
+  margin-inline: auto;
+  border-top-width: 0;
+  background: transparent;
+  padding: 1rem 0;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-chat-input {
+  padding: 0.7rem 1.25rem;
+  font-size: 1rem;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-chat-user {
+  max-width: 75%;
+  padding: 0.85rem 1.15rem;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-chat-assistant {
+  max-width: 100%;
+  padding: 1rem 1.25rem;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-chat-copy {
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-product-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  margin-top: 0;
+  padding: 0.85rem;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-product-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-product-image {
+  width: 100%;
+  height: 10rem;
+  max-height: none;
+  margin-bottom: 0.5rem;
+  object-fit: contain;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-product-actions {
+  margin-top: auto;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-product-title {
+  font-size: 1rem;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-product-price,
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-chat-copy h1,
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-chat-copy h2,
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-chat-header-title {
+  font-size: 1rem;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-product-actions a,
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-product-actions button {
+  height: 2.5rem;
+  font-size: 0.875rem;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-size-chart {
+  max-height: 36rem;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-chat-header-mark {
+  width: 3.5rem;
+  height: 3.5rem;
+}
+
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-chat-cart {
+  width: min(100%, 80rem);
+  margin-inline: auto;
+  align-self: center;
+}

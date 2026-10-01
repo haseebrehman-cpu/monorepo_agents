@@ -51,7 +51,7 @@ export default function ProductCard({
     product.compare_at_min !== null &&
     product.price_min !== null &&
     Number.parseFloat(product.compare_at_min) >
-      Number.parseFloat(product.price_min);
+    Number.parseFloat(product.price_min);
   const href = isAllowedChatHref(product.url) ? product.url : null;
   const image = isAllowedImageUrl(product.image_url ?? undefined)
     ? product.image_url
@@ -99,63 +99,67 @@ export default function ProductCard({
   };
 
   return (
-    <article className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left">
+    <article className="rdx-product-card mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left">
       {image && (
         <img
           src={image}
           alt={product.image_alt || product.title}
-          className="mb-2 h-50 w-full rounded-md object-fill"
+          className="rdx-product-image mb-2 h-44 w-full rounded-md bg-white object-contain"
         />
       )}
-      <h3 className="text-[13px] font-semibold text-slate-900">{product.title}</h3>
-      {current && (
-        <p className="mt-1 text-[13px] text-slate-800">
-          <span className="font-semibold">{current}</span>
-          {product.price_max &&
-            product.price_min &&
-            product.price_max !== product.price_min && (
-              <span className="text-slate-600">
-                {" "}
-                – {formatDecimalPrice(product.price_max, product.price_currency)}
-              </span>
+      <div className="rdx-product-body min-w-0">
+        <h3 className="rdx-product-title text-[13px] font-semibold text-slate-900">
+          {product.title}
+        </h3>
+        {current && (
+          <p className="rdx-product-price mt-1 text-[13px] text-slate-800">
+            <span className="font-semibold">{current}</span>
+            {product.price_max &&
+              product.price_min &&
+              product.price_max !== product.price_min && (
+                <span className="text-slate-600">
+                  {" "}
+                  – {formatDecimalPrice(product.price_max, product.price_currency)}
+                </span>
+              )}
+            {showWas && compare && (
+              <span className="ml-2 text-slate-400 line-through">{compare}</span>
             )}
-          {showWas && compare && (
-            <span className="ml-2 text-slate-400 line-through">{compare}</span>
+          </p>
+        )}
+        {product.stock_status && (
+          <p className="mt-0.5 text-[12px] text-slate-600">{product.stock_status}</p>
+        )}
+        {promotion && (
+          <p className="mt-0.5 text-[12px] font-medium text-rdx-red">{promotion}</p>
+        )}
+        <div className="rdx-product-actions mt-2.5 flex items-center gap-2 border-t border-slate-200/80 pt-2.5">
+          {href && (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-8 min-w-0 flex-1 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+            >
+              View product
+            </a>
           )}
-        </p>
-      )}
-      {product.stock_status && (
-        <p className="mt-0.5 text-[12px] text-slate-600">{product.stock_status}</p>
-      )}
-      {promotion && (
-        <p className="mt-0.5 text-[12px] font-medium text-rdx-red">{promotion}</p>
-      )}
-      <div className="mt-2.5 flex items-center gap-2 border-t border-slate-200/80 pt-2.5">
-        {href && (
-          <a
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-8 min-w-0 flex-1 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
-          >
-            View product
-          </a>
-        )}
-        {listingId && (
-          <button
-            disabled={!canAddToCart}
-            type="button"
-            onClick={() => void handleAdd()}
-            className="inline-flex h-8 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-rdx-red px-3 text-[12px] font-semibold text-white shadow-sm transition hover:bg-rdx-red-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rdx-red/40 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-rdx-red"
-          >
-            <CartIcon />
-            {pending
-              ? "Adding…"
-              : soldOut || blocked
-                ? "Sold out"
-                : "Add to Cart"}
-          </button>
-        )}
+          {listingId && (
+            <button
+              disabled={!canAddToCart}
+              type="button"
+              onClick={() => void handleAdd()}
+              className="inline-flex h-8 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-rdx-red px-3 text-[12px] font-semibold text-white shadow-sm transition hover:bg-rdx-red-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rdx-red/40 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-rdx-red"
+            >
+              <CartIcon />
+              {pending
+                ? "Adding…"
+                : soldOut || blocked
+                  ? "Sold out"
+                  : "Add to Cart"}
+            </button>
+          )}
+        </div>
       </div>
     </article>
   );

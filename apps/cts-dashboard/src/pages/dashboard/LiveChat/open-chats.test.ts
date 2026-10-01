@@ -12,7 +12,9 @@ import {
   floatingIds,
   layoutFloats,
   openChat,
+  openChatInMain,
   pruneOpenChats,
+  retainFloats,
 } from "./open-chats.ts";
 
 test("the first chat becomes the main panel", () => {
@@ -124,4 +126,24 @@ test("expanding a window collapses older expanded windows until it fits", () => 
   const layout = layoutFloats(floatingIds(expanded), new Set(expanded.collapsedIds), oneWindow, false);
   assert.equal(layout.find((item) => item.id === "a")?.minimized, false);
   assert.equal(layout.filter((item) => !item.minimized).length, 1);
+});
+
+test("a chat outside Active opens in the main panel and does not stay as a side window", () => {
+  const session = openChat(openChat(createOpenChatSession(), "active-a", { promote: true }).session, "active-b", {
+    promote: false,
+  }).session;
+  const active = new Set(["active-a", "active-b"]);
+  const next = openChatInMain(session, "queue-c", (id) => active.has(id));
+  assert.equal(next.mainId, "queue-c");
+  assert.deepEqual(floatingIds(next), ["active-b", "active-a"]);
+  assert.equal(retainFloats(next, (id) => active.has(id)), next);
+});
+
+test("side windows drop when a chat leaves Active", () => {
+  const session = openChat(openChat(createOpenChatSession(), "active-a", { promote: true }).session, "active-b", {
+    promote: false,
+  }).session;
+  const next = retainFloats(session, (id) => id === "active-a");
+  assert.equal(next.mainId, "active-a");
+  assert.deepEqual(floatingIds(next), []);
 });

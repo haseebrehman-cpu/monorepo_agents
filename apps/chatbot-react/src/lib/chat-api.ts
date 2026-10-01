@@ -72,7 +72,7 @@ function withScope(input: SendChatInput): ChatRequestBody {
   const marketplace = readMarketplace(input.region ?? undefined);
   return {
     message: input.message,
-    conversation_id: input.conversation_id ?? undefined,
+    conversation_id: input.conversation_id?.trim() || undefined,
     client_message_id: input.client_message_id ?? undefined,
     ...(sessionToken
       ? {}

@@ -28,7 +28,7 @@ export default function SizeChartAttachment({
         loading="lazy"
         decoding="async"
         referrerPolicy="no-referrer"
-        className="mx-auto max-h-80 w-full bg-white object-contain p-2"
+        className="rdx-size-chart mx-auto max-h-80 w-full bg-white object-contain p-2"
       />
       <div className="border-t border-slate-200 px-3 py-2 text-left">
         <a

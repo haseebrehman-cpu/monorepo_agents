@@ -6,6 +6,7 @@ import {
   assigneeId,
   canSeeConversation,
   createSupportTeam,
+  matchesInbox,
   MAX_QUEUE_LIMIT,
   memberName,
   MIN_QUEUE_LIMIT,
@@ -28,7 +29,9 @@ import {
   floatingIds as sessionFloatingIds,
   layoutFloats,
   openChat,
+  openChatInMain,
   pruneOpenChats,
+  retainFloats,
   type OpenChatSession,
 } from "./open-chats";
 import { createIncomingHandoff, createSampleConversations } from "./sample-conversations";
@@ -103,10 +106,16 @@ export default function LiveChatPage() {
   const [conversations, setConversations] = useState(() => rebalance(createSampleConversations(), createSupportTeam(agentName)));
   const [storedSession, setChatSession] = useState<OpenChatSession>(() => createOpenChatSession("lc-10482"));
   const [showThreadOnMobile, setShowThreadOnMobile] = useState(false);
-  const chatSession = pruneOpenChats(storedSession, (id) => {
-    const conv = conversations.find((item) => item.id === id);
-    return Boolean(conv && canSeeConversation(conv, isDeskAdmin, VIEWER_ID));
-  });
+  const chatSession = retainFloats(
+    pruneOpenChats(storedSession, (id) => {
+      const conv = conversations.find((item) => item.id === id);
+      return Boolean(conv && canSeeConversation(conv, isDeskAdmin, VIEWER_ID));
+    }),
+    (id) => {
+      const conv = conversations.find((item) => item.id === id);
+      return Boolean(conv && matchesInbox(conv, "active", VIEWER_ID, isDeskAdmin));
+    },
+  );
   if (chatSession !== storedSession) {
     setChatSession(chatSession);
     if (chatSession.mainId === null) setShowThreadOnMobile(false);
@@ -169,11 +178,27 @@ export default function LiveChatPage() {
     setTransferOpen(false);
     setDeskView("chats");
 
+    const canFloat = (chatId: string) => {
+      const conv = conversations.find((conversation) => conversation.id === chatId);
+      return Boolean(conv && matchesInbox(conv, "active", VIEWER_ID, isDeskAdmin));
+    };
+
+    if (!canFloat(id)) {
+      const next = openChatInMain(chatSession, id, canFloat);
+      setChatSession(next);
+      if (options?.openThread !== false) {
+        setShowThreadOnMobile(true);
+        if (options?.focusThread || narrowDesk) setThreadFocusToken((token) => token + 1);
+      }
+      return;
+    }
+
     const promote =
       narrowDesk ||
       options?.focusThread === true ||
       chatSession.openIds.includes(id) ||
-      chatSession.mainId === null;
+      chatSession.mainId === null ||
+      (chatSession.mainId !== null && !canFloat(chatSession.mainId));
     const result = openChat(chatSession, id, { promote });
     if (result.status === "limit") {
       const text = `You can have at most ${MAX_OPEN_CHATS} chats open. Close one to open another.`;
@@ -182,14 +207,15 @@ export default function LiveChatPage() {
       return;
     }
 
-    setChatSession(result.session);
-    if (result.status === "floated") {
+    const next = retainFloats(result.session, canFloat);
+    setChatSession(next);
+    if (result.status === "floated" && next.openIds.includes(id) && next.mainId !== id) {
       const conv = conversations.find((conversation) => conversation.id === id);
       announce(`${conv?.customerName ?? "Chat"} is open in a side window.`);
       return;
     }
 
-    if (result.session.mainId === id && options?.openThread !== false) {
+    if (next.mainId === id && options?.openThread !== false) {
       setShowThreadOnMobile(true);
       if (options?.focusThread || narrowDesk) setThreadFocusToken((token) => token + 1);
     }
@@ -197,7 +223,11 @@ export default function LiveChatPage() {
 
   /** Move a side window into the main panel. The previous main chat becomes a side window. */
   const focusChat = (id: string) => {
-    setChatSession(openChat(chatSession, id, { promote: true }).session);
+    const canFloat = (chatId: string) => {
+      const conv = conversations.find((conversation) => conversation.id === chatId);
+      return Boolean(conv && matchesInbox(conv, "active", VIEWER_ID, isDeskAdmin));
+    };
+    setChatSession(retainFloats(openChat(chatSession, id, { promote: true }).session, canFloat));
     setDeskView("chats");
     setShowThreadOnMobile(true);
     setThreadFocusToken((token) => token + 1);
@@ -255,42 +285,12 @@ export default function LiveChatPage() {
           at,
         },
       ),
+      true,
     );
     setFilter(isDeskAdmin ? "team" : "active");
     announce(`Chat with ${conv.customerName} transferred to ${target.name}.`);
     setTransferOpen(false);
     setTransferTargetId(null);
-  };
-
-  const leaveChat = (id: string) => {
-    const conv = conversations.find((c) => c.id === id);
-    if (!conv || !canAssign || conv.ownerId !== VIEWER_ID || conv.status !== "active") return;
-    const at = new Date().toISOString();
-    const released = withMessage(
-      { ...conv, status: "waiting", ownerId: null, queuedForId: null },
-      {
-        id: `left-${at}`,
-        author: "system",
-        authorName: "System",
-        body: `${agentName} put this conversation back in the queue.`,
-        at,
-      },
-    );
-    setConversations((current) => {
-      const next = rebalance(
-        current.map((conversation) => (conversation.id === released.id ? released : conversation)),
-        members,
-      );
-      const placed = next.find((conversation) => conversation.id === released.id);
-      const queuedName = memberName(members, placed?.queuedForId ?? null);
-      announce(
-        queuedName
-          ? `You released ${conv.customerName}. The handoff is now queued for ${queuedName}.`
-          : `You released ${conv.customerName}. No one has an open queue slot.`,
-      );
-      return next;
-    });
-    setFilter("user_queue");
   };
 
   const resolveChat = (id: string) => {
@@ -309,6 +309,7 @@ export default function LiveChatPage() {
           at,
         },
       ),
+      true,
     );
     setFilter("closed");
     announce(`Conversation with ${conv.customerName} closed.`);
@@ -330,6 +331,7 @@ export default function LiveChatPage() {
           at,
         },
       ),
+      true,
     );
     setFilter("active");
     announce(`Conversation with ${conv.customerName} reopened. Only you can see it.`);
@@ -364,7 +366,7 @@ export default function LiveChatPage() {
     const nextMembers = members.map((member) => (member.id === memberId ? { ...member, limit } : member));
     setMembers(nextMembers);
     setConversations(rebalance(conversations, nextMembers));
-    announce(`${memberName(nextMembers, memberId)} can now hold ${limit} queued handoffs.`);
+    announce(`${memberName(nextMembers, memberId)} can now hold ${limit} chats in Active, including owned and waiting.`);
   };
 
   const changeAccepting = (nextAccepting: boolean) => {
@@ -373,7 +375,11 @@ export default function LiveChatPage() {
     );
     setMembers(nextMembers);
     setConversations(rebalance(conversations, nextMembers));
-    announce(nextAccepting ? "You are accepting new handoffs." : "You are not accepting new handoffs. Your queue was released.");
+    announce(
+      nextAccepting
+        ? "You are accepting new handoffs. Open slots in Active fill from the oldest waiting chats."
+        : "You are not accepting new handoffs. Waiting chats left your Active tab.",
+    );
   };
 
   const receiveHandoff = () => {
@@ -382,16 +388,17 @@ export default function LiveChatPage() {
     setConversations(next);
     const placed = next.find((conversation) => conversation.id === incoming.id);
     const queuedName = memberName(members, placed?.queuedForId ?? null);
-    setFilter("user_queue");
     setDeskView("chats");
-    if (placed && (isDeskAdmin || placed.queuedForId === VIEWER_ID)) {
-      // Prefer opening as floating if already at capacity of open chats; otherwise openConversation handles it
+    if (placed?.queuedForId === VIEWER_ID) {
+      setFilter("active");
       openConversation(placed.id, { openThread: true });
+    } else {
+      setFilter("user_queue");
     }
     announce(
       queuedName
-        ? `${incoming.customerName} was handed off and queued for ${queuedName}.`
-        : `${incoming.customerName} is waiting. Every accepting person is at their queue limit.`,
+        ? `${incoming.customerName} is waiting and was assigned to ${queuedName} in Active.`
+        : `${incoming.customerName} is waiting in User Queue. Every accepting person is at their Active limit.`,
     );
   };
 
@@ -516,6 +523,7 @@ export default function LiveChatPage() {
             canReply={canReply}
             canAssign={canAssign}
             canResolve={canResolve}
+            allowTake={queueFilter === "active"}
             viewerId={VIEWER_ID}
             assigneeName={selectedAssignee}
             detailsOpen={detailsOpen}
@@ -532,9 +540,6 @@ export default function LiveChatPage() {
             }}
             onResolve={() => {
               if (visibleSelected) resolveChat(visibleSelected.id);
-            }}
-            onLeave={() => {
-              if (visibleSelected) leaveChat(visibleSelected.id);
             }}
             onReopen={() => {
               if (visibleSelected) reopenChat(visibleSelected.id);
@@ -604,7 +609,7 @@ export default function LiveChatPage() {
           >
           {floatLayout.map((item) => {
             const conv = conversations.find((conversation) => conversation.id === item.id);
-            if (!conv || !canSeeConversation(conv, isDeskAdmin, VIEWER_ID)) return null;
+            if (!conv || !matchesInbox(conv, "active", VIEWER_ID, isDeskAdmin)) return null;
             return (
               <FloatingChatWindow
                 key={conv.id}
@@ -614,6 +619,7 @@ export default function LiveChatPage() {
                 canReply={canReply}
                 canAssign={canAssign}
                 canResolve={canResolve}
+                allowTake={conv.status === "waiting" && conv.queuedForId === VIEWER_ID}
                 viewerId={VIEWER_ID}
                 assigneeName={memberName(members, assigneeId(conv))}
                 minimized={item.minimized}
@@ -622,7 +628,6 @@ export default function LiveChatPage() {
                 onSend={(mode) => sendReply(conv.id, mode)}
                 onTake={() => takeChat(conv.id)}
                 onResolve={() => resolveChat(conv.id)}
-                onLeave={() => leaveChat(conv.id)}
                 onReopen={() => reopenChat(conv.id)}
                 onOpenTransfer={() => {
                   setTransferTargetId(conv.id);

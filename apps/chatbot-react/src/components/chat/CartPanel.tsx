@@ -55,7 +55,7 @@ function LineRow({
         <img
           src={image}
           alt=""
-          className="h-16 w-16 shrink-0 rounded-md object-cover"
+          className="h-16 w-16 shrink-0 rounded-md object-contain"
         />
       ) : (
         <div className="h-16 w-16 shrink-0 rounded-md bg-neutral-100" />
@@ -207,7 +207,7 @@ export default function CartPanel({
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
+      <div className="rdx-chat-cart min-h-0 w-full flex-1 space-y-3 overflow-y-auto px-4 py-3">
         {notice && <CartNoticeBanner notice={notice} />}
         {frozen && (
           <CartNoticeBanner
@@ -253,7 +253,7 @@ export default function CartPanel({
         )}
       </div>
 
-      <div className="border-t border-neutral-200 bg-white px-4 py-3">
+      <div className="rdx-chat-cart w-full border-t border-neutral-200 bg-white px-4 py-3">
         {total && !empty && (
           <div className="mb-2 flex items-baseline justify-between">
             <span className="text-[12px] text-neutral-500">

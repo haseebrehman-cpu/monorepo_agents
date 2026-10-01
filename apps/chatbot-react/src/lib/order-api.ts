@@ -14,30 +14,38 @@ export function looksLikeOrderTracking(text: string): boolean {
   return new RegExp(TRACK_INTENT.source, TRACK_INTENT.flags).test(text);
 }
 
-export function shouldOfferOrderVerification(
-  result: Pick<ChatSuccessResponse, "skill" | "answer">,
-  userText: string,
-): boolean {
-  return result.skill === "order" || looksLikeOrderTracking(userText);
-}
+const DEFAULT_ORDER_TRACKING: OrderVerificationChallenge = {
+  required: true,
+  reason: "verification_required",
+  factors: ["email"],
+  fields: [
+    {
+      name: "order_number",
+      type: "text",
+      label: "Order number",
+      required: true,
+    },
+    {
+      name: "email",
+      type: "email",
+      label: "Email address",
+      required: true,
+      autocomplete: "email",
+    },
+  ],
+  submit: { method: "POST", path: "/v1/orders/verify" },
+};
 
-export function getOrderChallenge(input: {
-  region?: string | null;
-  orderNumber?: string | null;
-}) {
-  return api.orders.getChallenge({
-    ...cartScope(input.region),
-    orderNumber: input.orderNumber,
-  });
-}
-
-export async function resolveOrderVerification(
-  result: Pick<ChatSuccessResponse, "skill" | "answer">,
+/** Form only on this turn: chat skill is order and the customer asked to track. */
+export function orderTrackingForm(
+  result: Pick<ChatSuccessResponse, "skill" | "order_verification">,
   userText: string,
-  region?: string | null,
-) {
-  if (!shouldOfferOrderVerification(result, userText)) return null;
-  return getOrderChallenge({ region });
+): OrderVerificationChallenge | null {
+  if (result.skill !== "order") return null;
+  if (!looksLikeOrderTracking(userText)) return null;
+  const fromChat = result.order_verification;
+  if (fromChat && fromChat.fields.length > 0) return fromChat;
+  return DEFAULT_ORDER_TRACKING;
 }
 
 export function getOrderVerificationInitialValues(

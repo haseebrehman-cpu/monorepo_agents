@@ -5,7 +5,6 @@ import {
   ArrowRightLeftIcon,
   BookMarkedIcon,
   BotIcon,
-  LogOutIcon,
   MessageSquareIcon,
   PanelRightIcon,
   RotateCcwIcon,
@@ -29,6 +28,7 @@ export default function ConversationThread({
   canReply,
   canAssign,
   canResolve,
+  allowTake = false,
   viewerId,
   assigneeName,
   detailsOpen,
@@ -37,7 +37,6 @@ export default function ConversationThread({
   onSend,
   onTake,
   onResolve,
-  onLeave,
   onReopen,
   onOpenTransfer,
   onBack,
@@ -50,6 +49,8 @@ export default function ConversationThread({
   canReply: boolean;
   canAssign: boolean;
   canResolve: boolean;
+  /** Take over is offered only for waiting chats opened from Active. */
+  allowTake?: boolean;
   viewerId: string;
   assigneeName: string | null;
   detailsOpen: boolean;
@@ -58,7 +59,6 @@ export default function ConversationThread({
   onSend: (mode: ComposerMode) => void;
   onTake: () => void;
   onResolve: () => void;
-  onLeave: () => void;
   onReopen: () => void;
   onOpenTransfer: () => void;
   onBack: () => void;
@@ -72,8 +72,8 @@ export default function ConversationThread({
         <MessageSquareIcon className="h-8 w-8 text-slate-400" aria-hidden="true" />
         <h2 className="mt-3 text-sm font-semibold text-slate-900">Select a chat</h2>
         <p className="mt-1 max-w-sm text-sm leading-6 text-slate-600">
-          Queued chats are customers the assistant has already passed to a person. Take one, reply, or transfer it.
-          Open up to {MAX_OPEN_CHATS} chats at once. This panel keeps the one you are working in, and the others sit in windows along the bottom.
+          User Queue lists every waiting handoff. Active fills up to your limit with chats you own and waiting chats assigned to you.
+          Take over a waiting chat from Active before you reply. Open up to {MAX_OPEN_CHATS} chats at once.
         </p>
       </section>
     );
@@ -87,6 +87,7 @@ export default function ConversationThread({
       canReply={canReply}
       canAssign={canAssign}
       canResolve={canResolve}
+      allowTake={allowTake}
       viewerId={viewerId}
       assigneeName={assigneeName}
       detailsOpen={detailsOpen}
@@ -95,7 +96,6 @@ export default function ConversationThread({
       onSend={onSend}
       onTake={onTake}
       onResolve={onResolve}
-      onLeave={onLeave}
       onReopen={onReopen}
       onOpenTransfer={onOpenTransfer}
       onBack={onBack}
@@ -112,6 +112,7 @@ function ThreadView({
   canReply,
   canAssign,
   canResolve,
+  allowTake = false,
   viewerId,
   assigneeName,
   detailsOpen,
@@ -120,7 +121,6 @@ function ThreadView({
   onSend,
   onTake,
   onResolve,
-  onLeave,
   onReopen,
   onOpenTransfer,
   onBack,
@@ -133,6 +133,8 @@ function ThreadView({
   canReply: boolean;
   canAssign: boolean;
   canResolve: boolean;
+  /** Take over is offered only for waiting chats opened from Active. */
+  allowTake?: boolean;
   viewerId: string;
   assigneeName: string | null;
   detailsOpen: boolean;
@@ -141,7 +143,6 @@ function ThreadView({
   onSend: (mode: ComposerMode) => void;
   onTake: () => void;
   onResolve: () => void;
-  onLeave: () => void;
   onReopen: () => void;
   onOpenTransfer: () => void;
   onBack: () => void;
@@ -164,9 +165,9 @@ function ThreadView({
   const setMode = (next: ComposerMode) => {
     setModeChoice({ conversationId: conversation.id, ownsChat, mode: next });
   };
-  const canTake = conversation.status === "waiting" && canAssign && conversation.queuedForId === viewerId;
+  const canTake =
+    allowTake && conversation.status === "waiting" && canAssign && conversation.queuedForId === viewerId;
   const canTransfer = ownsChat && canAssign;
-  const canLeave = ownsChat && canAssign;
   const canClose = ownsChat && canResolve;
   const canReopen = conversation.status === "resolved" && conversation.ownerId === viewerId && canAssign;
   const waited = formatQueueTime(conversation.handedOffAt);
@@ -243,15 +244,9 @@ function ThreadView({
               Transfer
             </Button>
           ) : null}
-          {canLeave ? (
-            <Button size="sm" variant="outline" className="cursor-pointer" onClick={onLeave}>
-              <LogOutIcon className="h-3.5 w-3.5" aria-hidden="true" />
-              Leave
-            </Button>
-          ) : null}
           {canTake ? (
             <Button size="sm" variant="primary" className="cursor-pointer" onClick={onTake}>
-              Take chat
+              Take over
             </Button>
           ) : null}
           {canClose ? (
@@ -298,13 +293,15 @@ function ThreadView({
             {conversation.status === "waiting" ? (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
                 <p className="text-sm text-amber-950">
-                  {canAssign
-                    ? "This customer is in the queue. Take the chat before you reply."
-                    : "Assign access is required before this chat can be taken."}
+                  {canTake
+                    ? "This chat is assigned to you. Take it over before you reply."
+                    : conversation.queuedForId === viewerId
+                      ? "This chat is in your Active tab. Open Active to take it over."
+                      : "Every waiting chat is listed in User Queue. Take over is only available in Active, and only for chats assigned to you."}
                 </p>
                 {canTake ? (
                   <Button size="sm" variant="primary" className="cursor-pointer" onClick={onTake}>
-                    Take chat
+                    Take over
                   </Button>
                 ) : null}
               </div>
@@ -321,6 +318,7 @@ function ThreadView({
                 mode={mode}
                 canSend={canSend}
                 canCompose={canCompose}
+                canTake={canTake}
                 onMode={setMode}
                 onDraft={onDraft}
                 onSend={() => onSend(mode)}
@@ -375,6 +373,7 @@ function Composer({
   mode,
   canSend,
   canCompose,
+  canTake,
   onMode,
   onDraft,
   onSend,
@@ -384,6 +383,7 @@ function Composer({
   mode: ComposerMode;
   canSend: boolean;
   canCompose: boolean;
+  canTake: boolean;
   onMode: (mode: ComposerMode) => void;
   onDraft: (value: string) => void;
   onSend: () => void;
@@ -484,7 +484,9 @@ function Composer({
             ? "Private note. Customers never see this. Type / for a saved reply."
             : canCompose
               ? `Reply to ${conversation.customerName}. Type / for a saved reply.`
-              : "Take this chat to reply, or switch to a private note."
+              : canTake
+                ? "Take over this chat to reply, or switch to a private note."
+                : "Take over from Active when this chat is assigned to you, or switch to a private note."
         }
         disabled={!canCompose}
         aria-describedby="live-chat-reply-hint"

@@ -20,7 +20,6 @@ import {
 } from "./http";
 import {
   createOrdersApi,
-  getOrderChallenge,
   verifyOrder,
   type OrderScope,
   type OrdersApi,
@@ -70,7 +69,6 @@ export {
   getCart,
   getCartAction,
   getHealthz,
-  getOrderChallenge,
   getTurn,
   patchCartLine,
   sendChatMessage,
