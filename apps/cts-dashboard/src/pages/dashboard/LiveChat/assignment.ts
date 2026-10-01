@@ -1,4 +1,4 @@
-import type { LiveConversation, QueueFilter, SupportMember } from "./types";
+import type { LiveConversation, QueueFilter, SupportMember } from "./types.js";
 
 export const VIEWER_ID = "you";
 export const SUPPORT_ADMIN_ID = "support-admin";

@@ -103,11 +103,24 @@ export function nonProductCitations(
   return (citations ?? []).filter((citation) => !isProductCitation(citation));
 }
 
-/** Remove product markdown links so they are not also shown as a link list. */
+const URL_LABEL = /\*{0,2}URL:?\*{0,2}\s*$/i;
+
+/**
+ * Remove standalone product markdown links so they are not also shown as a
+ * link list. Links that are the value of a URL field stay, with the address
+ * as the visible text.
+ */
 export function stripProductLinksFromAnswer(content: string): string {
   return content
-    .replace(MARKDOWN_LINK, (full, _title, url: string) =>
-      isProductHref(url) ? "" : full,
+    .replace(
+      MARKDOWN_LINK,
+      (full, _title: string, url: string, offset: number, source: string) => {
+        if (!isProductHref(url)) return full;
+        const lineStart = source.lastIndexOf("\n", offset - 1) + 1;
+        const before = source.slice(lineStart, offset);
+        if (URL_LABEL.test(before)) return `[${url}](${url})`;
+        return "";
+      },
     )
     .replace(/^\s*(?:[-*]|•|\d+\.)\s*$/gm, "")
     .replace(/[ \t]{2,}/g, " ")

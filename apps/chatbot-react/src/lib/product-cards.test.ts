@@ -110,4 +110,34 @@ describe("stripProductLinksFromAnswer", () => {
       "Here are shin guards:\n\nNeed help with [returns](https://rdxsports.co.uk/policies/refund-policy)?",
     );
   });
+
+  it("keeps the address on a labeled URL field", () => {
+    expect(
+      stripProductLinksFromAnswer(
+        [
+          "1. **RDX R2 Weightlifting Grips**",
+          "   - **Price:** £7.99, reduced from £10.99",
+          "   - **Availability:** In Stock",
+          "   - **URL:** [RDX R2 Weightlifting Grips](https://rdxsports.co.uk/products/r2-weightlifting-grips)",
+          "",
+          "2. **RDX T1 Weightlifting Grips**",
+          "   - **Price:** £8.99",
+          "   - **Availability:** In Stock",
+          "   - **URL:** [RDX T1 Weightlifting Grips](https://rdxsports.co.uk/products/t1-weightlifting-grips)",
+        ].join("\n"),
+      ),
+    ).toBe(
+      [
+        "1. **RDX R2 Weightlifting Grips**",
+        " - **Price:** £7.99, reduced from £10.99",
+        " - **Availability:** In Stock",
+        " - **URL:** [https://rdxsports.co.uk/products/r2-weightlifting-grips](https://rdxsports.co.uk/products/r2-weightlifting-grips)",
+        "",
+        "2. **RDX T1 Weightlifting Grips**",
+        " - **Price:** £8.99",
+        " - **Availability:** In Stock",
+        " - **URL:** [https://rdxsports.co.uk/products/t1-weightlifting-grips](https://rdxsports.co.uk/products/t1-weightlifting-grips)",
+      ].join("\n"),
+    );
+  });
 });
