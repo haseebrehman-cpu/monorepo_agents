@@ -1,5 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import { normalizeOrderedListNumbering } from "@/lib/ordered-lists";
 import { stripAssistantMedia } from "@/lib/sanitize";
 import { isAllowedChatHref } from "@/lib/url-allowlist";
 
@@ -15,7 +16,7 @@ const schema = {
 };
 
 export default function MessageContent({ content }: { content: string }) {
-  const cleaned = stripAssistantMedia(content);
+  const cleaned = normalizeOrderedListNumbering(stripAssistantMedia(content));
 
   return (
     <div className="rdx-chat-copy w-full text-left text-[13.5px] leading-relaxed text-slate-700">
@@ -37,8 +38,11 @@ export default function MessageContent({ content }: { content: string }) {
               {children}
             </ul>
           ),
-          ol: ({ children }) => (
-            <ol className="mb-3 list-decimal space-y-3 pl-4 text-left last:mb-0 text-sm">
+          ol: ({ children, start }) => (
+            <ol
+              start={typeof start === "number" ? start : undefined}
+              className="mb-3 list-decimal space-y-3 pl-4 text-left last:mb-0 text-sm"
+            >
               {children}
             </ol>
           ),
