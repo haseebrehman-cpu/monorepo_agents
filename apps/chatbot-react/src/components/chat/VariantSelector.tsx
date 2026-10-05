@@ -55,6 +55,7 @@ export default function VariantSelector({
   onImageChange,
   onSelectionChange,
   onPriceChange,
+  savedSelection,
 }: {
   /** The card's default selection — also the id the selector is opened with. */
   listingId: string;
@@ -68,10 +69,14 @@ export default function VariantSelector({
   onImageChange: (imageUrl: string | null) => void;
   onSelectionChange: (selection: VariantSelection) => void;
   onPriceChange: (price: VariantPricePreview | null) => void;
+  /** Picks already made on this card, restored when the selector reopens. */
+  savedSelection: VariantSelection;
 }) {
   const query = useProductVariants(listingId, region, true);
   /** `null` until the shopper picks — the card's default applies until then. */
-  const [picked, setPicked] = useState<VariantSelection | null>(null);
+  const [picked, setPicked] = useState<VariantSelection | null>(() =>
+    Object.keys(savedSelection).length > 0 ? savedSelection : null,
+  );
   const { add, pending } = useAddToCart(region, onNotice, onListingFailed);
 
   const options = orderedOptions(query.data?.options);

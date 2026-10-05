@@ -224,6 +224,7 @@ export default function ProductCard({
             onImageChange={showVariantImage}
             onSelectionChange={showSelection}
             onPriceChange={showVariantPrice}
+            savedSelection={selection}
           />
         )}
       </div>
