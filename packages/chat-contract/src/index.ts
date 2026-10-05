@@ -26,6 +26,20 @@ export interface ChatCitation {
   score?: number;
 }
 
+/** One value of a product option, with live availability when it was read. */
+export interface ProductOptionValue {
+  value: string;
+  available?: boolean | null;
+}
+
+/** An option type on a card (colour, size, weight, …) in the store's words. */
+export interface ProductCardOption {
+  key: string;
+  label: string;
+  position: number;
+  values: ProductOptionValue[];
+}
+
 export interface ChatProductCard {
   title: string;
   url: string;
@@ -44,6 +58,51 @@ export interface ChatProductCard {
   image_alt?: string | null;
   availability_as_of?: string | null;
   size_chart?: { url: string; alt?: string } | null;
+  /** True when live stock was read for this card. */
+  availability_known?: boolean | null;
+  /** True when the shopper still has a variant to choose. `null` when unknown. */
+  has_variants?: boolean | null;
+  /** Every option type, in the store's order. `null` when live stock was not read. */
+  options?: ProductCardOption[] | null;
+  available_sizes?: string[] | null;
+  sold_out_sizes?: string[] | null;
+  available_colours?: string[] | null;
+  sold_out_colours?: string[] | null;
+}
+
+/** An option type in the variant selector, with every value that exists. */
+export interface ProductSelectorOption {
+  key: string;
+  label: string;
+  position: number;
+  values: string[];
+}
+
+export interface ProductVariant {
+  /** `null` for a variant this service does not know yet — show it, disabled. */
+  listing_id: string | null;
+  /** This variant's value for each option key. */
+  options: Record<string, string>;
+  price: string | null;
+  compare_at_price: string | null;
+  available: boolean | null;
+  /** The only field that enables Add to Cart. */
+  purchasable: boolean;
+  image_url?: string | null;
+}
+
+export interface ProductVariantsResponse {
+  listing_id: string;
+  handle: string;
+  /** `false` when price and availability could not be read live. */
+  live: boolean;
+  reason?: string | null;
+  /** Diagnostics only — never rendered. */
+  source?: string | null;
+  availability_as_of?: string | null;
+  has_variants?: boolean | null;
+  options: ProductSelectorOption[];
+  variants: ProductVariant[];
 }
 
 export interface ChatTokenUsage {

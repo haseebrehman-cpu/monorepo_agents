@@ -24,6 +24,12 @@ import {
   type OrderScope,
   type OrdersApi,
 } from "./orders";
+import {
+  createProductsApi,
+  getProductVariants,
+  type ProductScope,
+  type ProductsApi,
+} from "./products";
 import { createSessionApi, createSession, type SessionApi } from "./session";
 import {
   createStreamApi,
@@ -39,6 +45,7 @@ export type RdxApiClient = ApiClient & {
   health: HealthApi;
   cart: CartApi;
   orders: OrdersApi;
+  products: ProductsApi;
 };
 
 /** Factory used by apps — attach namespaced API modules here as they grow. */
@@ -51,6 +58,7 @@ export function createRdxApiClient(options: ApiClientOptions): RdxApiClient {
     health: createHealthApi(client),
     cart: createCartApi(client),
     orders: createOrdersApi(client),
+    products: createProductsApi(client),
   });
 }
 
@@ -63,12 +71,14 @@ export {
   createChatApi,
   createHealthApi,
   createOrdersApi,
+  createProductsApi,
   createSessionApi,
   createStreamApi,
   deleteCartLine,
   getCart,
   getCartAction,
   getHealthz,
+  getProductVariants,
   getTurn,
   patchCartLine,
   sendChatMessage,
@@ -86,6 +96,8 @@ export type {
   HealthApi,
   OrderScope,
   OrdersApi,
+  ProductScope,
+  ProductsApi,
   SessionApi,
   StreamApi,
   StreamChatHandlers,

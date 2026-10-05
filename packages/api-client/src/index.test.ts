@@ -225,6 +225,70 @@ describe("createRdxApiClient", () => {
     );
   });
 
+  it("reads product variants with the store scope", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers(),
+      text: async () =>
+        JSON.stringify({
+          listing_id: "lst_black_12",
+          handle: "boxing-gloves-black",
+          live: true,
+          reason: null,
+          has_variants: true,
+          options: [
+            { key: "size", label: "Size", position: 1, values: ["12oz"] },
+          ],
+          variants: [
+            {
+              listing_id: "lst_black_12",
+              options: { size: "12oz" },
+              price: "29.99",
+              compare_at_price: null,
+              available: true,
+              purchasable: true,
+              image_url: "https://rdxsports.co.uk/images/black.jpg",
+            },
+          ],
+        }),
+    });
+
+    const api = createRdxApiClient({
+      baseUrl: "https://api.example.com",
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await expect(
+      api.products.variants("lst_black_12", {
+        tenant: "rdx",
+        marketplace: "uk",
+        sessionId: "shopper-1",
+      }),
+    ).resolves.toMatchObject({ live: true, has_variants: true });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "https://api.example.com/v1/products/lst_black_12/variants?tenant=rdx&marketplace=uk",
+      expect.any(Object),
+    );
+    const headers = fetchMock.mock.calls[0]?.[1]?.headers as Headers;
+    expect(headers.get("X-Session-Id")).toBe("shopper-1");
+  });
+
+  it("rejects a blank listing id before calling the variants route", async () => {
+    const fetchMock = vi.fn();
+    const api = createRdxApiClient({
+      baseUrl: "https://api.example.com",
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await expect(api.products.variants("  ")).rejects.toMatchObject({
+      name: "ApiError",
+      status: 400,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("submits order verification with shopper headers", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce({
       ok: true,

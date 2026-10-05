@@ -1,12 +1,16 @@
-import { useState } from "react";
-import { ApiError } from "@rdx/api-client";
+import { useCallback, useState } from "react";
 import type { ChatProductCard } from "@rdx/chat-contract";
-import { MARKETPLACE_CURRENCY, newCartActionId, toMinorUnits } from "@/lib/cart-api";
+import { MARKETPLACE_CURRENCY } from "@/lib/cart-api";
 import { formatDecimalPrice } from "@/lib/cart-money";
-import { noticeFromCartAction, type CartNotice } from "@/lib/cart-outcome";
 import { readMarketplace } from "@/lib/chat-api";
+import type { CartNotice } from "@/lib/cart-outcome";
 import { isAllowedChatHref, isAllowedImageUrl } from "@/lib/url-allowlist";
-import { useAddCartLine } from "@/lib/use-cart";
+import { useAddToCart } from "@/lib/use-add-to-cart";
+import {
+  selectedSizeColorLabel,
+  type VariantSelection,
+} from "@/lib/variant-selection";
+import VariantSelector from "./VariantSelector";
 
 function CartIcon() {
   return (
@@ -40,8 +44,12 @@ export default function ProductCard({
   onListingFailed: (listingId: string) => void;
   onNotice: (notice: CartNotice) => void;
 }) {
-  const addLine = useAddCartLine(region);
-  const [pending, setPending] = useState(false);
+  const [selectorOpen, setSelectorOpen] = useState(false);
+  const [selectorHidden, setSelectorHidden] = useState(false);
+  const [variantImage, setVariantImage] = useState<string | null>(null);
+  const [selection, setSelection] = useState<VariantSelection>({});
+  const { add, pending } = useAddToCart(region, onNotice, onListingFailed);
+
   const current = formatDecimalPrice(product.price_min, product.price_currency);
   const compare = formatDecimalPrice(
     product.compare_at_min,
@@ -53,50 +61,45 @@ export default function ProductCard({
     Number.parseFloat(product.compare_at_min) >
     Number.parseFloat(product.price_min);
   const href = isAllowedChatHref(product.url) ? product.url : null;
-  const image = isAllowedImageUrl(product.image_url ?? undefined)
+  const selectedImage = isAllowedImageUrl(variantImage ?? undefined)
+    ? variantImage
+    : null;
+  const cardImage = isAllowedImageUrl(product.image_url ?? undefined)
     ? product.image_url
     : null;
+  const image = selectedImage ?? cardImage;
   const promotion = product.promotions?.[0];
   const listingId = product.listing_id?.trim() || "";
   const soldOut = product.availability === "false";
   const blocked = Boolean(listingId && failedListingIds.has(listingId));
+  const hasVariants =
+    product.has_variants === true && Boolean(listingId) && !selectorHidden;
+  const currency =
+    product.price_currency || MARKETPLACE_CURRENCY[readMarketplace(region)];
   const canAddToCart =
     product.availability === "true" && Boolean(listingId) && !blocked && !pending;
 
-  const handleAdd = async () => {
-    if (!canAddToCart || !listingId) return;
-    const marketplace = readMarketplace(region);
-    const quotedUnitAmount = toMinorUnits(product.price_min);
-    const quotedCurrency =
-      product.price_currency || MARKETPLACE_CURRENCY[marketplace];
-    const actionId = newCartActionId();
+  const hideSelector = useCallback(() => {
+    setSelectorHidden(true);
+    setSelectorOpen(false);
+    setVariantImage(null);
+    setSelection({});
+  }, []);
 
-    setPending(true);
-    try {
-      const result = await addLine.mutateAsync({
-        listingId,
-        quantity: 1,
-        quotedUnitAmount,
-        quotedCurrency,
-        actionId,
-      });
-      onNotice(noticeFromCartAction(result, "add"));
-      if (result.outcome === "failed") {
-        onListingFailed(listingId);
-        return;
+  const showVariantImage = useCallback((imageUrl: string | null) => {
+    setVariantImage(imageUrl);
+  }, []);
+
+  const showSelection = useCallback((next: VariantSelection) => {
+    setSelection((prev) => {
+      const keys = new Set([...Object.keys(prev), ...Object.keys(next)]);
+      for (const key of keys) {
+        if (prev[key] !== next[key]) return next;
       }
-    } catch (error) {
-      onNotice({
-        kind: "error",
-        text:
-          error instanceof ApiError
-            ? error.message
-            : "Could not add this item. Please try again.",
-      });
-    } finally {
-      setPending(false);
-    }
-  };
+      return prev;
+    });
+  }, []);
+  const pickedLabel = selectedSizeColorLabel(selection);
 
   return (
     <article className="rdx-product-card mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left">
@@ -111,7 +114,7 @@ export default function ProductCard({
         <h3 className="rdx-product-title text-[13px] font-semibold text-slate-900">
           {product.title}
         </h3>
-        {current && (
+        {current ? (
           <p className="rdx-product-price mt-1 text-[13px] text-slate-800">
             <span className="font-semibold">{current}</span>
             {product.price_max &&
@@ -126,9 +129,18 @@ export default function ProductCard({
               <span className="ml-2 text-slate-400 line-through">{compare}</span>
             )}
           </p>
+        ) : (
+          <p className="rdx-product-price mt-1 text-[13px] text-slate-600">
+            See product page
+          </p>
         )}
-        {product.stock_status && (
-          <p className="mt-0.5 text-[12px] text-slate-600">{product.stock_status}</p>
+        {(product.stock_status || pickedLabel) && (
+          <p className="mt-0.5 flex items-baseline justify-between gap-2 text-[12px] text-slate-600">
+            <span>{product.stock_status}</span>
+            {pickedLabel && (
+              <span className="shrink-0 text-right text-slate-700">{pickedLabel}</span>
+            )}
+          </p>
         )}
         {promotion && (
           <p className="mt-0.5 text-[12px] font-medium text-rdx-red">{promotion}</p>
@@ -144,22 +156,54 @@ export default function ProductCard({
               View product
             </a>
           )}
-          {listingId && (
+          {hasVariants ? (
             <button
-              disabled={!canAddToCart}
               type="button"
-              onClick={() => void handleAdd()}
-              className="inline-flex h-8 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-rdx-red px-3 text-[12px] font-semibold text-white shadow-sm transition hover:bg-rdx-red-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rdx-red/40 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-rdx-red"
+              aria-expanded={selectorOpen}
+              onClick={() => setSelectorOpen(!selectorOpen)}
+              className="inline-flex h-8 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-rdx-red px-3 text-[12px] font-semibold text-white shadow-sm transition hover:bg-rdx-red-hover focus-visible:ring-2 focus-visible:ring-rdx-red/40 focus-visible:ring-offset-1 focus-visible:outline-none"
             >
               <CartIcon />
-              {pending
-                ? "Adding…"
-                : soldOut || blocked
-                  ? "Sold out"
-                  : "Add to Cart"}
+              {selectorOpen ? "Hide options" : "Select options"}
             </button>
+          ) : (
+            listingId && (
+              <button
+                disabled={!canAddToCart}
+                type="button"
+                onClick={() =>
+                  void add({
+                    listingId,
+                    price: product.price_min,
+                    currency: product.price_currency,
+                  })
+                }
+                className="inline-flex h-8 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-rdx-red px-3 text-[12px] font-semibold text-white shadow-sm transition hover:bg-rdx-red-hover focus-visible:ring-2 focus-visible:ring-rdx-red/40 focus-visible:ring-offset-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-rdx-red"
+              >
+                <CartIcon />
+                {pending
+                  ? "Adding…"
+                  : soldOut || blocked
+                    ? "Sold out"
+                    : "Add to Cart"}
+              </button>
+            )
           )}
         </div>
+        {hasVariants && selectorOpen && (
+          <VariantSelector
+            listingId={listingId}
+            region={region}
+            currency={currency}
+            productHref={href}
+            failedListingIds={failedListingIds}
+            onListingFailed={onListingFailed}
+            onNotice={onNotice}
+            onUnavailable={hideSelector}
+            onImageChange={showVariantImage}
+            onSelectionChange={showSelection}
+          />
+        )}
       </div>
     </article>
   );
