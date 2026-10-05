@@ -16,6 +16,8 @@ import {
   previewImageUrl,
   priceRange,
   selectValue,
+  variantPricePreview,
+  type VariantPricePreview,
   type VariantSelection,
 } from "@/lib/variant-selection";
 
@@ -33,6 +35,7 @@ function availabilityNote(variant: ProductVariant): string | null {
 
 const VALUE_CLASS: Record<string, string> = {
   selected: "border-rdx-red bg-rdx-red text-white",
+  selected_sold_out: "border-rdx-red text-black line-through",
   available:
     "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-100",
   sold_out:
@@ -51,6 +54,7 @@ export default function VariantSelector({
   onUnavailable,
   onImageChange,
   onSelectionChange,
+  onPriceChange,
 }: {
   /** The card's default selection — also the id the selector is opened with. */
   listingId: string;
@@ -63,6 +67,7 @@ export default function VariantSelector({
   onUnavailable: () => void;
   onImageChange: (imageUrl: string | null) => void;
   onSelectionChange: (selection: VariantSelection) => void;
+  onPriceChange: (price: VariantPricePreview | null) => void;
 }) {
   const query = useProductVariants(listingId, region, true);
   /** `null` until the shopper picks — the card's default applies until then. */
@@ -88,11 +93,21 @@ export default function VariantSelector({
   }, [previewImage, onImageChange]);
 
   useEffect(() => {
-    if (!query.data?.live) return;
-    onSelectionChange(
-      picked ?? initialSelection(query.data.variants, query.data.listing_id),
+    if (!query.data?.live) {
+      onPriceChange(null);
+      return;
+    }
+    const current =
+      picked ?? initialSelection(query.data.variants, query.data.listing_id);
+    onSelectionChange(current);
+    onPriceChange(
+      variantPricePreview(
+        orderedOptions(query.data.options),
+        query.data.variants,
+        current,
+      ),
     );
-  }, [query.data, picked, onSelectionChange]);
+  }, [query.data, picked, onSelectionChange, onPriceChange]);
 
   if (query.isPending) {
     return (
@@ -201,6 +216,11 @@ export default function VariantSelector({
                 value,
               );
               const selected = selection[option.key] === value;
+              const appearance = selected
+                ? state === "sold_out"
+                  ? "selected_sold_out"
+                  : "selected"
+                : state;
               return (
                 <button
                   key={value}
@@ -218,9 +238,7 @@ export default function VariantSelector({
                       ),
                     )
                   }
-                  className={`rounded-full border px-2.5 py-1 text-[12px] font-medium transition disabled:cursor-not-allowed ${
-                    VALUE_CLASS[selected ? "selected" : state]
-                  }`}
+                  className={`cursor-pointer rounded-full border px-2.5 py-1 text-[12px] font-medium transition disabled:cursor-not-allowed ${VALUE_CLASS[appearance]}`}
                 >
                   {value}
                 </button>
@@ -267,7 +285,7 @@ export default function VariantSelector({
             currency,
           })
         }
-        className="mt-2 inline-flex h-8 w-full items-center justify-center rounded-lg bg-rdx-red px-3 text-[12px] font-semibold text-white shadow-sm transition hover:bg-rdx-red-hover focus-visible:ring-2 focus-visible:ring-rdx-red/40 focus-visible:ring-offset-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-rdx-red"
+        className="cursor-pointer mt-2 inline-flex h-8 w-full items-center justify-center rounded-lg bg-rdx-red px-3 text-[12px] font-semibold text-white shadow-sm transition hover:bg-rdx-red-hover focus-visible:ring-2 focus-visible:ring-rdx-red/40 focus-visible:ring-offset-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-rdx-red"
       >
         {pending
           ? "Adding…"

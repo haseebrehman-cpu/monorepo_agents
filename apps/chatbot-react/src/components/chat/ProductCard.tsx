@@ -8,6 +8,7 @@ import { isAllowedChatHref, isAllowedImageUrl } from "@/lib/url-allowlist";
 import { useAddToCart } from "@/lib/use-add-to-cart";
 import {
   selectedSizeColorLabel,
+  type VariantPricePreview,
   type VariantSelection,
 } from "@/lib/variant-selection";
 import VariantSelector from "./VariantSelector";
@@ -48,18 +49,22 @@ export default function ProductCard({
   const [selectorHidden, setSelectorHidden] = useState(false);
   const [variantImage, setVariantImage] = useState<string | null>(null);
   const [selection, setSelection] = useState<VariantSelection>({});
+  const [variantPrice, setVariantPrice] = useState<VariantPricePreview | null>(
+    null,
+  );
   const { add, pending } = useAddToCart(region, onNotice, onListingFailed);
 
-  const current = formatDecimalPrice(product.price_min, product.price_currency);
-  const compare = formatDecimalPrice(
-    product.compare_at_min,
-    product.price_currency,
-  );
+  const currency =
+    product.price_currency || MARKETPLACE_CURRENCY[readMarketplace(region)];
+  const priceMin = variantPrice ? variantPrice.min : product.price_min;
+  const priceMax = variantPrice ? variantPrice.max : product.price_max;
+  const compareAt = variantPrice ? variantPrice.compareAt : product.compare_at_min;
+  const current = formatDecimalPrice(priceMin, currency);
+  const compare = formatDecimalPrice(compareAt, currency);
   const showWas =
-    product.compare_at_min !== null &&
-    product.price_min !== null &&
-    Number.parseFloat(product.compare_at_min) >
-    Number.parseFloat(product.price_min);
+    compareAt !== null &&
+    priceMin !== null &&
+    Number.parseFloat(compareAt) > Number.parseFloat(priceMin);
   const href = isAllowedChatHref(product.url) ? product.url : null;
   const selectedImage = isAllowedImageUrl(variantImage ?? undefined)
     ? variantImage
@@ -74,8 +79,6 @@ export default function ProductCard({
   const blocked = Boolean(listingId && failedListingIds.has(listingId));
   const hasVariants =
     product.has_variants === true && Boolean(listingId) && !selectorHidden;
-  const currency =
-    product.price_currency || MARKETPLACE_CURRENCY[readMarketplace(region)];
   const canAddToCart =
     product.availability === "true" && Boolean(listingId) && !blocked && !pending;
 
@@ -84,6 +87,7 @@ export default function ProductCard({
     setSelectorOpen(false);
     setVariantImage(null);
     setSelection({});
+    setVariantPrice(null);
   }, []);
 
   const showVariantImage = useCallback((imageUrl: string | null) => {
@@ -97,6 +101,19 @@ export default function ProductCard({
         if (prev[key] !== next[key]) return next;
       }
       return prev;
+    });
+  }, []);
+
+  const showVariantPrice = useCallback((next: VariantPricePreview | null) => {
+    setVariantPrice((prev) => {
+      if (
+        prev?.min === next?.min &&
+        prev?.max === next?.max &&
+        prev?.compareAt === next?.compareAt
+      ) {
+        return prev;
+      }
+      return next;
     });
   }, []);
   const pickedLabel = selectedSizeColorLabel(selection);
@@ -117,21 +134,19 @@ export default function ProductCard({
         {current ? (
           <p className="rdx-product-price mt-1 text-[13px] text-slate-800">
             <span className="font-semibold">{current}</span>
-            {product.price_max &&
-              product.price_min &&
-              product.price_max !== product.price_min && (
-                <span className="text-slate-600">
-                  {" "}
-                  – {formatDecimalPrice(product.price_max, product.price_currency)}
-                </span>
-              )}
+            {priceMax && priceMin && priceMax !== priceMin && (
+              <span className="text-slate-600">
+                {" "}
+                – {formatDecimalPrice(priceMax, currency)}
+              </span>
+            )}
             {showWas && compare && (
               <span className="ml-2 text-slate-400 line-through">{compare}</span>
             )}
           </p>
         ) : (
           <p className="rdx-product-price mt-1 text-[13px] text-slate-600">
-            See product page
+            {variantPrice ? "Price unavailable" : "See product page"}
           </p>
         )}
         {(product.stock_status || pickedLabel) && (
@@ -202,6 +217,7 @@ export default function ProductCard({
             onUnavailable={hideSelector}
             onImageChange={showVariantImage}
             onSelectionChange={showSelection}
+            onPriceChange={showVariantPrice}
           />
         )}
       </div>

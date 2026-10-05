@@ -146,6 +146,46 @@ export function selectedSizeColorLabel(selection: VariantSelection): string {
   return [color, size].filter(Boolean).join(" · ");
 }
 
+/** Live price of the current picks, for the product card. */
+export type VariantPricePreview = {
+  min: string | null;
+  max: string | null;
+  compareAt: string | null;
+};
+
+/** Price span of the variants that still match the current picks. */
+export function pricesForSelection(
+  variants: ProductVariant[],
+  selection: VariantSelection,
+): { min: string | null; max: string | null } {
+  const matching =
+    Object.keys(selection).length === 0
+      ? variants
+      : variants.filter((variant) => matchesSelection(variant, selection));
+  return priceRange(matching);
+}
+
+/**
+ * Exact price once one variant is chosen; otherwise the range of the variants
+ * those picks still allow. Compare-at is only meaningful for one variant.
+ */
+export function variantPricePreview(
+  options: ProductSelectorOption[],
+  variants: ProductVariant[],
+  selection: VariantSelection,
+): VariantPricePreview {
+  const match = matchedVariant(options, variants, selection);
+  if (match) {
+    return {
+      min: match.price,
+      max: match.price,
+      compareAt: match.compare_at_price,
+    };
+  }
+  const range = pricesForSelection(variants, selection);
+  return { min: range.min, max: range.max, compareAt: null };
+}
+
 export function priceRange(variants: ProductVariant[]): {
   min: string | null;
   max: string | null;

@@ -10,8 +10,10 @@ import {
   orderedOptions,
   previewImageUrl,
   priceRange,
+  pricesForSelection,
   selectedSizeColorLabel,
   selectValue,
+  variantPricePreview,
 } from "./variant-selection";
 
 const options: ProductSelectorOption[] = [
@@ -198,6 +200,43 @@ describe("selectedSizeColorLabel", () => {
     expect(selectedSizeColorLabel({ colour: "Blue" })).toBe("Blue");
     expect(selectedSizeColorLabel({ size: "14oz" })).toBe("14oz");
     expect(selectedSizeColorLabel({})).toBe("");
+  });
+});
+
+describe("pricesForSelection", () => {
+  it("spans every live price before a pick", () => {
+    expect(pricesForSelection(variants, {})).toEqual({
+      min: "29.99",
+      max: "31.99",
+    });
+  });
+
+  it("narrows to the variants that match the current picks", () => {
+    expect(pricesForSelection(variants, { colour: "Blue" })).toEqual({
+      min: "29.99",
+      max: "29.99",
+    });
+    expect(pricesForSelection(variants, { size: "14oz" })).toEqual({
+      min: "31.99",
+      max: "31.99",
+    });
+  });
+});
+
+describe("variantPricePreview", () => {
+  it("uses the matched variant price and compare-at", () => {
+    expect(
+      variantPricePreview(options, variants, {
+        colour: "Black",
+        size: "14oz",
+      }),
+    ).toEqual({ min: "31.99", max: "31.99", compareAt: "34.99" });
+  });
+
+  it("keeps a range until the selection names one variant", () => {
+    expect(variantPricePreview(options, variants, { colour: "Black" })).toEqual(
+      { min: "29.99", max: "31.99", compareAt: null },
+    );
   });
 });
 
