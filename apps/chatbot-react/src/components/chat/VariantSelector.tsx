@@ -285,7 +285,7 @@ export default function VariantSelector({
             currency,
           })
         }
-        className="cursor-pointer mt-2 inline-flex h-8 w-full items-center justify-center rounded-lg bg-rdx-red px-3 text-[12px] font-semibold text-white shadow-sm transition hover:bg-rdx-red-hover focus-visible:ring-2 focus-visible:ring-rdx-red/40 focus-visible:ring-offset-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-rdx-red"
+        className="rdx-variant-add mt-2 inline-flex min-h-8 w-full cursor-pointer items-center justify-center rounded-lg bg-rdx-red px-3 text-center text-[12px] leading-tight font-semibold whitespace-nowrap text-white shadow-sm transition hover:bg-rdx-red-hover focus-visible:ring-2 focus-visible:ring-rdx-red/40 focus-visible:ring-offset-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-rdx-red"
       >
         {pending
           ? "Adding…"

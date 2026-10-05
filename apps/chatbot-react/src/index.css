@@ -132,9 +132,11 @@ body {
 }
 
 .rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-product-actions a,
-.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-product-actions button {
-  height: 2.5rem;
-  font-size: 0.875rem;
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-product-actions button,
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-variant-add {
+  min-height: 2.5rem;
+  height: auto;
+  line-height: 1.2;
 }
 
 .rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-size-chart {

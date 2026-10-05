@@ -13,6 +13,12 @@ import {
 } from "@/lib/variant-selection";
 import VariantSelector from "./VariantSelector";
 
+const viewActionClass =
+  "inline-flex min-h-8 w-full items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-center text-[12px] leading-tight font-medium whitespace-nowrap text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 @min-[16rem]:min-w-0 @min-[16rem]:flex-1 @min-[16rem]:px-2 @min-[16rem]:text-[11px] @min-[22rem]:px-3 @min-[22rem]:text-[12px]";
+
+const cartActionClass =
+  "inline-flex min-h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-rdx-red px-3 text-center text-[12px] leading-tight font-semibold whitespace-nowrap text-white shadow-sm transition hover:bg-rdx-red-hover focus-visible:ring-2 focus-visible:ring-rdx-red/40 focus-visible:ring-offset-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-rdx-red @min-[16rem]:min-w-0 @min-[16rem]:flex-1 @min-[16rem]:px-2 @min-[16rem]:text-[11px] @min-[22rem]:px-3 @min-[22rem]:text-[12px]";
+
 function CartIcon() {
   return (
     <svg
@@ -119,7 +125,7 @@ export default function ProductCard({
   const pickedLabel = selectedSizeColorLabel(selection);
 
   return (
-    <article className="rdx-product-card mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left">
+    <article className="@container rdx-product-card mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left">
       {image && (
         <img
           src={image}
@@ -160,13 +166,13 @@ export default function ProductCard({
         {promotion && (
           <p className="mt-0.5 text-[12px] font-medium text-rdx-red">{promotion}</p>
         )}
-        <div className="rdx-product-actions mt-2.5 flex items-center gap-2 border-t border-slate-200/80 pt-2.5">
+        <div className="rdx-product-actions mt-2.5 flex flex-col gap-2 border-t border-slate-200/80 pt-2.5 @min-[16rem]:flex-row @min-[16rem]:items-stretch">
           {href && (
             <a
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-8 min-w-0 flex-1 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+              className={viewActionClass}
             >
               View product
             </a>
@@ -176,7 +182,7 @@ export default function ProductCard({
               type="button"
               aria-expanded={selectorOpen}
               onClick={() => setSelectorOpen(!selectorOpen)}
-              className="inline-flex h-8 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-rdx-red px-3 text-[12px] font-semibold text-white shadow-sm transition hover:bg-rdx-red-hover focus-visible:ring-2 focus-visible:ring-rdx-red/40 focus-visible:ring-offset-1 focus-visible:outline-none"
+              className={cartActionClass}
             >
               <CartIcon />
               {selectorOpen ? "Hide options" : "Select options"}
@@ -193,7 +199,7 @@ export default function ProductCard({
                     currency: product.price_currency,
                   })
                 }
-                className="inline-flex h-8 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-rdx-red px-3 text-[12px] font-semibold text-white shadow-sm transition hover:bg-rdx-red-hover focus-visible:ring-2 focus-visible:ring-rdx-red/40 focus-visible:ring-offset-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-rdx-red"
+                className={cartActionClass}
               >
                 <CartIcon />
                 {pending
