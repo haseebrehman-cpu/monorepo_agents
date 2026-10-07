@@ -34,14 +34,29 @@ export default function ChatWidget({ region }: { region: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
+  const sendChatRef = useRef(sendChat);
+  sendChatRef.current = sendChat;
   const close = useCallback(() => setIsOpen(false), []);
 
-  if (cartSessionRegion !== region) {
-    setCartSessionRegion(region);
+  const clearConversation = useCallback(() => {
+    generationRef.current += 1;
+    conversationIdRef.current = null;
+    setInput("");
     setCartOpen(false);
     setCartNotice(null);
     setFailedListingIds(new Set());
+    setMessages([createWelcomeMessage()]);
+  }, [setCartNotice]);
+
+  if (cartSessionRegion !== region) {
+    setCartSessionRegion(region);
+    setIsOpen(true);
+    clearConversation();
   }
+
+  useEffect(() => {
+    sendChatRef.current.reset();
+  }, [cartSessionRegion]);
 
   useDialogFocus({
     isOpen,
@@ -57,14 +72,9 @@ export default function ChatWidget({ region }: { region: string }) {
   }, [messages, isTyping, isOpen]);
 
   const handleNewChat = useCallback(() => {
-    generationRef.current += 1;
-    conversationIdRef.current = null;
+    clearConversation();
     sendChat.reset();
-    setInput("");
-    setCartOpen(false);
-    setCartNotice(null);
-    setMessages([createWelcomeMessage()]);
-  }, [sendChat, setCartNotice]);
+  }, [clearConversation, sendChat]);
 
   const handleListingFailed = useCallback((listingId: string) => {
     setFailedListingIds((prev) => new Set(prev).add(listingId));
@@ -165,7 +175,7 @@ export default function ChatWidget({ region }: { region: string }) {
           aria-modal="true"
           aria-label={`${STORE_NAME} Assistant`}
           tabIndex={-1}
-          className="rdx-chat-panel fixed right-5 bottom-32 z-50 flex h-[600px] max-h-[calc(100vh-8.5rem)] w-[380px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-white shadow-[0_24px_60px_rgba(0,0,0,0.45)]"
+          className="rdx-chat-panel fixed right-5 bottom-32 z-50 flex h-[600px] max-h-[calc(100vh-8.5rem)] w-[420px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-white shadow-[0_24px_60px_rgba(0,0,0,0.45)]"
         >
           <ChatHeader
             isTyping={isTyping}

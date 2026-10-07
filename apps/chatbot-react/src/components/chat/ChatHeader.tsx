@@ -77,7 +77,7 @@ export default function ChatHeader({
         </p>
         <p className="flex items-center gap-1.5 text-xs text-neutral-300">
           <span
-            className={`h-1.5 w-1.5 rounded-full ${isOnline ? "bg-rdx-red" : "bg-neutral-500"}`}
+            className={`h-1.5 w-1.5 rounded-full ${isOnline ? "bg-green-500" : "bg-rdx-red"}`}
             aria-hidden="true"
           />
           {isOnline

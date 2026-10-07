@@ -1,25 +1,25 @@
 import { PlusIcon } from "lucide-react"
-import ResendFilterPane from "../../../components/atoms/ResendFilterPane"
+import RefundFilterPane from "../../../components/atoms/RefuncFilterPane"
 import { Button } from "@rdx/ui"
-import { resendColumns } from "./tickets-table/columns"
+import { refundColumns } from "./tickets-table/columns"
 import { DataTable } from "./tickets-table/data-table"
 
-const Resend = () => {
+const RefundPage = () => {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-row justify-between gap-2">
-        <h1 className="text-xl font-semibold text-slate-900">Resend List</h1>
+        <h1 className="text-xl font-semibold text-slate-900">Refund List</h1>
         <div className="flex flex-row gap-2">
           <Button size="sm" variant="outline" onClick={() => { }}>
             <PlusIcon className="h-4 w-4" />
-            Add Resend
+            Add Refund
           </Button>
         </div>
       </div>
-      <ResendFilterPane />
-      <DataTable columns={resendColumns} data={[]} label="Resends" />
+      <RefundFilterPane />
+      <DataTable columns={refundColumns} data={[]} label="Refunds" />
     </div>
   )
 }
 
-export default Resend
+export default RefundPage

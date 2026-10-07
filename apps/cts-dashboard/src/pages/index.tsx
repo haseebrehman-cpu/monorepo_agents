@@ -1,7 +1,7 @@
 import Login from "./authentication/Login";
 import DashboardHome from "./dashboard/Dashboard_Home";
 import Tickets from "./dashboard/CTS/Tickets";
-import RefundResend from "./dashboard/Refund/Refund";
+import RefundPage from "./dashboard/Refund/RefundPage";
 import Invoices from "./dashboard/CourierInvoices/Invoices";
 import Prices from "./dashboard/CourierInvoices/Prices";
 import Reports from "./dashboard/CourierInvoices/Reports";
@@ -21,4 +21,4 @@ import ViewTicket from "./dashboard/CTS/ViewTicket";
 import AccessControl from "./dashboard/Access/AccessControl";
 import Return from "./dashboard/Return/Return";
 
-export { Login, DashboardHome, Tickets, RefundResend, Invoices, Prices, Reports, OverallDetails, On_TimeDelivery_Ratio, In_Transit_Details, Counrty_Specific, Country_Courier_Specific, Warehouse_Pending, ManualPerformance, Frequency, Refund, Resend, Return, AddTickets, AddBulkTickets, ViewTicket, AccessControl };
+export { Login, DashboardHome, Tickets, RefundPage, Invoices, Prices, Reports, OverallDetails, On_TimeDelivery_Ratio, In_Transit_Details, Counrty_Specific, Country_Courier_Specific, Warehouse_Pending, ManualPerformance, Frequency, Refund, Resend, Return, AddTickets, AddBulkTickets, ViewTicket, AccessControl };
