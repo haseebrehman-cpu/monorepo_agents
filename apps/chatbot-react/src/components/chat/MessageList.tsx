@@ -165,7 +165,7 @@ export default function MessageList({
                   )}
                 </>
               ) : (
-                <p className="text-sm">{message.content}</p>
+                <p className="text-xs">{message.content}</p>
               )}
             </div>
 

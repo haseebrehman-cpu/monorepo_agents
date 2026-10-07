@@ -14,10 +14,10 @@ import {
 import VariantSelector from "./VariantSelector";
 
 const viewActionClass =
-  "inline-flex min-h-8 w-full items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-center text-[12px] leading-tight font-medium whitespace-nowrap text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 @min-[16rem]:min-w-0 @min-[16rem]:flex-1 @min-[16rem]:px-2 @min-[16rem]:text-[11px] @min-[22rem]:px-3 @min-[22rem]:text-[12px]";
+  "inline-flex min-h-8 w-full items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-center text-[10px] leading-tight font-medium whitespace-nowrap text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 @min-[16rem]:min-w-0 @min-[16rem]:flex-1 @min-[16rem]:px-2 @min-[16rem]:text-[11px] @min-[22rem]:px-3 @min-[22rem]:text-[12px]";
 
 const cartActionClass =
-  "inline-flex min-h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-rdx-red px-3 text-center text-[12px] leading-tight font-semibold whitespace-nowrap text-white shadow-sm transition hover:bg-rdx-red-hover focus-visible:ring-2 focus-visible:ring-rdx-red/40 focus-visible:ring-offset-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-rdx-red @min-[16rem]:min-w-0 @min-[16rem]:flex-1 @min-[16rem]:px-2 @min-[16rem]:text-[11px] @min-[22rem]:px-3 @min-[22rem]:text-[12px]";
+  "inline-flex min-h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-rdx-red px-3 text-center text-[10px] leading-tight font-semibold whitespace-nowrap text-white shadow-sm transition hover:bg-rdx-red-hover focus-visible:ring-2 focus-visible:ring-rdx-red/40 focus-visible:ring-offset-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-rdx-red @min-[16rem]:min-w-0 @min-[16rem]:flex-1 @min-[16rem]:px-2 @min-[16rem]:text-[11px] @min-[22rem]:px-3 @min-[22rem]:text-[12px]";
 
 function CartIcon() {
   return (
@@ -134,11 +134,11 @@ export default function ProductCard({
         />
       )}
       <div className="rdx-product-body min-w-0">
-        <h3 className="rdx-product-title text-[13px] font-semibold text-slate-900">
+        <h3 className="rdx-product-title text-[12px] font-semibold text-slate-900">
           {product.title}
         </h3>
         {current ? (
-          <p className="rdx-product-price mt-1 text-[13px] text-slate-800">
+          <p className="rdx-product-price mt-1 text-[12px] text-slate-800">
             <span className="font-semibold">{current}</span>
             {priceMax && priceMin && priceMax !== priceMin && (
               <span className="text-slate-600">
@@ -151,12 +151,12 @@ export default function ProductCard({
             )}
           </p>
         ) : (
-          <p className="rdx-product-price mt-1 text-[13px] text-slate-600">
+          <p className="rdx-product-price mt-1 text-[12px] text-slate-600">
             {variantPrice ? "Price unavailable" : "See product page"}
           </p>
         )}
         {(product.stock_status || pickedLabel) && (
-          <p className="mt-0.5 flex items-baseline justify-between gap-2 text-[12px] text-slate-600">
+          <p className="mt-0.5 flex items-baseline justify-between gap-2 text-[10px] text-slate-600">
             <span>{product.stock_status}</span>
             {pickedLabel && (
               <span className="shrink-0 text-right text-slate-700">{pickedLabel}</span>
@@ -164,7 +164,7 @@ export default function ProductCard({
           </p>
         )}
         {promotion && (
-          <p className="mt-0.5 text-[12px] font-medium text-rdx-red">{promotion}</p>
+          <p className="mt-0.5 text-[10px] font-medium text-rdx-red">{promotion}</p>
         )}
         <div className="rdx-product-actions mt-2.5 flex flex-col gap-2 border-t border-slate-200/80 pt-2.5 @min-[16rem]:flex-row @min-[16rem]:items-stretch">
           {href && (

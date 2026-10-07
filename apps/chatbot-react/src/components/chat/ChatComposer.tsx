@@ -42,7 +42,7 @@ export default function ChatComposer({
         type="submit"
         disabled={isTyping || !value.trim()}
         aria-label="Send message"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rdx-red text-white transition hover:bg-rdx-red-hover disabled:opacity-40"
+        className="cursor-pointer flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rdx-red text-white transition hover:bg-rdx-red-hover disabled:opacity-40"
       >
         <SendIcon />
       </button>
