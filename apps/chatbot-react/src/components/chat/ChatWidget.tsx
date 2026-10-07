@@ -34,8 +34,7 @@ export default function ChatWidget({ region }: { region: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
-  const sendChatRef = useRef(sendChat);
-  sendChatRef.current = sendChat;
+  const regionRef = useRef(region);
   const close = useCallback(() => setIsOpen(false), []);
 
   const clearConversation = useCallback(() => {
@@ -51,12 +50,20 @@ export default function ChatWidget({ region }: { region: string }) {
   if (cartSessionRegion !== region) {
     setCartSessionRegion(region);
     setIsOpen(true);
-    clearConversation();
+    setInput("");
+    setCartOpen(false);
+    setCartNotice(null);
+    setFailedListingIds(new Set());
+    setMessages([createWelcomeMessage()]);
   }
 
   useEffect(() => {
-    sendChatRef.current.reset();
-  }, [cartSessionRegion]);
+    if (regionRef.current === region) return;
+    regionRef.current = region;
+    generationRef.current += 1;
+    conversationIdRef.current = null;
+    sendChat.reset();
+  }, [region, sendChat]);
 
   useDialogFocus({
     isOpen,
