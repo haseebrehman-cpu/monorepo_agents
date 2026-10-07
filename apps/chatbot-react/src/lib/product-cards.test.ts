@@ -111,6 +111,17 @@ describe("stripProductLinksFromAnswer", () => {
     );
   });
 
+  it("keeps inline product links that share a line with other copy", () => {
+    const answer = [
+      "I couldn't find Nike boxing gloves in this store. However, here are some alternatives:",
+      "",
+      "1. **RDX Boxing Gloves AS2** — £62.99 — In Stock — [View Product](https://rdxsports.co.uk/products/boxing-gloves-as2)",
+      "2. **RDX F7 Ego Boxing Gloves** — £36.99 — In Stock — [View Product](https://rdxsports.co.uk/products/ego-boxing-gloves)",
+    ].join("\n");
+
+    expect(stripProductLinksFromAnswer(answer)).toBe(answer);
+  });
+
   it("keeps the address on a labeled URL field", () => {
     expect(
       stripProductLinksFromAnswer(

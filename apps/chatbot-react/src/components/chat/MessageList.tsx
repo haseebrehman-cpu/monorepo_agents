@@ -2,7 +2,6 @@ import type { RefObject } from "react";
 import type { ChatMessage, ChatOption } from "@rdx/chat-contract";
 import type { CartNotice } from "@/lib/cart-outcome";
 import {
-  collectDisplayProducts,
   // nonProductCitations,
   stripProductLinksFromAnswer,
 } from "@/lib/product-cards";
@@ -76,6 +75,8 @@ export default function MessageList({
     (m) => m.role === "assistant" && Boolean(m.order_verification),
   );
 
+
+
   return (
     <div
       ref={scrollRef}
@@ -84,109 +85,111 @@ export default function MessageList({
       aria-busy={isTyping}
     >
       <div className="rdx-chat-thread w-full space-y-3">
-      {messages.length === 0 && !isTyping && (
-        <div className="flex min-h-48 flex-col items-center justify-center gap-2 px-4 text-center">
-          <p className="text-sm font-medium text-neutral-700">
-            Start a conversation
-          </p>
-          <p className="text-xs text-neutral-500">
-            Ask about gloves, sizes, or training gear.
-          </p>
-        </div>
-      )}
+        {messages.length === 0 && !isTyping && (
+          <div className="flex min-h-48 flex-col items-center justify-center gap-2 px-4 text-center">
+            <p className="text-sm font-medium text-neutral-700">
+              Start a conversation
+            </p>
+            <p className="text-xs text-neutral-500">
+              Ask about gloves, sizes, or training gear.
+            </p>
+          </div>
+        )}
 
-      {messages.map((message) => {
-        const isLatestAssistant = message.id === latestAssistantId;
-        const products =
-          message.role === "assistant" ? collectDisplayProducts(message) : [];
-        // const citations =
-        //   message.role === "assistant"
-        //     ? nonProductCitations(message.citations)
-        //     : [];
+        {messages.map((message) => {
+          const isLatestAssistant = message.id === latestAssistantId;
+          const products =
+            message.role === "assistant" ? (message.products ?? []) : [];
+          // const citations =
+          //   message.role === "assistant"
+          //     ? nonProductCitations(message.citations)
+          //     : [];
+          
 
-        return (
-          <div key={message.id} className="w-full">
-            <div
-              className={
-                message.role === "user"
-                  ? "rdx-chat-user ml-auto w-fit max-w-[88%] rounded-2xl rounded-br-md bg-rdx-red px-3.5 py-2.5 text-left text-sm leading-relaxed text-white"
-                  : "rdx-chat-assistant mr-auto w-full max-w-[95%] rounded-2xl rounded-bl-md border border-neutral-200 bg-white px-3.5 py-3 text-left shadow-sm"
-              }
-            >
-              {message.role === "assistant" ? (
-                <>
-                  <MessageContent
-                    content={stripProductLinksFromAnswer(message.content)}
-                  />
-                  {message.escalated && (
-                    <p className="mt-2 text-[11px] font-medium text-slate-700">
-                      A person is taking over this conversation.
-                    </p>
-                  )}
-                  {products.length > 0 && (
-                    <div className="rdx-product-grid">
-                      {products.map((product) => (
-                        <ProductCard
-                          key={`${message.id}-${product.listing_id ?? product.handle}`}
-                          product={product}
-                          region={region}
-                          failedListingIds={failedListingIds}
-                          onListingFailed={onListingFailed}
-                          onNotice={onCartNotice}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  {/* {citations.length > 0 && (
+
+          return (
+            <div key={message.id} className="w-full">
+              <div
+                className={
+                  message.role === "user"
+                    ? "rdx-chat-user ml-auto w-fit max-w-[88%] rounded-2xl rounded-br-md bg-rdx-red px-3.5 py-2.5 text-left text-sm leading-relaxed text-white"
+                    : "rdx-chat-assistant mr-auto w-full max-w-[95%] rounded-2xl rounded-bl-md border border-neutral-200 bg-white px-3.5 py-3 text-left shadow-sm"
+                }
+              >
+                {message.role === "assistant" ? (
+                  <>
+                    <MessageContent
+                      content={stripProductLinksFromAnswer(message.content)}
+                    />
+                    {message.escalated && (
+                      <p className="mt-2 text-[11px] font-medium text-slate-700">
+                        A person is taking over this conversation.
+                      </p>
+                    )}
+                    {products.length > 0 && (
+                      <div className="rdx-product-grid">
+                        {products.map((product) => (
+                          <ProductCard
+                            key={`${message.id}-${product.listing_id ?? product.handle}`}
+                            product={product}
+                            region={region}
+                            failedListingIds={failedListingIds}
+                            onListingFailed={onListingFailed}
+                            onNotice={onCartNotice}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {/* {citations.length > 0 && (
                     <CitationList citations={citations} />
                   )} */}
-                  {message.attachments?.map((attachment, index) =>
-                    attachment.kind === "size_chart" ? (
-                      <SizeChartAttachment
-                        key={`${message.id}-chart-${index}`}
-                        attachment={attachment}
+                    {message.attachments?.map((attachment, index) =>
+                      attachment.kind === "size_chart" ? (
+                        <SizeChartAttachment
+                          key={`${message.id}-chart-${index}`}
+                          attachment={attachment}
+                        />
+                      ) : null,
+                    )}
+                    {message.order_verification && (
+                      <TrackingForm
+                        challenge={message.order_verification}
+                        region={region}
+                        hideMessage={
+                          message.content.trim() ===
+                          message.order_verification.message?.trim()
+                        }
+                        disabled={
+                          isTyping || message.id !== latestVerificationId
+                        }
+                        onNotSatisfied={onNotSatisfied}
+                        onTalkToPerson={onTalkToPerson}
                       />
-                    ) : null,
-                  )}
-                  {message.order_verification && (
-                    <TrackingForm
-                      challenge={message.order_verification}
-                      region={region}
-                      hideMessage={
-                        message.content.trim() ===
-                        message.order_verification.message?.trim()
-                      }
-                      disabled={
-                        isTyping || message.id !== latestVerificationId
-                      }
-                      onNotSatisfied={onNotSatisfied}
-                      onTalkToPerson={onTalkToPerson}
-                    />
-                  )}
-                </>
-              ) : (
-                <p className="text-xs">{message.content}</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-xs">{message.content}</p>
+                )}
+              </div>
+
+              {message.role === "assistant" &&
+                message.showMenu &&
+                message.id === latestMenuId && (
+                  <OptionButtons disabled={isTyping} onSelect={onOptionSelect} />
+                )}
+
+              {isLatestAssistant && !message.showMenu && showMenuHint && (
+                <p className="mt-1.5 px-1 text-left text-[11px] text-neutral-400">
+                  Reply with{" "}
+                  <span className="font-semibold text-neutral-600">M</span> for the
+                  main menu
+                </p>
               )}
             </div>
+          );
+        })}
 
-            {message.role === "assistant" &&
-              message.showMenu &&
-              message.id === latestMenuId && (
-                <OptionButtons disabled={isTyping} onSelect={onOptionSelect} />
-              )}
-
-            {isLatestAssistant && !message.showMenu && showMenuHint && (
-              <p className="mt-1.5 px-1 text-left text-[11px] text-neutral-400">
-                Reply with{" "}
-                <span className="font-semibold text-neutral-600">M</span> for the
-                main menu
-              </p>
-            )}
-          </div>
-        );
-      })}
-
-      {isTyping && <TypingIndicator />}
+        {isTyping && <TypingIndicator />}
       </div>
     </div>
   );

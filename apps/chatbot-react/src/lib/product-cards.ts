@@ -107,8 +107,9 @@ const URL_LABEL = /\*{0,2}URL:?\*{0,2}\s*$/i;
 
 /**
  * Remove standalone product markdown links so they are not also shown as a
- * link list. Links that are the value of a URL field stay, with the address
- * as the visible text.
+ * link list. A link stays when the same line already has other copy (name,
+ * price, stock, or a "View Product" label). Links that are the value of a
+ * URL field stay, with the address as the visible text.
  */
 export function stripProductLinksFromAnswer(content: string): string {
   return content
@@ -117,8 +118,17 @@ export function stripProductLinksFromAnswer(content: string): string {
       (full, _title: string, url: string, offset: number, source: string) => {
         if (!isProductHref(url)) return full;
         const lineStart = source.lastIndexOf("\n", offset - 1) + 1;
+        const lineEnd = source.indexOf("\n", offset);
         const before = source.slice(lineStart, offset);
+        const after = source.slice(
+          offset + full.length,
+          lineEnd === -1 ? source.length : lineEnd,
+        );
         if (URL_LABEL.test(before)) return `[${url}](${url})`;
+        const surrounding = `${before}${after}`
+          .replace(/^\s*(?:[-*]|•|\d+\.)\s*/, "")
+          .trim();
+        if (surrounding.length > 0) return full;
         return "";
       },
     )
