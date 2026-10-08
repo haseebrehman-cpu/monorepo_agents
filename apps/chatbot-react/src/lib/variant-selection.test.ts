@@ -3,6 +3,7 @@ import type { ProductSelectorOption, ProductVariant } from "@rdx/chat-contract";
 import {
   candidatesFor,
   initialSelection,
+  isColourOption,
   isSelectionComplete,
   matchedVariant,
   missingOptions,
@@ -106,6 +107,34 @@ describe("optionValueState", () => {
         "Blue",
       ),
     ).toBe("available");
+  });
+
+  it("keeps a colour enabled when any of its sizes can be bought", () => {
+    expect(isColourOption("Colour")).toBe(true);
+    expect(
+      optionValueState(
+        variants,
+        { colour: "Black", size: "14oz" },
+        "colour",
+        "Blue",
+      ),
+    ).toBe("available");
+  });
+
+  it("marks a colour sold out only when none of its sizes can be bought", () => {
+    const redOnly: ProductVariant = {
+      ...variants[1],
+      listing_id: "lst_red_14",
+      options: { colour: "Red", size: "14oz" },
+    };
+    expect(
+      optionValueState(
+        [...variants, redOnly],
+        { size: "12oz" },
+        "colour",
+        "Red",
+      ),
+    ).toBe("sold_out");
   });
 });
 

@@ -9,6 +9,7 @@ import {
 } from "@/lib/use-product-variants";
 import {
   initialSelection,
+  isColourOption,
   matchedVariant,
   missingOptions,
   optionValueState,
@@ -221,17 +222,23 @@ export default function VariantSelector({
                 value,
               );
               const selected = selection[option.key] === value;
+              const colour = isColourOption(option.key);
+              const unavailable = colour
+                ? state !== "available"
+                : state === "sold_out";
               const appearance = selected
-                ? state === "sold_out"
+                ? unavailable
                   ? "selected_sold_out"
                   : "selected"
-                : state;
+                : colour && state === "missing"
+                  ? "sold_out"
+                  : state;
               return (
                 <button
                   key={value}
                   type="button"
                   aria-pressed={selected}
-                  disabled={state === "missing"}
+                  disabled={colour ? state !== "available" : state === "missing"}
                   onClick={() =>
                     setPicked(
                       selectValue(

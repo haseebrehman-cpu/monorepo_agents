@@ -8,6 +8,13 @@ export type VariantSelection = Record<string, string>;
 
 export type OptionValueState = "available" | "sold_out" | "missing";
 
+const COLOUR_KEYS = new Set(["colour", "color"]);
+
+/** Colour is judged on its own sizes, not on the size currently picked. */
+export function isColourOption(optionKey: string): boolean {
+  return COLOUR_KEYS.has(optionKey.trim().toLowerCase());
+}
+
 /** Options in the store's order; values are already sorted by the API. */
 export function orderedOptions<T extends { position: number }>(
   options: T[] | null | undefined,
@@ -45,7 +52,11 @@ export function optionValueState(
   optionKey: string,
   value: string,
 ): OptionValueState {
-  const candidates = candidatesFor(variants, selection, optionKey, value);
+  // A colour stays enabled while any of its sizes can be bought. It is struck
+  // through only when none of those sizes are purchasable.
+  const candidates = isColourOption(optionKey)
+    ? variants.filter((variant) => variant.options[optionKey] === value)
+    : candidatesFor(variants, selection, optionKey, value);
   if (candidates.length === 0) return "missing";
   return candidates.some((variant) => variant.purchasable)
     ? "available"
