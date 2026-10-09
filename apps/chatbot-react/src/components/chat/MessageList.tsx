@@ -3,6 +3,8 @@ import type { ChatMessage, ChatOption } from "@rdx/chat-contract";
 import type { CartNotice } from "@/lib/cart-outcome";
 import {
   // nonProductCitations,
+  collectProductSizeCharts,
+  isSizeChartQuery,
   stripProductLinksFromAnswer,
 } from "@/lib/product-cards";
 // import CitationList from "./CitationList";
@@ -47,6 +49,14 @@ function findLatestId(
     if (m && predicate(m)) return m.id;
   }
   return null;
+}
+
+function priorUserContent(messages: ChatMessage[], beforeIndex: number): string {
+  for (let i = beforeIndex - 1; i >= 0; i--) {
+    const prior = messages[i];
+    if (prior?.role === "user") return prior.content;
+  }
+  return "";
 }
 
 export default function MessageList({
@@ -96,16 +106,23 @@ export default function MessageList({
           </div>
         )}
 
-        {messages.map((message) => {
+        {messages.map((message, index) => {
           const isLatestAssistant = message.id === latestAssistantId;
+          const sizeChartOnly =
+            message.role === "assistant" &&
+            (isSizeChartQuery(priorUserContent(messages, index)) ||
+              isSizeChartQuery(message.content));
+          const sizeCharts = sizeChartOnly
+            ? collectProductSizeCharts(message.products)
+            : [];
           const products =
-            message.role === "assistant" ? (message.products ?? []) : [];
+            message.role === "assistant" && !sizeChartOnly
+              ? (message.products ?? [])
+              : [];
           // const citations =
           //   message.role === "assistant"
           //     ? nonProductCitations(message.citations)
           //     : [];
-          
-
 
           return (
             <div key={message.id} className="w-full">
@@ -140,17 +157,30 @@ export default function MessageList({
                         ))}
                       </div>
                     )}
+                    {sizeCharts.map((chart, chartIndex) => (
+                      <SizeChartAttachment
+                        key={`${message.id}-chart-${chartIndex}`}
+                        productTitle={chart.title}
+                        url={chart.url}
+                        altText={chart.alt}
+                      />
+                    ))}
                     {/* {citations.length > 0 && (
                     <CitationList citations={citations} />
                   )} */}
-                    {message.attachments?.map((attachment, index) =>
-                      attachment.kind === "size_chart" ? (
-                        <SizeChartAttachment
-                          key={`${message.id}-chart-${index}`}
-                          attachment={attachment}
-                        />
-                      ) : null,
-                    )}
+                    {!sizeChartOnly &&
+                      message.attachments?.map((attachment, index) =>
+                        attachment.kind === "size_chart" ? (
+                          <SizeChartAttachment
+                            key={`${message.id}-attach-${index}`}
+                            productTitle={attachment.productTitle}
+                            url={attachment.url}
+                            altText={attachment.altText}
+                            width={attachment.width}
+                            height={attachment.height}
+                          />
+                        ) : null,
+                      )}
                     {message.order_verification && (
                       <TrackingForm
                         challenge={message.order_verification}

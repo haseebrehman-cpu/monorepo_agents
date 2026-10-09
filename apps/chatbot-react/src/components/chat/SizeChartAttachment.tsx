@@ -1,30 +1,34 @@
-import type { ChatAttachment } from "@rdx/chat-contract";
-import { isAllowedChatHref } from "@/lib/url-allowlist";
+import { isAllowedImageUrl } from "@/lib/url-allowlist";
 
 interface SizeChartAttachmentProps {
-  attachment: ChatAttachment;
+  productTitle: string;
+  url: string;
+  altText: string;
+  width?: number | null;
+  height?: number | null;
 }
 
 export default function SizeChartAttachment({
-  attachment,
+  productTitle,
+  url,
+  altText,
+  width,
+  height,
 }: SizeChartAttachmentProps) {
-  if (attachment.kind !== "size_chart" || !isAllowedChatHref(attachment.url)) {
+  if (!isAllowedImageUrl(url)) {
     return null;
   }
-
-  const width = attachment.width ?? undefined;
-  const height = attachment.height ?? undefined;
 
   return (
     <figure className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
       <figcaption className="border-b border-slate-200 px-3 py-2 text-left text-[12px] font-medium text-slate-700">
-        Size chart — {attachment.productTitle}
+        Size chart — {productTitle}
       </figcaption>
       <img
-        src={attachment.url}
-        alt={attachment.altText}
-        width={width}
-        height={height}
+        src={url}
+        alt={altText}
+        width={width ?? undefined}
+        height={height ?? undefined}
         loading="lazy"
         decoding="async"
         referrerPolicy="no-referrer"
@@ -32,7 +36,7 @@ export default function SizeChartAttachment({
       />
       <div className="border-t border-slate-200 px-3 py-2 text-left">
         <a
-          href={attachment.url}
+          href={url}
           target="_blank"
           rel="noopener noreferrer"
           className="text-[12px] font-medium text-rdx-red underline underline-offset-2 hover:text-rdx-red-hover"

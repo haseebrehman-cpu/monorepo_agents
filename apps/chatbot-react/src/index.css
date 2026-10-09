@@ -140,7 +140,11 @@ body {
 }
 
 .rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-size-chart {
-  max-height: 36rem;
+  display: block;
+  width: auto;
+  max-width: 28rem;
+  max-height: 24rem;
+  margin-inline: auto;
 }
 
 .rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-chat-header-mark {

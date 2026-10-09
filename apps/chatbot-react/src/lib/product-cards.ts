@@ -103,6 +103,35 @@ export function nonProductCitations(
   return (citations ?? []).filter((citation) => !isProductCitation(citation));
 }
 
+export interface ProductSizeChart {
+  title: string;
+  url: string;
+  alt: string;
+}
+
+export function isSizeChartQuery(text: string): boolean {
+  return /\bsize[\s_-]*charts?\b/i.test(text);
+}
+
+/** Size-chart image from a product card (`size_chart.url` + optional `alt`). */
+export function collectProductSizeCharts(
+  products: ChatProductCard[] | undefined,
+): ProductSizeChart[] {
+  const seen = new Set<string>();
+  const charts: ProductSizeChart[] = [];
+  for (const product of products ?? []) {
+    const url = product.size_chart?.url?.trim();
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    charts.push({
+      title: product.title,
+      url,
+      alt: product.size_chart?.alt?.trim() || `Size chart for ${product.title}`,
+    });
+  }
+  return charts;
+}
+
 const URL_LABEL = /\*{0,2}URL:?\*{0,2}\s*$/i;
 
 /**
