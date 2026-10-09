@@ -83,6 +83,7 @@ export default function ProductCard({
   const listingId = product.listing_id?.trim() || "";
   const soldOut = product.availability === "false";
   const blocked = Boolean(listingId && failedListingIds.has(listingId));
+  const sizeChart = product.size_chart ? <a href={product.size_chart.url} target="_blank" rel="noopener noreferrer" className="rdx-size-chart-link">View size chart</a> : null;
   const hasVariants =
     product.has_variants === true && Boolean(listingId) && !selectorHidden;
   const canAddToCart =
@@ -165,6 +166,10 @@ export default function ProductCard({
         )}
         {promotion && (
           <p className="mt-0.5 text-[10px] font-medium text-rdx-red">{promotion}</p>
+        )}
+
+        {sizeChart && (
+          <p className="mt-0.5 text-[10px] text-red-600 underline flex justify-end">{sizeChart}</p>
         )}
         <div className="rdx-product-actions mt-2.5 flex flex-col gap-2 border-t border-slate-200/80 pt-2.5 @min-[16rem]:flex-row @min-[16rem]:items-stretch">
           {href && (
