@@ -4,8 +4,9 @@ import { RequireSuperAdmin } from "../../../routes/guards";
 import UsersManager from "./UsersManager";
 import UserAccessManager from "./UserAccessManager";
 import TicketLookupsManager from "./TicketLookupsManager";
+import RefundLookupsManager from "./RefundLookupsManager";
 
-type Tab = "users" | "access" | "lookups";
+type Tab = "users" | "access" | "lookups" | "refunds";
 
 function AccessControl() {
   const [tab, setTab] = useState<Tab>("users");
@@ -56,14 +57,28 @@ function AccessControl() {
         >
           Ticket options
         </button>
+        <button
+          type="button"
+          onClick={() => setTab("refunds")}
+          className={cn(
+            "cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium",
+            tab === "refunds"
+              ? "bg-indigo-600 text-white"
+              : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50",
+          )}
+        >
+          Refund options
+        </button>
       </div>
 
       {tab === "users" ? (
         <UsersManager />
       ) : tab === "access" ? (
         <UserAccessManager />
-      ) : (
+      ) : tab === "lookups" ? (
         <TicketLookupsManager />
+      ) : (
+        <RefundLookupsManager />
       )}
     </div>
   );

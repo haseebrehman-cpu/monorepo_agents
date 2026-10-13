@@ -29,6 +29,7 @@ export {
 } from "./components/table";
 export { Checkbox } from "./components/checkbox";
 export { Input } from "./components/input";
+export { Textarea } from "./components/textarea";
 export {
   Dialog,
   DialogClose,

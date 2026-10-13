@@ -158,3 +158,43 @@ export function deleteTicketLookup(id: number) {
     method: "DELETE",
   });
 }
+
+export type RefundLookupKind =
+  | "type"
+  | "sales_channel"
+  | "currency"
+  | "reason"
+  | "tag"
+  | "accountable";
+
+export type RefundLookup = {
+  id: number;
+  kind: RefundLookupKind;
+  label: string;
+  isActive: boolean;
+  sortOrder: number;
+};
+
+export function listRefundLookups() {
+  return authedApi().request<ListResponse<RefundLookup[]>>("/api/refund-lookups");
+}
+
+export function createRefundLookup(input: { kind: RefundLookupKind; label: string }) {
+  return authedApi().request<ListResponse<RefundLookup>>("/api/refund-lookups", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateRefundLookup(id: number, input: { label?: string; isActive?: boolean }) {
+  return authedApi().request<ListResponse<RefundLookup>>(`/api/refund-lookups/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteRefundLookup(id: number) {
+  return authedApi().request<{ success: true }>(`/api/refund-lookups/${id}`, {
+    method: "DELETE",
+  });
+}

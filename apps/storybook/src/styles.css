@@ -1,0 +1,4 @@
+@import "tailwindcss";
+@import "@rdx/ui/styles.css";
+@source "./**/*.{ts,tsx}";
+@source "../../../packages/ui/**/*.{ts,tsx}";
