@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { ChatMessage } from "@rdx/chat-contract";
 import {
   collectDisplayProducts,
+  collectProductSizeCharts,
+  isSizeChartQuery,
   nonProductCitations,
   stripProductLinksFromAnswer,
 } from "./product-cards";
@@ -74,6 +76,68 @@ describe("collectDisplayProducts", () => {
     );
 
     expect(cards).toHaveLength(1);
+  });
+});
+
+describe("isSizeChartQuery", () => {
+  it("matches size chart phrasing and ignores other sizing questions", () => {
+    expect(isSizeChartQuery("show me the size chart for T2")).toBe(true);
+    expect(isSizeChartQuery("Size-charts for these gloves?")).toBe(true);
+    expect(isSizeChartQuery("what size should I buy?")).toBe(false);
+  });
+});
+
+describe("collectProductSizeCharts", () => {
+  it("returns unique size charts from products that include one", () => {
+    expect(
+      collectProductSizeCharts([
+        {
+          ...product,
+          size_chart: {
+            url: "https://rdxsports.co.uk/cdn/shop/files/t2-size-chart.jpg",
+            alt: "T2 size chart",
+          },
+        },
+        {
+          ...product,
+          title: "RDX T6",
+          handle: "t6",
+          url: "https://rdxsports.co.uk/products/t6",
+        },
+        {
+          ...product,
+          title: "RDX T2 duplicate",
+          handle: "t2-dup",
+          size_chart: {
+            url: "https://rdxsports.co.uk/cdn/shop/files/t2-size-chart.jpg",
+            alt: "Same chart",
+          },
+        },
+      ]),
+    ).toEqual([
+      {
+        title: product.title,
+        url: "https://rdxsports.co.uk/cdn/shop/files/t2-size-chart.jpg",
+        alt: "T2 size chart",
+      },
+    ]);
+  });
+
+  it("falls back to a product title when alt is missing", () => {
+    expect(
+      collectProductSizeCharts([
+        {
+          ...product,
+          size_chart: { url: "https://rdxsports.co.uk/cdn/shop/files/chart.png" },
+        },
+      ]),
+    ).toEqual([
+      {
+        title: product.title,
+        url: "https://rdxsports.co.uk/cdn/shop/files/chart.png",
+        alt: `Size chart for ${product.title}`,
+      },
+    ]);
   });
 });
 
