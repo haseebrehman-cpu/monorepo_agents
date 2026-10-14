@@ -87,17 +87,52 @@ body {
   line-height: 1.7;
 }
 
+/* Product cards scroll inside the message. The chat thread stays put.
+   One card (image, copy, and action buttons) must fit before the clip. */
+.rdx-product-grid {
+  max-height: 21rem;
+  margin-top: 0.75rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #a3a3a3 transparent;
+}
+
+.rdx-product-grid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.rdx-product-grid::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #a3a3a3;
+}
+
+.rdx-product-grid .rdx-product-card {
+  margin-top: 0;
+}
+
+.rdx-product-grid .rdx-product-card + .rdx-product-card {
+  margin-top: 0.75rem;
+}
+
 .rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-product-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
   gap: 0.75rem;
-  margin-top: 0.75rem;
+  align-content: start;
+  grid-auto-rows: max-content;
+  max-height: calc(100vh - 11rem);
 }
 
-.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-product-card {
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-product-card,
+.rdx-chat-panel:is(:fullscreen, :-webkit-full-screen)
+  .rdx-product-grid
+  .rdx-product-card
+  + .rdx-product-card {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: auto;
+  min-height: min-content;
   margin-top: 0;
   padding: 0.85rem;
 }

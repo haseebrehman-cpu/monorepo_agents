@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage, ChatOption } from "@rdx/chat-contract";
 import { useTimedCartNotice } from "@/lib/cart-outcome";
+import {
+  buildHumanHandoffMessage,
+  isHumanAgentRequest,
+  isHumanHandoffResponse,
+} from "@/lib/human-agent";
+import { isMainMenuRequest } from "@/lib/main-menu";
 import { orderTrackingForm } from "@/lib/order-api";
 import { useCart } from "@/lib/use-cart";
 import { useDialogFocus } from "@/lib/use-dialog-focus";
@@ -31,6 +37,8 @@ export default function ChatWidget({ region }: { region: string }) {
   const [cartSessionRegion, setCartSessionRegion] = useState(region);
   const conversationIdRef = useRef<string | null>(null);
   const generationRef = useRef(0);
+  const handoffContextRef = useRef("");
+  const handoffContactRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
@@ -40,6 +48,8 @@ export default function ChatWidget({ region }: { region: string }) {
   const clearConversation = useCallback(() => {
     generationRef.current += 1;
     conversationIdRef.current = null;
+    handoffContextRef.current = "";
+    handoffContactRef.current = false;
     setInput("");
     setCartOpen(false);
     setCartNotice(null);
@@ -62,6 +72,8 @@ export default function ChatWidget({ region }: { region: string }) {
     regionRef.current = region;
     generationRef.current += 1;
     conversationIdRef.current = null;
+    handoffContextRef.current = "";
+    handoffContactRef.current = false;
     sendChat.reset();
   }, [region, sendChat]);
 
@@ -87,17 +99,61 @@ export default function ChatWidget({ region }: { region: string }) {
     setFailedListingIds((prev) => new Set(prev).add(listingId));
   }, []);
 
+  const openHandoffForm = useCallback((userText: string | null, context: string) => {
+    handoffContextRef.current = context.trim();
+    setInput("");
+    setMessages((prev) => [
+      ...prev.map((message) =>
+        message.showHandoffForm ? { ...message, showHandoffForm: false } : message,
+      ),
+      ...(userText
+        ? [{ id: createMessageId(), role: "user" as const, content: userText }]
+        : []),
+      {
+        id: createMessageId(),
+        role: "assistant" as const,
+        content:
+          "A person can take over this chat. Enter your name and email to connect.",
+        showHandoffForm: true,
+      },
+    ]);
+  }, []);
+
   const sendUserText = useCallback(
-    (text: string) => {
+    (text: string, options?: { bypassHandoffForm?: boolean; displayText?: string }) => {
       const trimmed = text.trim();
       if (!trimmed || sendChat.isPending) return;
+
+      if (!options?.bypassHandoffForm && isHumanAgentRequest(trimmed)) {
+        openHandoffForm(trimmed, trimmed);
+        return;
+      }
+
+      if (isMainMenuRequest(trimmed)) {
+        setMessages((prev) => [
+          ...prev,
+          { id: createMessageId(), role: "user", content: trimmed },
+          {
+            id: createMessageId(),
+            role: "assistant",
+            content: "",
+            showMenu: true,
+          },
+        ]);
+        setInput("");
+        return;
+      }
 
       const generation = generationRef.current;
       const clientMessageId = createMessageId();
 
       setMessages((prev) => [
         ...prev,
-        { id: createMessageId(), role: "user", content: trimmed },
+        {
+          id: createMessageId(),
+          role: "user",
+          content: options?.displayText?.trim() || trimmed,
+        },
       ]);
       setInput("");
 
@@ -116,6 +172,10 @@ export default function ChatWidget({ region }: { region: string }) {
               conversationIdRef.current = nextConversationId;
             }
             const orderVerification = orderTrackingForm(result, trimmed);
+            const offerHandoff =
+              !handoffContactRef.current &&
+              (Boolean(result.escalated) ||
+                isHumanHandoffResponse(result.answer));
 
             setMessages((prev) => [
               ...prev,
@@ -127,7 +187,7 @@ export default function ChatWidget({ region }: { region: string }) {
                 citations: result.citations,
                 escalated: result.escalated,
                 degraded: result.degraded,
-                showMenu: /^m$/i.test(trimmed),
+                showHandoffForm: offerHandoff,
                 order_verification: orderVerification,
               },
             ]);
@@ -149,7 +209,28 @@ export default function ChatWidget({ region }: { region: string }) {
         },
       );
     },
-    [region, sendChat],
+    [openHandoffForm, region, sendChat],
+  );
+
+  const handleHandoffSubmit = useCallback(
+    (name: string, email: string) => {
+      if (sendChat.isPending || handoffContactRef.current) return;
+      const context = handoffContextRef.current;
+      handoffContextRef.current = "";
+      handoffContactRef.current = true;
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.showHandoffForm
+            ? { ...message, showHandoffForm: false }
+            : message,
+        ),
+      );
+      sendUserText(buildHumanHandoffMessage(name, email, context), {
+        bypassHandoffForm: true,
+        displayText: `${name} · ${email}`,
+      });
+    },
+    [sendChat.isPending, sendUserText],
   );
 
   const handleSubmit = useCallback(() => {
@@ -182,7 +263,7 @@ export default function ChatWidget({ region }: { region: string }) {
           aria-modal="true"
           aria-label={`${STORE_NAME} Assistant`}
           tabIndex={-1}
-          className="rdx-chat-panel fixed right-5 bottom-32 z-50 flex h-[600px] max-h-[calc(100vh-8.5rem)] w-[420px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-white shadow-[0_24px_60px_rgba(0,0,0,0.45)]"
+          className="rdx-chat-panel fixed right-5 bottom-17 z-50 flex h-[600px] max-h-[calc(100vh-8.5rem)] w-[420px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-white shadow-[0_24px_60px_rgba(0,0,0,0.45)]"
         >
           <ChatHeader
             isTyping={isTyping}
@@ -214,7 +295,14 @@ export default function ChatWidget({ region }: { region: string }) {
                 onCartNotice={setCartNotice}
                 onOptionSelect={handleOptionSelect}
                 onNotSatisfied={sendUserText}
-                onTalkToPerson={sendUserText}
+                onHandoffSubmit={handleHandoffSubmit}
+                onTalkToPerson={(message) => {
+                  if (handoffContactRef.current) {
+                    sendUserText(message, { bypassHandoffForm: true });
+                    return;
+                  }
+                  openHandoffForm(null, message);
+                }}
                 scrollRef={scrollRef}
               />
 

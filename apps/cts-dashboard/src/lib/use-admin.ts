@@ -3,20 +3,25 @@ import { toast } from "react-toastify";
 import { ApiError } from "@rdx/api-client";
 import {
   createDepartment,
+  createRefundLookup,
   createTicketLookup,
   createUser,
   deleteDepartment,
+  deleteRefundLookup,
   deleteTicketLookup,
   deleteUser,
   listDepartments,
   listFeatures,
+  listRefundLookups,
   listRoles,
   listTicketLookups,
   listUsers,
   updateDepartment,
+  updateRefundLookup,
   updateTicketLookup,
   updateUser,
   updateUserPermissions,
+  type RefundLookupKind,
   type TicketLookupKind,
 } from "./admin-api";
 
@@ -35,7 +40,9 @@ function adminErrorMessage(error: unknown, fallback: string) {
     if (error.message === "ROLE_NOT_FOUND") return "Select a valid role.";
     if (error.message === "LOOKUP_ALREADY_EXISTS") return "That value already exists.";
     if (error.message === "LOOKUP_NOT_FOUND") return "That value no longer exists.";
-    if (error.message === "LOOKUP_IN_USE") return "This value is used on existing tickets. Deactivate it instead.";
+    if (error.message === "LOOKUP_IN_USE") {
+      return "This value is used on existing records. Deactivate it instead.";
+    }
     if (error.message) return error.message;
   }
   return fallback;
@@ -248,4 +255,63 @@ export function useDeleteTicketLookup() {
   });
 }
 
-export type { TicketLookupKind };
+export type { TicketLookupKind, RefundLookupKind };
+
+export function useRefundLookups() {
+  return useQuery({
+    queryKey: ["refund-lookups"],
+    queryFn: async () => (await listRefundLookups()).data,
+  });
+}
+
+export function useCreateRefundLookup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createRefundLookup,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["refund-lookups"] });
+      await queryClient.invalidateQueries({ queryKey: ["refund-options"] });
+      toast.success("Value added");
+    },
+    onError: (error) => {
+      toast.error(adminErrorMessage(error, "Could not add value."));
+    },
+  });
+}
+
+export function useUpdateRefundLookup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      ...input
+    }: {
+      id: number;
+      label?: string;
+      isActive?: boolean;
+    }) => updateRefundLookup(id, input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["refund-lookups"] });
+      await queryClient.invalidateQueries({ queryKey: ["refund-options"] });
+      toast.success("Value updated");
+    },
+    onError: (error) => {
+      toast.error(adminErrorMessage(error, "Could not update value."));
+    },
+  });
+}
+
+export function useDeleteRefundLookup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => deleteRefundLookup(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["refund-lookups"] });
+      await queryClient.invalidateQueries({ queryKey: ["refund-options"] });
+      toast.success("Value removed");
+    },
+    onError: (error) => {
+      toast.error(adminErrorMessage(error, "Could not remove value."));
+    },
+  });
+}

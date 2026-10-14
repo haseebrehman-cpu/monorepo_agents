@@ -1,53 +1,64 @@
 import type { GridColDef } from "@rdx/ui";
-import { TicketStatusBadge } from "../../CTS/tickets-table/TicketStatusBadge";
 
 export type RefundRow = {
   id: string;
-  createdAt: string;
-  orderId: string;
   category: string;
-  lossNoLoss: string;
+  referenceNo: string;
+  orderId: string;
+  categoryName: string;
+  email: string;
   type: string;
-  saleChannel: string;
+  salesChannel: string;
+  sku: string;
+  title: string;
+  quantity: string;
+  salePrice: string;
+  refundCurrency: string;
+  refundPrice: string;
+  shippingCost: string;
   country: string;
-  accountable: string;
+  courierService: string;
+  trackingNumber: string;
   reason: string;
-  courier: string;
-  productCategory: string;
-  status: string;
+  tags: string;
+  accountable: string;
+  itemReturned: string;
+  buyerComment: string;
+  comment: string;
+  attachment: string;
+  issueListing: string;
+  issueWarehouse: string;
+  issueLogistics: string;
+  issueFactory: string;
 };
 
 export const refundColumns: GridColDef<RefundRow>[] = [
-  {
-    field: "createdAt",
-    headerName: "Date",
-    type: "date",
-    width: 140,
-    valueGetter: (value) =>
-      typeof value === "string" && value ? new Date(value) : value,
-  },
-  { field: "id", headerName: "Refund ID", width: 130 },
-  { field: "orderId", headerName: "Order ID", width: 140 },
-  { field: "category", headerName: "Category", flex: 1, minWidth: 130 },
-  { field: "lossNoLoss", headerName: "Loss/No Loss", width: 130 },
+  { field: "category", headerName: "Category", width: 120 },
+  { field: "referenceNo", headerName: "Reference No", width: 150 },
+  { field: "orderId", headerName: "Order Id", width: 140 },
+  { field: "categoryName", headerName: "Category Name", flex: 1, minWidth: 160 },
+  { field: "email", headerName: "Email Address", flex: 1, minWidth: 180 },
   { field: "type", headerName: "Type", width: 120 },
-  { field: "saleChannel", headerName: "Sale Channel", flex: 1, minWidth: 140 },
-  { field: "country", headerName: "Country", width: 120 },
-  { field: "accountable", headerName: "Accountable", flex: 1, minWidth: 140 },
+  { field: "salesChannel", headerName: "Sales Channel", flex: 1, minWidth: 150 },
+  { field: "sku", headerName: "SKU", width: 140 },
+  { field: "title", headerName: "Title", flex: 1, minWidth: 180 },
+  { field: "quantity", headerName: "Quantity", width: 110 },
+  { field: "salePrice", headerName: "Sale Price", width: 130 },
+  { field: "refundCurrency", headerName: "Refund Currency", width: 150 },
+  { field: "refundPrice", headerName: "Refund Price", width: 140 },
+  { field: "shippingCost", headerName: "Shipping Cost", width: 140 },
+  { field: "country", headerName: "Country", width: 140 },
+  { field: "courierService", headerName: "Courier Service", flex: 1, minWidth: 150 },
+  { field: "trackingNumber", headerName: "Tracking Number", flex: 1, minWidth: 160 },
   { field: "reason", headerName: "Reason", flex: 1, minWidth: 160 },
-  { field: "courier", headerName: "Courier", flex: 1, minWidth: 120 },
-  {
-    field: "productCategory",
-    headerName: "Product Category",
-    flex: 1,
-    minWidth: 160,
-  },
-  {
-    field: "status",
-    headerName: "Status",
-    width: 140,
-    renderCell: (params) => (
-      <TicketStatusBadge status={String(params.value ?? "")} />
-    ),
-  },
+  { field: "tags", headerName: "Tags", width: 140 },
+  { field: "accountable", headerName: "Accountable", flex: 1, minWidth: 160 },
+  { field: "itemReturned", headerName: "Item Returned", width: 140 },
+  { field: "buyerComment", headerName: "Buyer Comment", flex: 1, minWidth: 180 },
+  { field: "comment", headerName: "Comment", flex: 1, minWidth: 180 },
+  { field: "attachment", headerName: "Attachment", flex: 1, minWidth: 160 },
+  { field: "issueListing", headerName: "Issue with Listing", width: 160 },
+  { field: "issueWarehouse", headerName: "Issue with Warehouse", width: 180 },
+  { field: "issueLogistics", headerName: "Issue with Logistics", width: 180 },
+  { field: "issueFactory", headerName: "Issue with Factory", width: 170 },
 ];

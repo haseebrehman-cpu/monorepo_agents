@@ -6,6 +6,7 @@ import {
   stripProductLinksFromAnswer,
 } from "@/lib/product-cards";
 // import CitationList from "./CitationList";
+import HandoffForm from "./HandoffForm";
 import MessageContent from "./MessageContent";
 import OptionButtons from "./OptionButtons";
 import ProductCard from "./ProductCard";
@@ -22,6 +23,7 @@ interface MessageListProps {
   onOptionSelect: (option: ChatOption) => void;
   onNotSatisfied: (message: string) => void;
   onTalkToPerson: (message: string) => void;
+  onHandoffSubmit: (name: string, email: string) => void;
   scrollRef: RefObject<HTMLDivElement | null>;
 }
 
@@ -59,6 +61,7 @@ export default function MessageList({
   onOptionSelect,
   onNotSatisfied,
   onTalkToPerson,
+  onHandoffSubmit,
   scrollRef,
 }: MessageListProps) {
   const showMenuHint = messages.filter((m) => m.role === "user").length >= 1;
@@ -73,6 +76,10 @@ export default function MessageList({
   const latestVerificationId = findLatestId(
     messages,
     (m) => m.role === "assistant" && Boolean(m.order_verification),
+  );
+  const latestHandoffId = findLatestId(
+    messages,
+    (m) => m.role === "assistant" && Boolean(m.showHandoffForm),
   );
 
 
@@ -104,73 +111,97 @@ export default function MessageList({
           //   message.role === "assistant"
           //     ? nonProductCitations(message.citations)
           //     : [];
-          
-
+          const menuOnly =
+            message.role === "assistant" &&
+            Boolean(message.showMenu) &&
+            message.content.trim() === "";
 
           return (
             <div key={message.id} className="w-full">
-              <div
-                className={
-                  message.role === "user"
-                    ? "rdx-chat-user ml-auto w-fit max-w-[88%] rounded-2xl rounded-br-md bg-rdx-red px-3.5 py-2.5 text-left text-sm leading-relaxed text-white"
-                    : "rdx-chat-assistant mr-auto w-full max-w-[95%] rounded-2xl rounded-bl-md border border-neutral-200 bg-white px-3.5 py-3 text-left shadow-sm"
-                }
-              >
-                {message.role === "assistant" ? (
-                  <>
-                    <MessageContent
-                      content={stripProductLinksFromAnswer(message.content)}
-                    />
-                    {message.escalated && (
-                      <p className="mt-2 text-[11px] font-medium text-slate-700">
-                        A person is taking over this conversation.
-                      </p>
-                    )}
-                    {products.length > 0 && (
-                      <div className="rdx-product-grid">
-                        {products.map((product) => (
-                          <ProductCard
-                            key={`${message.id}-${product.listing_id ?? product.handle}`}
-                            product={product}
-                            region={region}
-                            failedListingIds={failedListingIds}
-                            onListingFailed={onListingFailed}
-                            onNotice={onCartNotice}
+              {!menuOnly && (
+                <div
+                  className={
+                    message.role === "user"
+                      ? "rdx-chat-user ml-auto w-fit max-w-[88%] rounded-2xl rounded-br-md bg-rdx-red px-3.5 py-2.5 text-left text-sm leading-relaxed text-white"
+                      : "rdx-chat-assistant mr-auto w-full max-w-[95%] rounded-2xl rounded-bl-md border border-neutral-200 bg-white px-3.5 py-3 text-left shadow-sm"
+                  }
+                >
+                  {message.role === "assistant" ? (
+                    <>
+                      <MessageContent
+                        content={stripProductLinksFromAnswer(message.content)}
+                      />
+                      {message.escalated && !message.showHandoffForm && (
+                        <p className="mt-2 text-[11px] font-medium text-slate-700">
+                          A person is taking over this conversation.
+                        </p>
+                      )}
+                      {message.showHandoffForm &&
+                        message.id === latestHandoffId && (
+                          <HandoffForm
+                            disabled={isTyping}
+                            onSubmit={onHandoffSubmit}
                           />
-                        ))}
-                      </div>
-                    )}
-                    {/* {citations.length > 0 && (
+                        )}
+                      {products.length > 0 && (
+                        <div className="rdx-product-grid">
+                          {products.map((product) => (
+                            <ProductCard
+                              key={`${message.id}-${product.listing_id ?? product.handle}`}
+                              product={product}
+                              region={region}
+                              failedListingIds={failedListingIds}
+                              onListingFailed={onListingFailed}
+                              onNotice={onCartNotice}
+                            />
+                          ))}
+                        </div>
+                      )}
+                      {sizeCharts.map((chart, chartIndex) => (
+                        <SizeChartAttachment
+                          key={`${message.id}-chart-${chartIndex}`}
+                          productTitle={chart.title}
+                          url={chart.url}
+                          altText={chart.alt}
+                        />
+                      ))}
+                      {/* {citations.length > 0 && (
                     <CitationList citations={citations} />
                   )} */}
-                    {message.attachments?.map((attachment, index) =>
-                      attachment.kind === "size_chart" ? (
-                        <SizeChartAttachment
-                          key={`${message.id}-chart-${index}`}
-                          attachment={attachment}
+                      {!sizeChartOnly &&
+                        message.attachments?.map((attachment, index) =>
+                          attachment.kind === "size_chart" ? (
+                            <SizeChartAttachment
+                              key={`${message.id}-attach-${index}`}
+                              productTitle={attachment.productTitle}
+                              url={attachment.url}
+                              altText={attachment.altText}
+                              width={attachment.width}
+                              height={attachment.height}
+                            />
+                          ) : null,
+                        )}
+                      {message.order_verification && (
+                        <TrackingForm
+                          challenge={message.order_verification}
+                          region={region}
+                          hideMessage={
+                            message.content.trim() ===
+                            message.order_verification.message?.trim()
+                          }
+                          disabled={
+                            isTyping || message.id !== latestVerificationId
+                          }
+                          onNotSatisfied={onNotSatisfied}
+                          onTalkToPerson={onTalkToPerson}
                         />
-                      ) : null,
-                    )}
-                    {message.order_verification && (
-                      <TrackingForm
-                        challenge={message.order_verification}
-                        region={region}
-                        hideMessage={
-                          message.content.trim() ===
-                          message.order_verification.message?.trim()
-                        }
-                        disabled={
-                          isTyping || message.id !== latestVerificationId
-                        }
-                        onNotSatisfied={onNotSatisfied}
-                        onTalkToPerson={onTalkToPerson}
-                      />
-                    )}
-                  </>
-                ) : (
-                  <p className="text-xs">{message.content}</p>
-                )}
-              </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-xs">{message.content}</p>
+                  )}
+                </div>
+              )}
 
               {message.role === "assistant" &&
                 message.showMenu &&

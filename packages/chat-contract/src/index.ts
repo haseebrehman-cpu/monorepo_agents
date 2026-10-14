@@ -236,6 +236,8 @@ export interface ChatMessage {
   role: ChatRole;
   content: string;
   showMenu?: boolean;
+  /** Client-only. Collect name and email before a human handoff. */
+  showHandoffForm?: boolean;
   attachments?: ChatAttachment[];
   products?: ChatProductCard[];
   citations?: ChatCitation[];

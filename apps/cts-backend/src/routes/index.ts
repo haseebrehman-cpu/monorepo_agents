@@ -6,6 +6,8 @@ import rolesRoutes from "../modules/roles/roles.routes.js";
 import departmentsRoutes from "../modules/departments/departments.routes.js";
 import ticketsRoutes from "../modules/tickets/tickets.routes.js";
 import ticketLookupsRoutes from "../modules/ticket-lookups/ticket-lookups.routes.js";
+import refundsRoutes from "../modules/refunds/refunds.routes.js";
+import refundLookupsRoutes from "../modules/refund-lookups/refund-lookups.routes.js";
 
 const router = Router();
 router.use("/auth", authRoutes);
@@ -15,4 +17,6 @@ router.use("/roles", rolesRoutes);
 router.use("/departments", departmentsRoutes);
 router.use("/tickets", ticketsRoutes);
 router.use("/ticket-lookups", ticketLookupsRoutes);
+router.use("/refunds", refundsRoutes);
+router.use("/refund-lookups", refundLookupsRoutes);
 export default router;

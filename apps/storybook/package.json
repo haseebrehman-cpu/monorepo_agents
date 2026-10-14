@@ -1,0 +1,33 @@
+{
+  "name": "@rdx/storybook",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "storybook dev -p 6006",
+    "build": "storybook build",
+    "storybook": "storybook dev -p 6006",
+    "lint": "node -e \"process.exit(0)\"",
+    "typecheck": "tsc --noEmit --pretty false",
+    "test": "node -e \"process.exit(0)\""
+  },
+  "dependencies": {
+    "@rdx/ui": "*",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@rdx/tsconfig": "*",
+    "@storybook/addon-docs": "^10.4.4",
+    "@storybook/react-vite": "^10.4.4",
+    "@tailwindcss/vite": "^4.1.12",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.1.0",
+    "storybook": "^10.4.4",
+    "tailwindcss": "^4.1.12",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.2"
+  }
+}

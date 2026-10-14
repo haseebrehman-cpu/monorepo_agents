@@ -6,6 +6,7 @@ node_modules
 .turbo
 coverage
 dist
+storybook-static
 *.tsbuildinfo
 test-results
 playwright-report

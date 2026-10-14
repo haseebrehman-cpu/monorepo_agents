@@ -24,7 +24,7 @@ export default function ChatLauncher({
       aria-label="Toggle chat widget"
       className={
         isOpen
-          ? "fixed right-4 bottom-4 z-50 flex h-24 w-24 items-center justify-center rounded-full bg-rdx-black text-white shadow-lg ring-2 ring-rdx-red transition hover:bg-neutral-900 focus-visible:ring-2 focus-visible:ring-rdx-red focus-visible:ring-offset-2 focus-visible:outline-none"
+          ? "fixed right-4 bottom-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-rdx-black text-white shadow-lg ring-2 ring-rdx-red transition hover:bg-neutral-900 focus-visible:ring-2 focus-visible:ring-rdx-red focus-visible:ring-offset-2 focus-visible:outline-none"
           : "rdx-launcher-pulse fixed right-4 bottom-4 z-50 h-24 w-24 rounded-full bg-[#e7e7e9] p-0 focus-visible:ring-2 focus-visible:ring-rdx-red focus-visible:ring-offset-2 focus-visible:outline-none"
       }
     >
