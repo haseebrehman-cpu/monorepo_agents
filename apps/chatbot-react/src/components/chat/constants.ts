@@ -8,5 +8,5 @@ export const OPTIONS: ChatOption[] = [
   { id: "track-order", label: "Track Your Order", enabled: true },
   { id: "product-info", label: "Product Information", enabled: true },
   { id: "refund-return", label: "Refunds & Returns", enabled: true },
-  { id: "damaged-product", label: "Report a Damaged Product", enabled: false },
+  { id: "damaged-product", label: "Report a Damaged Product", enabled: true },
 ];
