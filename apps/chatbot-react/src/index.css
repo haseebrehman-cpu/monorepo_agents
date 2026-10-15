@@ -87,13 +87,14 @@ body {
   line-height: 1.7;
 }
 
-/* Product cards scroll inside the message. The chat thread stays put.
-   One card (image, copy, and action buttons) must fit before the clip. */
+/* In the docked panel, extra cards scroll inside the message.
+   overscroll-behavior stays auto so a wheel at the end of that list
+   continues into the chat thread. */
 .rdx-product-grid {
-  max-height: 21rem;
+  max-height: 23rem;
   margin-top: 0.75rem;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior: auto;
   scrollbar-width: thin;
   scrollbar-color: #a3a3a3 transparent;
 }
@@ -121,7 +122,8 @@ body {
   gap: 0.75rem;
   align-content: start;
   grid-auto-rows: max-content;
-  max-height: calc(100vh - 11rem);
+  max-height: none;
+  overflow: visible;
 }
 
 .rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-product-card,

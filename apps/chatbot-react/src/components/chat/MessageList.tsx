@@ -97,7 +97,7 @@ export default function MessageList({
   return (
     <div
       ref={scrollRef}
-      className="rdx-chat-scroll flex-1 overflow-y-auto bg-neutral-100 px-4 py-4"
+      className="rdx-chat-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain bg-neutral-100 px-4 py-4"
       aria-live="polite"
       aria-busy={isTyping}
     >
@@ -134,7 +134,6 @@ export default function MessageList({
             message.role === "assistant" &&
             Boolean(message.showMenu) &&
             message.content.trim() === "";
-          console.log("message22", message.order_verification)
 
           return (
             <div key={message.id} className="w-full">
