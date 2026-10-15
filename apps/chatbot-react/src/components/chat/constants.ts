@@ -7,7 +7,6 @@ export const MAX_INPUT_CHARS = 4000;
 export const OPTIONS: ChatOption[] = [
   { id: "track-order", label: "Track Your Order", enabled: true },
   { id: "product-info", label: "Product Information", enabled: true },
-  { id: "place-order", label: "Place an Order", enabled: false },
-  { id: "refund-return", label: "Refunds & Returns", enabled: false },
+  { id: "refund-return", label: "Refunds & Returns", enabled: true },
   { id: "damaged-product", label: "Report a Damaged Product", enabled: false },
 ];

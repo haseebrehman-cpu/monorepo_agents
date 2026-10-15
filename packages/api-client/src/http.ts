@@ -20,7 +20,7 @@ export class ApiError extends Error {
 }
 
 export type ApiClientOptions = {
-  /** Origin only, e.g. https://backend-staging-1a2f.up.railway.app — no trailing slash. */
+  /** Origin only, e.g. https://backend-production-0a592.up.railway.app/ — no trailing slash. */
   baseUrl: string;
   /** Override for tests. */
   fetch?: typeof fetch;

@@ -6,7 +6,7 @@ import type {
 } from "@rdx/chat-contract";
 import { getShopperSessionId } from "./shopper-session";
 
-export const STAGING_API_URL = "https://backend-staging-1a2f.up.railway.app";
+export const STAGING_API_URL = "https://backend-production-0a592.up.railway.app/";
 
 export const MARKETPLACES = new Set<MarketplaceCode>([
   "uk",

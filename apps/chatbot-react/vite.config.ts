@@ -47,7 +47,7 @@ export default defineConfig({
     },
     proxy: {
       "/rdx-api": {
-        target: "https://backend-staging-1a2f.up.railway.app",
+        target: "https://backend-production-0a592.up.railway.app/",
         changeOrigin: true,
         secure: true,
         rewrite: (requestPath) => requestPath.replace(/^\/rdx-api/, ""),
@@ -57,7 +57,7 @@ export default defineConfig({
   preview: {
     proxy: {
       "/rdx-api": {
-        target: "https://backend-staging-1a2f.up.railway.app",
+        target: "https://backend-production-0a592.up.railway.app/",
         changeOrigin: true,
         secure: true,
         rewrite: (requestPath) => requestPath.replace(/^\/rdx-api/, ""),

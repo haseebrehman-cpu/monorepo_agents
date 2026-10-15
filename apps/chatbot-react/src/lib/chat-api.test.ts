@@ -99,7 +99,7 @@ describe("sendChatMessage", () => {
   });
 
   it("uses the backend URL on a production host instead of a same-origin proxy", async () => {
-    vi.stubEnv("VITE_CHAT_API_URL", "https://backend-staging-1a2f.up.railway.app");
+    vi.stubEnv("VITE_CHAT_API_URL", "https://backend-production-0a592.up.railway.app/");
     vi.stubGlobal("window", {
       location: { hostname: "chatbot-react.vercel.app" },
     });
@@ -110,13 +110,13 @@ describe("sendChatMessage", () => {
     await sendChatMessage({ message: "Hello" });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://backend-staging-1a2f.up.railway.app/v1/chat",
+      "https://backend-production-0a592.up.railway.app//v1/chat",
       expect.anything(),
     );
   });
 
   it("keeps the Vite proxy on localhost", async () => {
-    vi.stubEnv("VITE_CHAT_API_URL", "https://backend-staging-1a2f.up.railway.app");
+    vi.stubEnv("VITE_CHAT_API_URL", "https://backend-production-0a592.up.railway.app/");
     vi.stubGlobal("window", { location: { hostname: "localhost" } });
     const fetchMock = vi.fn().mockResolvedValue(mockChatResponse());
     vi.stubGlobal("fetch", fetchMock);
