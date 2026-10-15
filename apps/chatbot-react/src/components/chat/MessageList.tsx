@@ -134,6 +134,7 @@ export default function MessageList({
             message.role === "assistant" &&
             Boolean(message.showMenu) &&
             message.content.trim() === "";
+          console.log("message22", message.order_verification)
 
           return (
             <div key={message.id} className="w-full">
@@ -187,6 +188,7 @@ export default function MessageList({
                       {/* {citations.length > 0 && (
                     <CitationList citations={citations} />
                   )} */}
+
                       {!sizeChartOnly &&
                         message.attachments?.map((attachment, index) =>
                           attachment.kind === "size_chart" ? (

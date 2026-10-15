@@ -46,7 +46,7 @@ describe("order verification helpers", () => {
     expect(looksLikeOrderTracking("What size are the gloves?")).toBe(false);
   });
 
-  it("shows the tracking form only for an order-skill tracking turn", () => {
+  it("shows the tracking form when order skill returns order_verification or user asks to track", () => {
     expect(
       orderTrackingForm(
         { skill: "commerce", order_verification: challenge },
@@ -62,12 +62,18 @@ describe("order verification helpers", () => {
     expect(
       orderTrackingForm(
         { skill: "order", order_verification: challenge },
+        "can you check my order",
+      )?.fields,
+    ).toEqual(challenge.fields);
+    expect(
+      orderTrackingForm(
+        { skill: "order", order_verification: null },
         "what is rdx",
       ),
     ).toBeNull();
     expect(
       orderTrackingForm(
-        { skill: "order", order_verification: challenge },
+        { skill: "order", order_verification: null },
         "need gloves",
       ),
     ).toBeNull();

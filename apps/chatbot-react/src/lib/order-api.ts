@@ -36,15 +36,17 @@ const DEFAULT_ORDER_TRACKING: OrderVerificationChallenge = {
   submit: { method: "POST", path: "/v1/orders/verify" },
 };
 
-/** Form only on this turn: chat skill is order and the customer asked to track. */
+/** Use server-supplied order_verification when present; fall back to default form when customer asked to track. */
 export function orderTrackingForm(
   result: Pick<ChatSuccessResponse, "skill" | "order_verification">,
   userText: string,
 ): OrderVerificationChallenge | null {
   if (result.skill !== "order") return null;
-  if (!looksLikeOrderTracking(userText)) return null;
   const fromChat = result.order_verification;
-  if (fromChat && fromChat.fields.length > 0) return fromChat;
+  if (fromChat && fromChat.required !== false && fromChat.fields.length > 0) {
+    return fromChat;
+  }
+  if (!looksLikeOrderTracking(userText)) return null;
   return DEFAULT_ORDER_TRACKING;
 }
 
