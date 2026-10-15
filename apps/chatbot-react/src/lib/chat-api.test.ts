@@ -110,7 +110,7 @@ describe("sendChatMessage", () => {
     await sendChatMessage({ message: "Hello" });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://backend-production-0a592.up.railway.app//v1/chat",
+      "https://backend-production-0a592.up.railway.app/v1/chat",
       expect.anything(),
     );
   });
