@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ChatMessage, ChatOption } from "@rdx/chat-contract";
+import type { ChatMessage } from "@rdx/chat-contract";
 import { useTimedCartNotice } from "@/lib/cart-outcome";
 import {
   buildHumanHandoffMessage,
@@ -17,7 +17,7 @@ import ChatLauncher from "./ChatLauncher";
 import ChatComposer from "./ChatComposer";
 import MessageList from "./MessageList";
 import { createMessageId, createWelcomeMessage } from "./messages";
-import { PANEL_ID, STORE_NAME } from "./constants";
+import { PANEL_ID, STORE_NAME, type MenuOption, type QuickQuestion } from "./constants";
 
 export default function ChatWidget({ region }: { region: string }) {
   const elementRef = useRef<HTMLDivElement>(null);
@@ -87,7 +87,11 @@ export default function ChatWidget({ region }: { region: string }) {
   useEffect(() => {
     const node = scrollRef.current;
     if (!node) return;
-    node.scrollTop = node.scrollHeight;
+    const isHome =
+      messages.length === 1 &&
+      messages[0]?.role === "assistant" &&
+      Boolean(messages[0]?.showMenu);
+    node.scrollTop = isHome ? 0 : node.scrollHeight;
   }, [messages, isTyping, isOpen]);
 
   const handleNewChat = useCallback(() => {
@@ -239,9 +243,17 @@ export default function ChatWidget({ region }: { region: string }) {
   }, [input, isTyping, sendUserText]);
 
   const handleOptionSelect = useCallback(
-    (option: ChatOption) => {
+    (option: MenuOption) => {
       if (isTyping || !option.enabled) return;
-      sendUserText(option.label);
+      sendUserText(option.message, { displayText: option.label });
+    },
+    [isTyping, sendUserText],
+  );
+
+  const handleQuestion = useCallback(
+    (question: QuickQuestion) => {
+      if (isTyping) return;
+      sendUserText(question.message, { displayText: question.label });
     },
     [isTyping, sendUserText],
   );
@@ -263,7 +275,7 @@ export default function ChatWidget({ region }: { region: string }) {
           aria-modal="true"
           aria-label={`${STORE_NAME} Assistant`}
           tabIndex={-1}
-          className="rdx-chat-panel fixed right-5 bottom-17 z-50 flex h-[600px] max-h-[calc(100vh-8.5rem)] w-[420px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-white shadow-[0_24px_60px_rgba(0,0,0,0.45)]"
+          className="rdx-chat-panel fixed right-5 bottom-17 z-50 flex h-[600px] max-h-[calc(100vh-8.5rem)] w-[460px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-white shadow-[0_24px_60px_rgba(0,0,0,0.45)]"
         >
           <ChatHeader
             isTyping={isTyping}
@@ -294,6 +306,7 @@ export default function ChatWidget({ region }: { region: string }) {
                 onListingFailed={handleListingFailed}
                 onCartNotice={setCartNotice}
                 onOptionSelect={handleOptionSelect}
+                onQuestion={handleQuestion}
                 onNotSatisfied={sendUserText}
                 onHandoffSubmit={handleHandoffSubmit}
                 onTalkToPerson={(message) => {

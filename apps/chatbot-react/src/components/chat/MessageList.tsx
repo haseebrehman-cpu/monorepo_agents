@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
-import type { ChatMessage, ChatOption } from "@rdx/chat-contract";
+import type { ChatMessage } from "@rdx/chat-contract";
+import type { MenuOption, QuickQuestion } from "./constants";
 import type { CartNotice } from "@/lib/cart-outcome";
 import {
   // nonProductCitations,
@@ -10,10 +11,10 @@ import {
 // import CitationList from "./CitationList";
 import HandoffForm from "./HandoffForm";
 import MessageContent from "./MessageContent";
-import OptionButtons from "./OptionButtons";
 import ProductCard from "./ProductCard";
 import SizeChartAttachment from "./SizeChartAttachment";
 import TrackingForm from "./TrackingForm";
+import WelcomeScreen from "./WelcomeScreen";
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -22,7 +23,8 @@ interface MessageListProps {
   failedListingIds: Set<string>;
   onListingFailed: (listingId: string) => void;
   onCartNotice: (notice: CartNotice) => void;
-  onOptionSelect: (option: ChatOption) => void;
+  onOptionSelect: (option: MenuOption) => void;
+  onQuestion: (question: QuickQuestion) => void;
   onNotSatisfied: (message: string) => void;
   onTalkToPerson: (message: string) => void;
   onHandoffSubmit: (name: string, email: string) => void;
@@ -69,12 +71,17 @@ export default function MessageList({
   onListingFailed,
   onCartNotice,
   onOptionSelect,
+  onQuestion,
   onNotSatisfied,
   onTalkToPerson,
   onHandoffSubmit,
   scrollRef,
 }: MessageListProps) {
   const showMenuHint = messages.filter((m) => m.role === "user").length >= 1;
+  const showWelcome =
+    messages.length === 1 &&
+    messages[0]?.role === "assistant" &&
+    Boolean(messages[0]?.showMenu);
   const latestAssistantId = findLatestId(
     messages,
     (m) => m.role === "assistant",
@@ -97,11 +104,22 @@ export default function MessageList({
   return (
     <div
       ref={scrollRef}
-      className="rdx-chat-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain bg-neutral-100 px-4 py-4"
+      className={`rdx-chat-scroll min-h-0 flex-1 overscroll-y-contain bg-neutral-100 px-4 py-4 ${
+        showWelcome ? "rdx-chat-home" : "overflow-y-auto"
+      }`}
       aria-live="polite"
       aria-busy={isTyping}
     >
       <div className="rdx-chat-thread w-full space-y-3">
+        {showWelcome && (
+          <WelcomeScreen
+            region={region}
+            disabled={isTyping}
+            onSelect={onOptionSelect}
+            onQuestion={onQuestion}
+          />
+        )}
+
         {messages.length === 0 && !isTyping && (
           <div className="flex min-h-48 flex-col items-center justify-center gap-2 px-4 text-center">
             <p className="text-sm font-medium text-neutral-700">
@@ -113,7 +131,7 @@ export default function MessageList({
           </div>
         )}
 
-        {messages.map((message, index) => {
+        {!showWelcome && messages.map((message, index) => {
           const isLatestAssistant = message.id === latestAssistantId;
           const sizeChartOnly =
             message.role === "assistant" &&
@@ -131,9 +149,9 @@ export default function MessageList({
           //     ? nonProductCitations(message.citations)
           //     : [];
           const menuOnly =
-            message.role === "assistant" &&
-            Boolean(message.showMenu) &&
-            message.content.trim() === "";
+            message.role === "assistant" && Boolean(message.showMenu);
+
+          if (menuOnly && message.id !== latestMenuId) return null;
 
           return (
             <div key={message.id} className="w-full">
@@ -226,7 +244,14 @@ export default function MessageList({
               {message.role === "assistant" &&
                 message.showMenu &&
                 message.id === latestMenuId && (
-                  <OptionButtons disabled={isTyping} onSelect={onOptionSelect} />
+                  <div className={menuOnly ? undefined : "mt-3"}>
+                    <WelcomeScreen
+                      region={region}
+                      disabled={isTyping}
+                      onSelect={onOptionSelect}
+                      onQuestion={onQuestion}
+                    />
+                  </div>
                 )}
 
               {isLatestAssistant && !message.showMenu && showMenuHint && (
