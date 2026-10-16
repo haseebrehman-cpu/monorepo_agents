@@ -270,8 +270,8 @@ body {
 
 .rdx-menu-icon {
   display: flex;
-  height: 1.7rem;
-  width: 1.7rem;
+  height: 2.8rem;
+  width: 2.8rem;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
@@ -282,8 +282,17 @@ body {
 }
 
 .rdx-menu-icon svg {
-  height: 0.95rem;
-  width: 0.95rem;
+  height: 1.5rem;
+  width: 1.5rem;
+}
+
+.rdx-menu-icon:has(svg.rdx-menu-art) {
+  background: transparent;
+}
+
+.rdx-menu-icon svg.rdx-menu-art {
+  height: 2.8rem;
+  width: 2.8rem;
 }
 
 .rdx-menu-copy {

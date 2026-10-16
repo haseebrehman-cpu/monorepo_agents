@@ -6,66 +6,58 @@ interface MenuGridProps {
   onSelect: (option: MenuOption) => void;
 }
 
-function Icon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className="h-5 w-5"
-      aria-hidden="true"
-      {...props}
-    />
-  );
+function MenuArt(props: SVGProps<SVGSVGElement>) {
+  return <svg fill="none" className="rdx-menu-art" aria-hidden="true" {...props} />;
 }
 
 function MenuGlyph({ id }: { id: string }) {
   switch (id) {
     case "track-order":
       return (
-        <Icon>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3.5 8.5 12 4l8.5 4.5L12 13 3.5 8.5Z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3.5 8.5V16L12 20.5 20.5 16V8.5" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 13v7.5" />
-        </Icon>
+        <MenuArt viewBox="0 0 48 48">
+          <circle cx="24" cy="24" r="22" fill="#FFF0F1" />
+          <path d="M12 17L24 10L36 16.5L24 23.5Z" fill="white" stroke="#202127" strokeWidth="2.5" strokeLinejoin="round" />
+          <path d="M12 17V31L24 38V23.5Z" fill="white" stroke="#202127" strokeWidth="2.5" strokeLinejoin="round" />
+          <path d="M24 23.5L36 16.5V30.5L24 38Z" fill="white" stroke="#202127" strokeWidth="2.5" strokeLinejoin="round" />
+          <path d="M18 20.5V29L24 32.5" stroke="#DF2429" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        </MenuArt>
       );
     case "find-products":
-      return (
-        <Icon>
-          <circle cx="11" cy="11" r="6.5" />
-          <path strokeLinecap="round" d="m16 16 4 4" />
-        </Icon>
-      );
     case "product-info":
       return (
-        <Icon>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M7 3.5h7l4.5 4.5V20a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 20V5A1.5 1.5 0 0 1 7 3.5Z" />
-          <path strokeLinecap="round" d="M14 3.5V8h4.5M8.5 12.5h7M8.5 16h5" />
-        </Icon>
+        <MenuArt viewBox="0 0 48 48">
+          <circle cx="24" cy="24" r="22" fill="#FFECEE" />
+          <circle cx="21" cy="20.5" r="9.5" stroke="#DF2429" strokeWidth="3.2" />
+          <path d="M28 28L35.5 35.5" stroke="#DF2429" strokeWidth="3.5" strokeLinecap="round" />
+        </MenuArt>
       );
     case "refund-return":
       return (
-        <Icon>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12a7.5 7.5 0 1 0 2.1-5.2" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 4.5v4h4" />
-        </Icon>
+        <MenuArt viewBox="0 0 48 48">
+          <circle cx="24" cy="24" r="22" fill="#FFF0F1" />
+          <path d="M16 25a8.5 8.5 0 1 0 2.4-6" stroke="#DF2429" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M16 14.5V21h6.5" stroke="#DF2429" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+        </MenuArt>
       );
     case "damaged-product":
       return (
-        <Icon>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3.5 5 6.5v5.2c0 4.2 2.9 7.1 7 8.8 4.1-1.7 7-4.6 7-8.8V6.5L12 3.5Z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8.5v4.2M12 15.8h.01" />
-        </Icon>
+        <MenuArt viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="48" fill="#FFF0F1" />
+          <path
+            d="M50 18 C66 18 80 24 80 36 C80 56 66 74 50 82 C34 74 20 56 20 36 C20 24 34 18 50 18 Z"
+            fill="#E53935"
+          />
+          <path d="M53 32 L42 50 H50 L45 66 L61 46 H52 Z" fill="#FFFFFF" />
+        </MenuArt>
       );
     default:
       return (
-        <Icon>
-          <path strokeLinecap="round" d="M4 13a8 8 0 0 1 16 0" />
-          <rect x="3" y="12.5" width="4" height="6" rx="1.3" />
-          <rect x="17" y="12.5" width="4" height="6" rx="1.3" />
-          <path strokeLinecap="round" d="M19 16.2v1.3a3 3 0 0 1-3 3h-2.2" />
-        </Icon>
+        <MenuArt viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="48" fill="#FFF0F1" />
+          <path d="M32 50 C32 36 68 36 68 50" fill="none" stroke="#202127" strokeWidth="5" strokeLinecap="round" />
+          <rect x="26" y="46" width="11" height="20" rx="4" fill="#DF2429" />
+          <rect x="63" y="46" width="11" height="20" rx="4" fill="#DF2429" />
+        </MenuArt>
       );
   }
 }

@@ -77,9 +77,9 @@ export const POPULAR_QUESTIONS: QuickQuestion[] = [
     message: "Show me boxing gloves",
   },
   {
-    id: "punch-pads",
-    label: "Punch Bags",
-    message: "Show me punch bags",
+    id: "gym-belts",
+    label: "Gym Belts",
+    message: "Show me gym belts",
   },
   {
     id: "weightlifting",
