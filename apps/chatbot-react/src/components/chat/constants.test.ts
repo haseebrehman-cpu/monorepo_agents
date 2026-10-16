@@ -18,10 +18,10 @@ describe("welcome menu", () => {
     );
   });
 
-  it("offers three popular questions for gloves, bags, and weightlifting", () => {
+  it("offers three popular questions for gloves, belts, and weightlifting", () => {
     expect(POPULAR_QUESTIONS.map((question) => question.message)).toEqual([
       "Show me boxing gloves",
-      "Show me punch bags",
+      "Show me gym belts",
       "Show me weightlifting gear",
     ]);
   });

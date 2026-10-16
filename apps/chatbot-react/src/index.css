@@ -348,3 +348,13 @@ body {
     color: red
   }
 }
+
+/* Windows paints the open list on a light popup, so option text must stay dark. */
+#select-country {
+  color-scheme: light;
+}
+
+#select-country option {
+  color: #171717;
+  background-color: #ffffff;
+}
