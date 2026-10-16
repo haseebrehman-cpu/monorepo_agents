@@ -2,11 +2,10 @@ import { describe, expect, it } from "vitest";
 import { OPTIONS, POPULAR_QUESTIONS } from "./constants";
 
 describe("welcome menu", () => {
-  it("keeps the existing menu options and adds talk to a human", () => {
+  it("lists the welcome menu and includes talk to a human", () => {
     expect(OPTIONS.map((option) => option.id)).toEqual([
-      "track-order",
-      "find-products",
       "product-info",
+      "track-order",
       "refund-return",
       "damaged-product",
       "talk-human",
@@ -19,10 +18,10 @@ describe("welcome menu", () => {
     );
   });
 
-  it("offers three popular questions for gloves, pads, and weightlifting", () => {
+  it("offers three popular questions for gloves, bags, and weightlifting", () => {
     expect(POPULAR_QUESTIONS.map((question) => question.message)).toEqual([
-      "Show me competition boxing gloves",
-      "Show me punch pad sets",
+      "Show me boxing gloves",
+      "Show me punch bags",
       "Show me weightlifting gear",
     ]);
   });
