@@ -68,7 +68,10 @@ body {
 }
 
 .rdx-chat-panel:is(:fullscreen, :-webkit-full-screen) .rdx-chat-input {
-  padding: 0.7rem 1.25rem;
+  /* Shorthand padding wiped pl-10 and let the placeholder cover the icon. */
+  padding-block: 0.7rem;
+  padding-right: 1.25rem;
+  padding-left: 2.75rem;
   font-size: 1rem;
 }
 
