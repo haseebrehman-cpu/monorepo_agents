@@ -1,0 +1,64 @@
+name: Deploy chatbot
+
+# Manual deploy of apps/chatbot-react into one GitHub environment.
+# Create dev, qa, staging, and prod under Settings → Environments, then on each one set:
+#   secret RAILWAY_TOKEN     Railway project token for that Railway environment
+#   variable RAILWAY_SERVICE Railway service name for the chatbot
+#   variable APP_URL         public URL, shown on the GitHub deployment
+# Vite build values (VITE_CHAT_API_URL and the other VITE_* args) stay on the Railway service.
+# staging and prod only run from main. dev and qa run from the branch you select.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options:
+          - dev
+          - qa
+          - staging
+          - prod
+
+concurrency:
+  group: deploy-chatbot-${{ inputs.environment }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ vars.APP_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require main for staging and prod
+        if: (inputs.environment == 'staging' || inputs.environment == 'prod') && github.ref != 'refs/heads/main'
+        run: |
+          echo "staging and prod deploy from main. This run is ${{ github.ref }}."
+          exit 1
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli@4
+
+      - name: Deploy chatbot
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "Add the RAILWAY_TOKEN secret to the ${{ inputs.environment }} GitHub environment."
+            exit 1
+          fi
+          if [ -z "$RAILWAY_SERVICE" ]; then
+            echo "Add the RAILWAY_SERVICE variable to the ${{ inputs.environment }} GitHub environment."
+            exit 1
+          fi
+          railway up --service "$RAILWAY_SERVICE" --ci --detach
