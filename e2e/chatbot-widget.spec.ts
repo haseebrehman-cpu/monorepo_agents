@@ -19,8 +19,8 @@ test("opens and closes the chat widget", async ({ page }) => {
   await expect(launcher).toHaveAttribute("aria-expanded", "true");
   await expect(page.getByRole("dialog", { name: /assistant/i })).toBeVisible();
   await expect(page.getByText(/how can i help you today/i)).toBeVisible();
-  await expect(page.getByRole("group", { name: "Quick options" })).toBeVisible();
-  await expect(page.getByPlaceholder(/ask about gloves/i)).toBeVisible();
+  await expect(page.getByRole("group", { name: "How can we help" })).toBeVisible();
+  await expect(page.getByPlaceholder(/ask about products/i)).toBeVisible();
 
   await launcher.click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
