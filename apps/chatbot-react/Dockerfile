@@ -36,4 +36,4 @@ FROM nginx:1.27-alpine
 COPY apps/chatbot-react/nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/apps/chatbot-react/dist /usr/share/nginx/html
 ENV NGINX_ENVSUBST_FILTER=PORT
-EXPOSE 8080
+EXPOSE 5173
