@@ -307,7 +307,6 @@ export default function ChatWidget({ region }: { region: string }) {
                 onCartNotice={setCartNotice}
                 onOptionSelect={handleOptionSelect}
                 onQuestion={handleQuestion}
-                onNotSatisfied={sendUserText}
                 onHandoffSubmit={handleHandoffSubmit}
                 onTalkToPerson={(message) => {
                   if (handoffContactRef.current) {

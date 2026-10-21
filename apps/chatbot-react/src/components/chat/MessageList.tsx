@@ -25,7 +25,6 @@ interface MessageListProps {
   onCartNotice: (notice: CartNotice) => void;
   onOptionSelect: (option: MenuOption) => void;
   onQuestion: (question: QuickQuestion) => void;
-  onNotSatisfied: (message: string) => void;
   onTalkToPerson: (message: string) => void;
   onHandoffSubmit: (name: string, email: string) => void;
   scrollRef: RefObject<HTMLDivElement | null>;
@@ -72,7 +71,6 @@ export default function MessageList({
   onCartNotice,
   onOptionSelect,
   onQuestion,
-  onNotSatisfied,
   onTalkToPerson,
   onHandoffSubmit,
   scrollRef,
@@ -230,7 +228,6 @@ export default function MessageList({
                           disabled={
                             isTyping || message.id !== latestVerificationId
                           }
-                          onNotSatisfied={onNotSatisfied}
                           onTalkToPerson={onTalkToPerson}
                         />
                       )}

@@ -258,14 +258,12 @@ export default function TrackingForm({
   region,
   disabled = false,
   hideMessage = false,
-  onNotSatisfied,
   onTalkToPerson,
 }: {
   challenge: OrderVerificationChallenge;
   region: string;
   disabled?: boolean;
   hideMessage?: boolean;
-  onNotSatisfied?: (message: string) => void;
   onTalkToPerson?: (message: string) => void;
 }) {
   const [descriptor, setDescriptor] = useState(challenge);
@@ -317,8 +315,8 @@ export default function TrackingForm({
               What is wrong with this result?
             </p>
             <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-              The assistant will look at this order again. This does not connect
-              you to a person.
+              A person will take over this chat with this order and what you tell
+              us.
             </p>
             <div className="mt-2 space-y-1.5" role="radiogroup" aria-label="What is wrong">
               {RESULT_ISSUES.map((issue) => (
@@ -357,13 +355,13 @@ export default function TrackingForm({
               disabled={disabled || !canSendResult}
               onClick={() => {
                 if (!selectedIssue) return;
-                onNotSatisfied?.(
+                onTalkToPerson?.(
                   buildResultFollowUp(orderNumber, selectedIssue, note),
                 );
               }}
               className={primaryButtonClass}
             >
-              Ask the assistant
+              Talk to a person
             </button>
             <button
               type="button"
