@@ -433,6 +433,8 @@ export interface VerifiedOrder {
   tracking_available?: boolean | null;
   needs_attention?: boolean | null;
   as_of?: string | null;
+  /** Customer-facing explanation of where the order stands. */
+  situation?: string | null;
 }
 
 export interface OrderVerifyRequest {
@@ -449,6 +451,8 @@ export interface OrderVerifyResponse {
   order?: VerifiedOrder | null;
   detail_unavailable?: boolean;
   note?: string | null;
+  /** Customer-facing explanation of where the order stands. */
+  situation?: string | null;
   message?: string;
   attempts_remaining?: number;
   retryable?: boolean;

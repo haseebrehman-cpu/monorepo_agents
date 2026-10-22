@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { VerifiedOrder } from "@rdx/chat-contract";
-import { buildOrderStatusView } from "./order-status";
+import { buildOrderStatusView, formatSituation } from "./order-status";
 
 const partialOrder: VerifiedOrder = {
   order_number: "410232",
@@ -273,6 +273,20 @@ describe("buildOrderStatusView", () => {
       detail:
         "Shipped on 20 Sept 2026. In transit since 21 Sept 2026. Out for delivery on 22 Sept 2026. A delivery attempt failed on 22 Sept 2026. The estimated delivery date of 23 Sept 2026 has passed. The store shows Shipped, while the courier shows Failed Attempt.",
     });
+  });
+
+  it("shows the situation returned with a verified order", () => {
+    const view = buildOrderStatusView({
+      order_number: "1004",
+      overall_label: "In transit",
+      situation: "The parcel left the hub and is on the way to you.",
+    });
+
+    expect(view.situation).toBe(
+      "The parcel left the hub and is on the way to you.",
+    );
+    expect(formatSituation("awaiting_courier_scan")).toBe("Awaiting Courier Scan");
+    expect(formatSituation("  ")).toBeNull();
   });
 
   it("keeps a plain item list when the response has no shipment split", () => {

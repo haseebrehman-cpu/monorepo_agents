@@ -36,7 +36,7 @@ export function resolveBaseUrl(): string {
     .replace(/\/+$/, "");
 
   // Local Vite (dev/preview) stays same-origin so the /rdx-api proxy can
-  // bypass staging CORS. Production (Vercel) must call the backend origin.
+  // reach the stage API without CORS. Production must call the backend origin.
   if (isLocalBrowserHost()) {
     return "/rdx-api";
   }
