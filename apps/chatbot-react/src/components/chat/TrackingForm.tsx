@@ -10,6 +10,7 @@ import {
 } from "@/lib/order-api";
 import {
   buildOrderStatusView,
+  formatSituation,
   type OrderProductLine,
   type OrderTrackingEventView,
 } from "@/lib/order-status";
@@ -84,14 +85,25 @@ function buildPersonHandoff(orderNumber: string | null, note: string): string {
     .join(" ");
 }
 
+function SituationLine({ text }: { text: string | null }) {
+  if (!text) return null;
+  return (
+    <p className="mt-1 text-[12px] leading-relaxed text-slate-700 font-semibold">
+      {text}
+    </p>
+  );
+}
+
 function OrderStatusCard({ result }: { result: OrderVerifyResponse }) {
   const order = result.order;
+  const responseSituation = formatSituation(result.situation);
   if (result.detail_unavailable || !order) {
     return (
       <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left">
         <p className="text-[13px] text-slate-800">
           Your order is verified, but details are not available right now.
         </p>
+        <SituationLine text={formatSituation(order?.situation) ?? responseSituation} />
         {result.note && (
           <p className="mt-1.5 text-[11px] text-slate-500">{result.note}</p>
         )}
@@ -114,6 +126,7 @@ function OrderStatusCard({ result }: { result: OrderVerifyResponse }) {
         Order {view.orderNumber}
       </p>
       <p className="mt-1 text-[13px] font-semibold text-slate-900">{view.headline}</p>
+      <SituationLine text={view.situation ?? responseSituation} />
       {view.summary && (
         <p className="mt-1 text-[12px] leading-relaxed text-slate-700">{view.summary}</p>
       )}

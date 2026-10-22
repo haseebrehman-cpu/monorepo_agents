@@ -31,6 +31,7 @@ export interface OrderShipmentView {
 export interface OrderStatusView {
   orderNumber: string;
   headline: string;
+  situation: string | null;
   summary: string | null;
   payment: string | null;
   fulfillment: string | null;
@@ -51,6 +52,15 @@ export function formatOrderStatus(value?: string | null): string {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+/** Customer-facing situation text. Snake_case codes are shown as words. */
+export function formatSituation(value?: string | null): string | null {
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  if (!text) return null;
+  if (/^[a-z0-9]+(?:_[a-z0-9]+)+$/i.test(text)) return formatOrderStatus(text);
+  return text;
 }
 
 export function formatOrderDate(value?: string | null): string | null {
@@ -408,6 +418,7 @@ export function buildOrderStatusView(order: VerifiedOrder): OrderStatusView {
   return {
     orderNumber: order.order_number,
     headline,
+    situation: formatSituation(order.situation),
     summary: summaryFor({
       cancelled: order.cancelled === true,
       shippedQty,
