@@ -1,12 +1,20 @@
 import app from "./app.js";
 import { env } from "./config/env.js";
 import { pool } from "./core/db.js";
+import { CTS_SCHEMA } from "./core/postgres-config.js";
 
 async function start() {
   try {
-    // 1. Test DB connection BEFORE accepting traffic
-    await pool.query("SELECT 1");
-    console.log("✅ Postgres connected");
+    const { rows } = await pool.query<{ schema: string | null }>(
+      "SELECT current_schema() AS schema"
+    );
+    const schema = rows[0]?.schema;
+    if (schema !== CTS_SCHEMA) {
+      throw new Error(
+        `Refusing to start: database search_path is "${schema ?? "unset"}", expected "${CTS_SCHEMA}".`
+      );
+    }
+    console.log(`✅ Postgres connected (schema ${schema})`);
 
     // 2. Then start the server
     const server = app.listen(env.PORT, () => {

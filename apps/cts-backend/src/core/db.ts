@@ -1,12 +1,14 @@
 import {Pool} from "pg";
 import {env} from "../config/env.js";
+import {connectionStringForPool, schemaSearchPathOption} from "./postgres-config.js";
 
 export const pool = new Pool({
-    connectionString: env.DATABASE_URL,
+    connectionString: connectionStringForPool(env.DATABASE_URL),
     max: env.DB_POOL_MAX,
     idleTimeoutMillis: env.DB_IDLE_TIMEOUT_MS,
     connectionTimeoutMillis: env.DB_CONNECTION_TIMEOUT_MS,
     statement_timeout: env.DB_STATEMENT_TIMEOUT_MS,
+    options: schemaSearchPathOption(),
 });
 
 pool.on("error", (err) => {

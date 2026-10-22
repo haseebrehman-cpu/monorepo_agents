@@ -26,7 +26,12 @@ interface MessageListProps {
   onOptionSelect: (option: MenuOption) => void;
   onQuestion: (question: QuickQuestion) => void;
   onTalkToPerson: (message: string) => void;
-  onHandoffSubmit: (name: string, email: string) => void;
+  onHandoffSubmit: (
+    name: string,
+    email: string,
+    comments?: string,
+    context?: string,
+  ) => void;
   scrollRef: RefObject<HTMLDivElement | null>;
 }
 
@@ -175,7 +180,9 @@ export default function MessageList({
                         message.id === latestHandoffId && (
                           <HandoffForm
                             disabled={isTyping}
-                            onSubmit={onHandoffSubmit}
+                            onSubmit={(name, email, comments) =>
+                              onHandoffSubmit(name, email, comments)
+                            }
                           />
                         )}
                       {products.length > 0 && (
@@ -229,6 +236,7 @@ export default function MessageList({
                             isTyping || message.id !== latestVerificationId
                           }
                           onTalkToPerson={onTalkToPerson}
+                          onHandoffSubmit={onHandoffSubmit}
                         />
                       )}
                     </>

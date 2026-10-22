@@ -217,21 +217,25 @@ export default function ChatWidget({ region }: { region: string }) {
   );
 
   const handleHandoffSubmit = useCallback(
-    (name: string, email: string) => {
-      if (sendChat.isPending || handoffContactRef.current) return;
-      const context = handoffContextRef.current;
-      handoffContextRef.current = "";
-      handoffContactRef.current = true;
-      setMessages((prev) =>
-        prev.map((message) =>
-          message.showHandoffForm
-            ? { ...message, showHandoffForm: false }
-            : message,
-        ),
-      );
-      sendUserText(buildHumanHandoffMessage(name, email, context), {
+    (name: string, email: string, comments = "", contextOverride?: string) => {
+      if (sendChat.isPending) return;
+      if (handoffContactRef.current && contextOverride === undefined) return;
+      const context = (contextOverride ?? handoffContextRef.current).trim();
+      if (!handoffContactRef.current) {
+        handoffContextRef.current = "";
+        handoffContactRef.current = true;
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.showHandoffForm
+              ? { ...message, showHandoffForm: false }
+              : message,
+          ),
+        );
+      }
+      const display = [name, email, comments.trim()].filter(Boolean).join(" · ");
+      sendUserText(buildHumanHandoffMessage(name, email, context, comments), {
         bypassHandoffForm: true,
-        displayText: `${name} · ${email}`,
+        displayText: display,
       });
     },
     [sendChat.isPending, sendUserText],

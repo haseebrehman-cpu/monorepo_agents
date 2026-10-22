@@ -3,7 +3,7 @@ import { isValidHandoffContact } from "@/lib/human-agent";
 
 interface HandoffFormProps {
   disabled: boolean;
-  onSubmit: (name: string, email: string) => void;
+  onSubmit: (name: string, email: string, comments: string) => void;
 }
 
 const inputClass =
@@ -12,6 +12,7 @@ const inputClass =
 export default function HandoffForm({ disabled, onSubmit }: HandoffFormProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [comments, setComments] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -22,7 +23,7 @@ export default function HandoffForm({ disabled, onSubmit }: HandoffFormProps) {
       return;
     }
     setError(null);
-    onSubmit(name.trim(), email.trim());
+    onSubmit(name.trim(), email.trim(), comments.trim());
   };
 
   return (
@@ -34,7 +35,7 @@ export default function HandoffForm({ disabled, onSubmit }: HandoffFormProps) {
         Talk to a person
       </p>
       <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-        Add your name and email and we will connect you with an agent.
+        Add your name, email, and any comments, and we will connect you with an agent.
       </p>
       <label className="mt-2 block">
         <span className="mb-1 block text-[11px] font-medium text-slate-600">
@@ -66,6 +67,20 @@ export default function HandoffForm({ disabled, onSubmit }: HandoffFormProps) {
           disabled={disabled}
           onChange={(event) => setEmail(event.target.value)}
           className={inputClass}
+        />
+      </label>
+      <label className="mt-2 block">
+        <span className="mb-1 block text-[11px] font-medium text-slate-600">
+          Comments (optional)
+        </span>
+        <textarea
+          name="comments"
+          rows={2}
+          maxLength={400}
+          value={comments}
+          disabled={disabled}
+          onChange={(event) => setComments(event.target.value)}
+          className="w-full resize-none rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13px] text-neutral-900 placeholder:text-neutral-400 focus:border-rdx-red focus:ring-1 focus:ring-rdx-red focus:outline-none disabled:opacity-60"
         />
       </label>
       {error && (

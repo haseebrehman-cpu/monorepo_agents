@@ -15,6 +15,7 @@ import {
 } from "@/lib/order-status";
 import { useVerifyOrder } from "@/lib/use-order-verify";
 import { isAllowedChatHref } from "@/lib/url-allowlist";
+import HandoffForm from "./HandoffForm";
 
 function ProductLines({ items }: { items: OrderProductLine[] }) {
   return (
@@ -60,51 +61,16 @@ function TrackingTimeline({ events }: { events: OrderTrackingEventView[] }) {
   );
 }
 
-const RESULT_ISSUES = [
-  {
-    id: "wrong-status",
-    label: "Status looks wrong",
-    sentence: "The status does not match what I expected.",
-  },
-  {
-    id: "delayed",
-    label: "Delivery is delayed",
-    sentence: "The delivery is taking longer than it should.",
-  },
-  {
-    id: "missing",
-    label: "Items are missing",
-    sentence: "Something from this order is missing.",
-  },
-  {
-    id: "other",
-    label: "Something else",
-    sentence: "Something else about this result is wrong.",
-  },
-] as const;
-
-type ResultIssueId = (typeof RESULT_ISSUES)[number]["id"];
-
 const primaryButtonClass =
   "mt-3 inline-flex h-8 w-full items-center justify-center rounded-lg bg-rdx-red px-3 text-[12px] font-semibold text-white shadow-sm transition hover:bg-rdx-red-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rdx-red/40 disabled:cursor-not-allowed disabled:opacity-50";
 
 const secondaryButtonClass =
   "mt-2 inline-flex h-8 w-full items-center justify-center rounded-lg border border-rdx-red bg-white px-3 text-[12px] font-semibold text-rdx-red transition hover:bg-rdx-red hover:text-white disabled:opacity-50";
 
-function buildResultFollowUp(
-  orderNumber: string | null,
-  issue: (typeof RESULT_ISSUES)[number],
-  note: string,
-): string {
-  const subject = orderNumber ? `order ${orderNumber}` : "this order";
-  const extra = note.trim();
-  return [
-    `I'm not satisfied with the tracking result for ${subject}.`,
-    issue.sentence,
-    extra ? `Details: ${extra}` : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
+function trackingHandoffContext(orderNumber: string | null): string {
+  return orderNumber
+    ? `This is about the tracking result for order ${orderNumber}.`
+    : "This is about a tracking result.";
 }
 
 function buildPersonHandoff(orderNumber: string | null, note: string): string {
@@ -141,8 +107,6 @@ function OrderStatusCard({ result }: { result: OrderVerifyResponse }) {
     view.cancelledOn ? `Cancelled ${view.cancelledOn}` : null,
   ].filter(Boolean);
 
-
-  console.log(view);
 
   return (
     <article className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left">
@@ -259,12 +223,19 @@ export default function TrackingForm({
   disabled = false,
   hideMessage = false,
   onTalkToPerson,
+  onHandoffSubmit,
 }: {
   challenge: OrderVerificationChallenge;
   region: string;
   disabled?: boolean;
   hideMessage?: boolean;
   onTalkToPerson?: (message: string) => void;
+  onHandoffSubmit?: (
+    name: string,
+    email: string,
+    comments?: string,
+    context?: string,
+  ) => void;
 }) {
   const [descriptor, setDescriptor] = useState(challenge);
   const [values, setValues] = useState(() =>
@@ -272,8 +243,7 @@ export default function TrackingForm({
   );
   const [result, setResult] = useState<OrderVerifyResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [followUp, setFollowUp] = useState<"result" | "person" | null>(null);
-  const [issueId, setIssueId] = useState<ResultIssueId | null>(null);
+  const [followUp, setFollowUp] = useState<"person" | null>(null);
   const [note, setNote] = useState("");
   const verify = useVerifyOrder(region);
 
@@ -286,7 +256,6 @@ export default function TrackingForm({
 
   const resetFollowUp = () => {
     setFollowUp(null);
-    setIssueId(null);
     setNote("");
   };
 
@@ -300,69 +269,23 @@ export default function TrackingForm({
     );
   };
 
-  const selectedIssue = RESULT_ISSUES.find((issue) => issue.id === issueId);
-  const noteRequired = selectedIssue?.id === "other";
-  const canSendResult =
-    Boolean(selectedIssue) && (!noteRequired || note.trim().length > 0);
-
   if (result?.verified) {
     return (
       <div>
         <OrderStatusCard result={result} />
-        {followUp === "result" ? (
-          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left">
-            <p className="text-[12px] font-medium text-slate-800">
-              What is wrong with this result?
-            </p>
-            <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-              A person will take over this chat with this order and what you tell
-              us.
-            </p>
-            <div className="mt-2 space-y-1.5" role="radiogroup" aria-label="What is wrong">
-              {RESULT_ISSUES.map((issue) => (
-                <label
-                  key={issue.id}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] text-slate-800"
-                >
-                  <input
-                    type="radio"
-                    name="result-issue"
-                    value={issue.id}
-                    checked={issueId === issue.id}
-                    disabled={disabled}
-                    onChange={() => setIssueId(issue.id)}
-                    className="accent-rdx-red"
-                  />
-                  {issue.label}
-                </label>
-              ))}
-            </div>
-            <label className="mt-2 block">
-              <span className="mb-1 block text-[11px] font-medium text-slate-600">
-                {noteRequired ? "Tell us more" : "Anything else (optional)"}
-              </span>
-              <textarea
-                value={note}
-                disabled={disabled}
-                rows={2}
-                maxLength={400}
-                onChange={(event) => setNote(event.target.value)}
-                className="w-full resize-none rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[13px] text-neutral-900 placeholder:text-neutral-400 focus:border-rdx-red focus:ring-1 focus:ring-rdx-red focus:outline-none disabled:opacity-60"
-              />
-            </label>
-            <button
-              type="button"
-              disabled={disabled || !canSendResult}
-              onClick={() => {
-                if (!selectedIssue) return;
-                onTalkToPerson?.(
-                  buildResultFollowUp(orderNumber, selectedIssue, note),
-                );
-              }}
-              className={primaryButtonClass}
-            >
-              Talk to a person
-            </button>
+        {followUp === "person" ? (
+          <>
+            <HandoffForm
+              disabled={disabled}
+              onSubmit={(name, email, comments) =>
+                onHandoffSubmit?.(
+                  name,
+                  email,
+                  comments,
+                  trackingHandoffContext(orderNumber),
+                )
+              }
+            />
             <button
               type="button"
               onClick={resetFollowUp}
@@ -371,7 +294,7 @@ export default function TrackingForm({
             >
               Back
             </button>
-          </div>
+          </>
         ) : (
           <>
             <button
@@ -384,11 +307,11 @@ export default function TrackingForm({
             </button>
             <button
               type="button"
-              onClick={() => setFollowUp("result")}
+              onClick={() => setFollowUp("person")}
               disabled={disabled}
               className={secondaryButtonClass}
             >
-              Not satisfied?
+              Talk to a person
             </button>
           </>
         )}

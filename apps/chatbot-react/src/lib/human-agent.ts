@@ -83,6 +83,7 @@ export function buildHumanHandoffMessage(
   name: string,
   email: string,
   context?: string,
+  comments?: string,
 ): string {
   const parts = [
     "I need to talk to a human agent.",
@@ -93,5 +94,7 @@ export function buildHumanHandoffMessage(
   const wordCount = extra ? normalize(extra).split(" ").length : 0;
   const alreadyCovered = Boolean(extra) && isHumanAgentRequest(extra) && wordCount <= 8;
   if (extra && !alreadyCovered) parts.push(extra);
+  const note = comments?.trim() ?? "";
+  if (note) parts.push(`Comments: ${note}`);
   return parts.join(" ");
 }

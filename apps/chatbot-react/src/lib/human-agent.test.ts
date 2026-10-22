@@ -80,4 +80,17 @@ describe("handoff contact", () => {
       "I need to talk to a human agent. My name is Ada Lovelace. My email is ada@example.com.",
     );
   });
+
+  it("appends comments when the person form includes them", () => {
+    expect(
+      buildHumanHandoffMessage(
+        "Ada Lovelace",
+        "ada@example.com",
+        "This is about the tracking result for order IG-1.",
+        "The delivery date already passed.",
+      ),
+    ).toBe(
+      "I need to talk to a human agent. My name is Ada Lovelace. My email is ada@example.com. This is about the tracking result for order IG-1. Comments: The delivery date already passed.",
+    );
+  });
 });
