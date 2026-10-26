@@ -96,8 +96,10 @@ function AppRoutes() {
 }
 
 function App() {
+  const routerBasename = import.meta.env.BASE_URL.replace(/\/$/, "") || undefined;
+
   return (
-    <Router basename='/cts-dashboard/'>
+    <Router basename={routerBasename}>
       <AppRoutes />
     </Router>
   )
