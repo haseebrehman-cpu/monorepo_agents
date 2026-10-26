@@ -27,7 +27,7 @@ RUN npm exec --workspace=@rdx/cts-dashboard -- tsc -b \
   && npm exec --workspace=@rdx/cts-dashboard -- vite build --base=/
 
 FROM nginx:1.27-alpine
-RUN rm -f /etc/nginx/conf.d/default.conf
-COPY apps/cts-dashboard/nginx.conf /etc/nginx/conf.d/default.conf
+COPY apps/cts-dashboard/nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/apps/cts-dashboard/dist /usr/share/nginx/html
+ENV NGINX_ENVSUBST_FILTER=PORT
 EXPOSE 8080
