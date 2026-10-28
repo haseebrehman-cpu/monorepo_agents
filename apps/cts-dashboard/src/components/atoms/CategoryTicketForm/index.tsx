@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button, Checkbox, DropDown, Input, Textarea, cn } from "@rdx/ui";
 import { toast } from "react-toastify";
 import { useCreateRefund, useRefundOptions } from "../../../lib/use-refunds";
+import { useCreateResend, useResendOptions } from "../../../lib/use-resends";
 import type { RefundLookupKind } from "../../../lib/admin-api";
 import QuickAddLookup from "../../molecules/QuickAddLookup";
 import {
@@ -142,8 +143,15 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [error, setError] = useState("");
   const createRefund = useCreateRefund();
+  const createResend = useCreateResend();
   const refundOptions = useRefundOptions(kind === "refund");
-  const refundLists = refundOptions.data;
+  const resendOptions = useResendOptions(kind === "resend");
+  const apiLists = kind === "refund" ? refundOptions.data : kind === "resend" ? resendOptions.data : undefined;
+  const usesApiLists = kind !== "return";
+  const isSubmitting = createRefund.isPending || createResend.isPending;
+
+  const listFor = (apiList: string[] | undefined, fallback: string[]) =>
+    usesApiLists ? (apiList ?? []) : fallback;
 
   const setField =
     (id: keyof FormState) =>
@@ -151,15 +159,16 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
         setForm((prev) => ({ ...prev, [id]: value }));
       };
 
-  const quickAdd = (lookupKind: RefundLookupKind, fieldLabel: string, field: keyof FormState) =>
-    kind === "refund" ? (
-      <QuickAddLookup
-        scope="refund"
-        kind={lookupKind}
-        fieldLabel={fieldLabel}
-        onAdded={(label) => setField(field)(label)}
-      />
-    ) : null;
+  const quickAdd = (lookupKind: RefundLookupKind, fieldLabel: string, field: keyof FormState) => {
+    const onAdded = (label: string) => setField(field)(label);
+    if (kind === "refund") {
+      return <QuickAddLookup scope="refund" kind={lookupKind} fieldLabel={fieldLabel} onAdded={onAdded} />;
+    }
+    if (kind === "resend" && lookupKind !== "currency") {
+      return <QuickAddLookup scope="resend" kind={lookupKind} fieldLabel={fieldLabel} onAdded={onAdded} />;
+    }
+    return null;
+  };
 
   const handleText =
     (id: keyof FormState) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -178,6 +187,13 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
       createRefund.mutate(
         { ...form, attachments },
         { onSuccess: () => navigate("/refund") }
+      );
+      return;
+    }
+    if (kind === "resend") {
+      createResend.mutate(
+        { ...form, attachments },
+        { onSuccess: () => navigate("/resend") }
       );
       return;
     }
@@ -233,7 +249,7 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
             id="type"
             value={form.type}
             onChange={setField("type")}
-            options={kind === "refund" ? (refundLists?.types ?? []) : TYPE_OPTIONS}
+            options={listFor(apiLists?.types, TYPE_OPTIONS)}
             placeholder="--Select Type--"
           />
         </Field>
@@ -247,7 +263,7 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
             id="salesChannel"
             value={form.salesChannel}
             onChange={setField("salesChannel")}
-            options={kind === "refund" ? (refundLists?.salesChannels ?? []) : SALE_CHANNEL_OPTIONS}
+            options={listFor(apiLists?.salesChannels, SALE_CHANNEL_OPTIONS)}
             placeholder="Select Sale Channel"
           />
         </Field>
@@ -292,7 +308,7 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
                 id="refundCurrency"
                 value={form.refundCurrency}
                 onChange={setField("refundCurrency")}
-                options={kind === "refund" ? (refundLists?.currencies ?? []) : CURRENCY_OPTIONS}
+                options={listFor(refundOptions.data?.currencies, CURRENCY_OPTIONS)}
                 placeholder="Select Currency"
               />
             </Field>
@@ -319,12 +335,12 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
             id="country"
             value={form.country}
             onChange={setField("country")}
-            options={kind === "refund" ? (refundLists?.countries ?? []) : COUNTRY_OPTIONS}
+            options={listFor(apiLists?.countries, COUNTRY_OPTIONS)}
             placeholder="Select Country"
           />
         </Field>
         <Field label="Courier Service" htmlFor="courierService">
-          {kind === "refund" ? (
+          {usesApiLists ? (
             <Input
               id="courierService"
               value={form.courierService}
@@ -354,7 +370,7 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
             id="reason"
             value={form.reason}
             onChange={setField("reason")}
-            options={kind === "refund" ? (refundLists?.reasons ?? []) : REASON_OPTIONS}
+            options={listFor(apiLists?.reasons, REASON_OPTIONS)}
             placeholder="--Select Reason--"
           />
         </Field>
@@ -363,7 +379,7 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
             id="tags"
             value={form.tags}
             onChange={setField("tags")}
-            options={kind === "refund" ? (refundLists?.tags ?? []) : TAG_OPTIONS}
+            options={listFor(apiLists?.tags, TAG_OPTIONS)}
             placeholder="--Select Tag--"
           />
         </Field>
@@ -377,7 +393,7 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
             id="accountable"
             value={form.accountable}
             onChange={setField("accountable")}
-            options={kind === "refund" ? (refundLists?.accountables ?? []) : ACCOUNTABLE_OPTIONS}
+            options={listFor(apiLists?.accountables, ACCOUNTABLE_OPTIONS)}
             placeholder="--Select Department--"
           />
         </Field>
@@ -386,7 +402,7 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
             id="itemReturned"
             value={form.itemReturned}
             onChange={setField("itemReturned")}
-            options={kind === "refund" ? (refundLists?.itemReturned ?? ["True", "False"]) : ITEM_RETURNED_OPTIONS}
+            options={usesApiLists ? (apiLists?.itemReturned ?? ["True", "False"]) : ITEM_RETURNED_OPTIONS}
             placeholder="-- Select --"
           />
         </Field>
@@ -497,7 +513,7 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
         <Button type="button" variant="outline" onClick={() => navigate(-1)}>
           Cancel
         </Button>
-        <Button type="submit" variant="primary" disabled={kind === "refund" && createRefund.isPending}>
+        <Button type="submit" variant="primary" disabled={isSubmitting}>
           {copy.submit}
         </Button>
       </div>

@@ -8,14 +8,15 @@ import {
   Input,
 } from "@rdx/ui";
 import { LoaderCircleIcon, PlusIcon } from "lucide-react";
-import type { RefundLookupKind, TicketLookupKind } from "../../lib/admin-api";
-import { useCreateRefundLookup, useCreateTicketLookup } from "../../lib/use-admin";
+import type { RefundLookupKind, ResendLookupKind, TicketLookupKind } from "../../lib/admin-api";
+import { useCreateCategoryLookup, useCreateTicketLookup } from "../../lib/use-admin";
 import { hasPermission, P } from "../../lib/permissions";
 import { useMe } from "../../lib/use-me";
 
 type LookupTarget =
   | { scope: "ticket"; kind: Exclude<TicketLookupKind, "status"> }
-  | { scope: "refund"; kind: RefundLookupKind };
+  | { scope: "refund"; kind: RefundLookupKind }
+  | { scope: "resend"; kind: ResendLookupKind };
 
 type QuickAddLookupProps = LookupTarget & {
   fieldLabel: string;
@@ -25,13 +26,15 @@ type QuickAddLookupProps = LookupTarget & {
 export default function QuickAddLookup({ fieldLabel, onAdded, ...target }: QuickAddLookupProps) {
   const me = useMe();
   const createTicketLookup = useCreateTicketLookup();
-  const createRefundLookup = useCreateRefundLookup();
+  const createRefundLookup = useCreateCategoryLookup("refund");
+  const createResendLookup = useCreateCategoryLookup("resend");
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
 
   if (!hasPermission(me.data?.user, P.LOOKUPS_MANAGE)) return null;
 
-  const isPending = createTicketLookup.isPending || createRefundLookup.isPending;
+  const isPending =
+    createTicketLookup.isPending || createRefundLookup.isPending || createResendLookup.isPending;
   const fieldName = fieldLabel.toLowerCase();
 
   const close = () => {
@@ -53,8 +56,10 @@ export default function QuickAddLookup({ fieldLabel, onAdded, ...target }: Quick
     if (!label) return;
     if (target.scope === "ticket") {
       createTicketLookup.mutate({ kind: target.kind, label }, { onSuccess: handleCreated });
-    } else {
+    } else if (target.scope === "refund") {
       createRefundLookup.mutate({ kind: target.kind, label }, { onSuccess: handleCreated });
+    } else {
+      createResendLookup.mutate({ kind: target.kind, label }, { onSuccess: handleCreated });
     }
   };
 

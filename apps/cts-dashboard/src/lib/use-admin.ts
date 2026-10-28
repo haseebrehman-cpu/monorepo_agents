@@ -2,26 +2,29 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { ApiError } from "@rdx/api-client";
 import {
+  createCategoryLookup,
   createDepartment,
-  createRefundLookup,
   createTicketLookup,
   createUser,
+  deleteCategoryLookup,
   deleteDepartment,
-  deleteRefundLookup,
   deleteTicketLookup,
   deleteUser,
+  listCategoryLookups,
   listDepartments,
   listFeatures,
-  listRefundLookups,
   listRoles,
   listTicketLookups,
   listUsers,
+  updateCategoryLookup,
   updateDepartment,
-  updateRefundLookup,
   updateTicketLookup,
   updateUser,
   updateUserPermissions,
+  type CategoryLookupKind,
+  type CategoryLookupScope,
   type RefundLookupKind,
+  type ResendLookupKind,
   type TicketLookupKind,
 } from "./admin-api";
 
@@ -255,22 +258,30 @@ export function useDeleteTicketLookup() {
   });
 }
 
-export type { TicketLookupKind, RefundLookupKind };
+export type { TicketLookupKind, RefundLookupKind, ResendLookupKind, CategoryLookupScope };
 
-export function useRefundLookups() {
+async function invalidateCategoryLookups(
+  queryClient: ReturnType<typeof useQueryClient>,
+  scope: CategoryLookupScope,
+) {
+  await queryClient.invalidateQueries({ queryKey: [`${scope}-lookups`] });
+  await queryClient.invalidateQueries({ queryKey: [`${scope}-options`] });
+}
+
+export function useCategoryLookups(scope: CategoryLookupScope) {
   return useQuery({
-    queryKey: ["refund-lookups"],
-    queryFn: async () => (await listRefundLookups()).data,
+    queryKey: [`${scope}-lookups`],
+    queryFn: async () => (await listCategoryLookups(scope)).data,
   });
 }
 
-export function useCreateRefundLookup() {
+export function useCreateCategoryLookup<S extends CategoryLookupScope>(scope: S) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: createRefundLookup,
+    mutationFn: (input: { kind: CategoryLookupKind<S>; label: string }) =>
+      createCategoryLookup(scope, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["refund-lookups"] });
-      await queryClient.invalidateQueries({ queryKey: ["refund-options"] });
+      await invalidateCategoryLookups(queryClient, scope);
       toast.success("Value added");
     },
     onError: (error) => {
@@ -279,7 +290,7 @@ export function useCreateRefundLookup() {
   });
 }
 
-export function useUpdateRefundLookup() {
+export function useUpdateCategoryLookup(scope: CategoryLookupScope) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -289,10 +300,9 @@ export function useUpdateRefundLookup() {
       id: number;
       label?: string;
       isActive?: boolean;
-    }) => updateRefundLookup(id, input),
+    }) => updateCategoryLookup(scope, id, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["refund-lookups"] });
-      await queryClient.invalidateQueries({ queryKey: ["refund-options"] });
+      await invalidateCategoryLookups(queryClient, scope);
       toast.success("Value updated");
     },
     onError: (error) => {
@@ -301,13 +311,12 @@ export function useUpdateRefundLookup() {
   });
 }
 
-export function useDeleteRefundLookup() {
+export function useDeleteCategoryLookup(scope: CategoryLookupScope) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => deleteRefundLookup(id),
+    mutationFn: (id: number) => deleteCategoryLookup(scope, id),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["refund-lookups"] });
-      await queryClient.invalidateQueries({ queryKey: ["refund-options"] });
+      await invalidateCategoryLookups(queryClient, scope);
       toast.success("Value removed");
     },
     onError: (error) => {

@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { cn } from "@rdx/ui";
 import TicketLookupsManager from "../Access/TicketLookupsManager";
-import RefundLookupsManager from "../Access/RefundLookupsManager";
+import CategoryLookupsManager from "../Access/CategoryLookupsManager";
 
-type Tab = "tracking" | "refund";
+type Tab = "tracking" | "refund" | "resend";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "tracking", label: "Tracking options" },
   { id: "refund", label: "Refund options" },
+  { id: "resend", label: "Resend options" },
 ];
 
 export default function DropdownValues() {
@@ -18,7 +19,7 @@ export default function DropdownValues() {
       <div>
         <h1 className="text-xl font-semibold text-slate-900">Dropdown values</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Add, hide, or remove the values shown in the tracking and refund form dropdowns.
+          Add, hide, or remove the values shown in the tracking, refund, and resend form dropdowns.
         </p>
       </div>
 
@@ -43,7 +44,7 @@ export default function DropdownValues() {
       {tab === "tracking" ? (
         <TicketLookupsManager showDepartments={false} />
       ) : (
-        <RefundLookupsManager />
+        <CategoryLookupsManager key={tab} scope={tab} />
       )}
     </div>
   );

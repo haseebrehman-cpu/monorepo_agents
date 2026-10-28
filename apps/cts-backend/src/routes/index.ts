@@ -8,6 +8,8 @@ import ticketsRoutes from "../modules/tickets/tickets.routes.js";
 import ticketLookupsRoutes from "../modules/ticket-lookups/ticket-lookups.routes.js";
 import refundsRoutes from "../modules/refunds/refunds.routes.js";
 import refundLookupsRoutes from "../modules/refund-lookups/refund-lookups.routes.js";
+import resendsRoutes from "../modules/resends/resends.routes.js";
+import resendLookupsRoutes from "../modules/resends/resend-lookups.routes.js";
 
 const router = Router();
 router.use("/auth", authRoutes);
@@ -19,4 +21,6 @@ router.use("/tickets", ticketsRoutes);
 router.use("/ticket-lookups", ticketLookupsRoutes);
 router.use("/refunds", refundsRoutes);
 router.use("/refund-lookups", refundLookupsRoutes);
+router.use("/resends", resendsRoutes);
+router.use("/resend-lookups", resendLookupsRoutes);
 export default router;
