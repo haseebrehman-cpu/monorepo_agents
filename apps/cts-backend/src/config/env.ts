@@ -20,6 +20,7 @@ const envSchema = z.object({
     DB_IDLE_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
     DB_CONNECTION_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
     DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -49,4 +50,5 @@ export const env: z.infer<typeof envSchema> = {
     DB_IDLE_TIMEOUT_MS: parsedEnv.data.DB_IDLE_TIMEOUT_MS,
     DB_CONNECTION_TIMEOUT_MS: parsedEnv.data.DB_CONNECTION_TIMEOUT_MS,
     DB_STATEMENT_TIMEOUT_MS: parsedEnv.data.DB_STATEMENT_TIMEOUT_MS,
+    TRUST_PROXY_HOPS: parsedEnv.data.TRUST_PROXY_HOPS,
 } satisfies z.infer<typeof envSchema>;

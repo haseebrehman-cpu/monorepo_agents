@@ -2,8 +2,26 @@ import type { CookieOptions, Request } from "express";
 import { env } from "../config/env.js";
 
 export const SESSION_COOKIE_NAME = "cts_session";
+export const JWT_ALGORITHM = "HS256" as const;
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+export type SessionPayload = {
+  userId: number;
+  email: string;
+  sv?: number;
+};
+
+export function isSessionPayload(value: unknown): value is SessionPayload {
+  if (!value || typeof value !== "object") return false;
+  const payload = value as Record<string, unknown>;
+  return (
+    Number.isInteger(payload.userId) &&
+    (payload.userId as number) > 0 &&
+    typeof payload.email === "string" &&
+    (payload.sv === undefined || Number.isInteger(payload.sv))
+  );
+}
 
 export const sessionCookieOptions: CookieOptions = {
   httpOnly: true,

@@ -4,6 +4,7 @@ import path from "node:path";
 import { authenticate, requirePermission } from "../../core/auth.middleware.js";
 import { P } from "../../config/features.js";
 import {
+  ALLOWED_ATTACHMENT_TYPES,
   ALLOWED_BULK_FILE_EXTENSIONS,
   ALLOWED_BULK_FILE_TYPES,
   MAX_ATTACHMENT_BYTES,
@@ -12,9 +13,22 @@ import {
 } from "./tickets.constants.js";
 import { ticketsController } from "./tickets.controller.js";
 
+const MAX_FORM_FIELDS = 50;
+const MAX_FORM_FIELD_BYTES = 1024 * 1024;
+
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_ATTACHMENT_BYTES, files: MAX_ATTACHMENTS },
+  limits: {
+    fileSize: MAX_ATTACHMENT_BYTES,
+    files: MAX_ATTACHMENTS,
+    fields: MAX_FORM_FIELDS,
+    fieldSize: MAX_FORM_FIELD_BYTES,
+    parts: MAX_ATTACHMENTS + MAX_FORM_FIELDS,
+  },
+  fileFilter(_req, file, callback) {
+    if (ALLOWED_ATTACHMENT_TYPES.has(file.mimetype)) return callback(null, true);
+    callback(Object.assign(new Error("INVALID_ATTACHMENT_TYPE"), { code: "INVALID_ATTACHMENT_TYPE" }));
+  },
 });
 
 function uploadAttachments(req: Request, res: Response, next: NextFunction) {
@@ -30,13 +44,22 @@ function uploadAttachments(req: Request, res: Response, next: NextFunction) {
     if (code === "LIMIT_FILE_COUNT") {
       return res.status(400).json({ success: false, error: "TOO_MANY_ATTACHMENTS" });
     }
+    if (code === "INVALID_ATTACHMENT_TYPE") {
+      return res.status(400).json({ success: false, error: "INVALID_ATTACHMENT_TYPE" });
+    }
     return res.status(400).json({ success: false, error: "INVALID_ATTACHMENT" });
   });
 }
 
 const bulkUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_BULK_FILE_BYTES, files: 1 },
+  limits: {
+    fileSize: MAX_BULK_FILE_BYTES,
+    files: 1,
+    fields: MAX_FORM_FIELDS,
+    fieldSize: MAX_FORM_FIELD_BYTES,
+    parts: 1 + MAX_FORM_FIELDS,
+  },
 });
 
 function uploadBulkTickets(req: Request, res: Response, next: NextFunction) {

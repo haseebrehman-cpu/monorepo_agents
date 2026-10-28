@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { contentMatchesMimeType } from "../../core/file-signature.js";
 import {
   ALLOWED_ATTACHMENT_TYPES,
   MAX_ATTACHMENT_BYTES,
@@ -22,6 +23,7 @@ function validateAttachments(files: RefundAttachmentInput[]) {
   for (const file of files) {
     if (!ALLOWED_ATTACHMENT_TYPES.has(file.mimeType)) return "INVALID_ATTACHMENT_TYPE";
     if (file.sizeBytes > MAX_ATTACHMENT_BYTES) return "ATTACHMENT_TOO_LARGE";
+    if (!contentMatchesMimeType(file.mimeType, file.fileData)) return "INVALID_ATTACHMENT_TYPE";
   }
   return null;
 }

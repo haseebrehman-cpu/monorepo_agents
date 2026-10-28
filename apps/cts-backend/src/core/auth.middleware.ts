@@ -3,7 +3,12 @@ import jwt from "jsonwebtoken";
 import { ROLE } from "../config/features.js";
 import { env } from "../config/env.js";
 import { loadUserAccess } from "./access.js";
-import { readSessionToken } from "./auth-session.js";
+import {
+  isSessionPayload,
+  JWT_ALGORITHM,
+  readSessionToken,
+  type SessionPayload,
+} from "./auth-session.js";
 
 export type AuthUser = {
   userId: number;
@@ -30,9 +35,11 @@ export async function authenticate(
     return res.status(401).json({ success: false, error: "NO_TOKEN" });
   }
 
-  let payload: { userId: number; email: string };
+  let payload: SessionPayload;
   try {
-    payload = jwt.verify(token, env.JWT_SECRET) as any;
+    const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: [JWT_ALGORITHM] });
+    if (!isSessionPayload(decoded)) throw new Error("INVALID_PAYLOAD");
+    payload = decoded;
   } catch {
     return res.status(401).json({ success: false, error: "INVALID_TOKEN" });
   }
@@ -41,6 +48,9 @@ export async function authenticate(
     const access = await loadUserAccess(payload.userId);
     if (!access.isActive) {
       return res.status(401).json({ success: false, error: "USER_INACTIVE" });
+    }
+    if ((payload.sv ?? 0) !== access.sessionVersion) {
+      return res.status(401).json({ success: false, error: "SESSION_REVOKED" });
     }
     req.user = {
       userId: payload.userId,
@@ -71,6 +81,16 @@ export function requirePermission(...codes: string[]) {
         .json({ success: false, error: "FORBIDDEN", required: codes });
     }
     next();
+  };
+}
+
+export function requireSuperAdminOrPermission(...codes: string[]) {
+  const checkPermission = requirePermission(...codes);
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (req.user?.roles.includes(ROLE.SUPER_ADMIN)) {
+      return next();
+    }
+    return checkPermission(req, res, next);
   };
 }
 

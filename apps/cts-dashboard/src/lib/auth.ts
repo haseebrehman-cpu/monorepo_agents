@@ -106,6 +106,12 @@ export function getLoginErrorMessage(error: unknown): string {
     if (error.message === "INVALID_CREDENTIALS" || error.status === 401) {
       return "Invalid email or password.";
     }
+    if (error.message === "USER_INACTIVE") {
+      return "This account has been deactivated.";
+    }
+    if (error.message === "TOO_MANY_LOGIN_ATTEMPTS") {
+      return "Too many failed sign-in attempts. Please try again in 15 minutes.";
+    }
     return error.message || "Unable to sign in. Please try again.";
   }
   return "Unable to sign in. Please try again.";

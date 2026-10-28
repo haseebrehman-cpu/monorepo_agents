@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Button, Checkbox, DropDown, Input, Textarea, cn } from "@rdx/ui";
 import { toast } from "react-toastify";
 import { useCreateRefund, useRefundOptions } from "../../../lib/use-refunds";
+import type { RefundLookupKind } from "../../../lib/admin-api";
+import QuickAddLookup from "../../molecules/QuickAddLookup";
 import {
   ACCOUNTABLE_OPTIONS,
   COURIER_OPTIONS,
@@ -149,6 +151,16 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
         setForm((prev) => ({ ...prev, [id]: value }));
       };
 
+  const quickAdd = (lookupKind: RefundLookupKind, fieldLabel: string, field: keyof FormState) =>
+    kind === "refund" ? (
+      <QuickAddLookup
+        scope="refund"
+        kind={lookupKind}
+        fieldLabel={fieldLabel}
+        onAdded={(label) => setField(field)(label)}
+      />
+    ) : null;
+
   const handleText =
     (id: keyof FormState) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       setField(id)(event.target.value);
@@ -216,7 +228,7 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
             placeholder="Email Address"
           />
         </Field>
-        <Field label="Type" htmlFor="type" required>
+        <Field label="Type" htmlFor="type" required action={quickAdd("type", "Type", "type")}>
           <SelectField
             id="type"
             value={form.type}
@@ -225,7 +237,12 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
             placeholder="--Select Type--"
           />
         </Field>
-        <Field label="Sales Channel" htmlFor="salesChannel" required>
+        <Field
+          label="Sales Channel"
+          htmlFor="salesChannel"
+          required
+          action={quickAdd("sales_channel", "Sales channel", "salesChannel")}
+        >
           <SelectField
             id="salesChannel"
             value={form.salesChannel}
@@ -265,7 +282,12 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
         </Field>
         {showRefundMoney ? (
           <>
-            <Field label="Refund Currency" htmlFor="refundCurrency" required>
+            <Field
+              label="Refund Currency"
+              htmlFor="refundCurrency"
+              required
+              action={quickAdd("currency", "Currency", "refundCurrency")}
+            >
               <SelectField
                 id="refundCurrency"
                 value={form.refundCurrency}
@@ -327,7 +349,7 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
             placeholder="Tracking Number"
           />
         </Field>
-        <Field label="Reason" htmlFor="reason" required>
+        <Field label="Reason" htmlFor="reason" required action={quickAdd("reason", "Reason", "reason")}>
           <SelectField
             id="reason"
             value={form.reason}
@@ -336,7 +358,7 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
             placeholder="--Select Reason--"
           />
         </Field>
-        <Field label="Tags" htmlFor="tags" required>
+        <Field label="Tags" htmlFor="tags" required action={quickAdd("tag", "Tag", "tags")}>
           <SelectField
             id="tags"
             value={form.tags}
@@ -345,7 +367,12 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
             placeholder="--Select Tag--"
           />
         </Field>
-        <Field label="Accountable" htmlFor="accountable" required>
+        <Field
+          label="Accountable"
+          htmlFor="accountable"
+          required
+          action={quickAdd("accountable", "Accountable", "accountable")}
+        >
           <SelectField
             id="accountable"
             value={form.accountable}
@@ -483,20 +510,25 @@ function Field({
   htmlFor,
   required,
   className,
+  action,
   children,
 }: {
   label: string;
   htmlFor: string;
   required?: boolean;
   className?: string;
+  action?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
-      <label htmlFor={htmlFor} className="text-sm font-medium text-slate-700">
-        {label}
-        {required ? <span className="text-red-500">*</span> : null}:
-      </label>
+      <div className="flex items-center justify-between gap-2">
+        <label htmlFor={htmlFor} className="text-sm font-medium text-slate-700">
+          {label}
+          {required ? <span className="text-red-500">*</span> : null}:
+        </label>
+        {action}
+      </div>
       {children}
     </div>
   );

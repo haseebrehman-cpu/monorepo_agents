@@ -3,6 +3,8 @@ import { env } from "./config/env.js";
 import { pool } from "./core/db.js";
 import { CTS_SCHEMA } from "./core/postgres-config.js";
 
+const SHUTDOWN_TIMEOUT_MS = 10_000;
+
 async function start() {
   try {
     const { rows } = await pool.query<{ schema: string | null }>(
@@ -22,17 +24,27 @@ async function start() {
     });
 
     // 3. Graceful shutdown
+    let shuttingDown = false;
     const shutdown = (signal: string) => {
+      if (shuttingDown) return;
+      shuttingDown = true;
       console.log(`\nReceived ${signal}, shutting down...`);
+      // Keep-alive sockets would otherwise hold server.close() open indefinitely.
+      const forceExit = setTimeout(() => {
+        console.error("Shutdown timed out, forcing exit");
+        process.exit(1);
+      }, SHUTDOWN_TIMEOUT_MS);
+      forceExit.unref();
       server.close(async () => {
         await pool.end();
         console.log("Server closed");
         process.exit(0);
       });
+      server.closeIdleConnections();
     };
 
-    process.on("SIGINT", () => shutdown("SIGINT"));
-    process.on("SIGTERM", () => shutdown("SIGTERM"));
+    process.once("SIGINT", () => shutdown("SIGINT"));
+    process.once("SIGTERM", () => shutdown("SIGTERM"));
   } catch (err) {
     console.error("❌ Failed to connect to Postgres:", err);
     process.exit(1);

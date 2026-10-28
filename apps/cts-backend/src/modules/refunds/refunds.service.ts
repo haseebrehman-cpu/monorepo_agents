@@ -150,8 +150,9 @@ async function resolveChoices(input: CreateRefundInput) {
   };
 }
 
+// Numeric refs are database ids; longer digit strings would overflow INTEGER, so treat them as refund numbers.
 function isRefundNumber(ref: string) {
-  return !/^\d+$/.test(ref);
+  return !/^\d{1,9}$/.test(ref);
 }
 
 function buildListQuery(filters: RefundListFilters) {
@@ -246,8 +247,10 @@ export const refundsService = {
 
   async list(filters: RefundListFilters) {
     const { sql, countSql, values, countValues, page, pageSize } = buildListQuery(filters);
-    const countResult = await pool.query(countSql, countValues);
-    const { rows } = await pool.query(sql, values);
+    const [countResult, { rows }] = await Promise.all([
+      pool.query(countSql, countValues),
+      pool.query(sql, values),
+    ]);
     return {
       items: rows.map(mapRefund),
       total: Number(countResult.rows[0]?.total ?? 0),

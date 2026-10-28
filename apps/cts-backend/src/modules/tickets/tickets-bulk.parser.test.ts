@@ -60,6 +60,26 @@ describe("parseBulkTicketFile", () => {
     expect(rows[0].input.assignedDepartmentId).toBeNull();
   });
 
+  it("ignores headers that match Object.prototype keys", () => {
+    const rows = parseBulkTicketFile(
+      "tickets.csv",
+      csv("Order ID,Courier,Tracking Number,Issue,Constructor,toString\nORDER-1,DHL,TRACK-1,Delayed,x,y")
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(Object.keys(rows[0].input).sort()).toEqual(
+      ["assignedDepartmentId", "comment", "courier", "issue", "orderId", "status", "trackingNumber"]
+    );
+  });
+
+  it("rejects sheets far beyond the row limit before reading them", () => {
+    const lines = ["Order ID,Courier,Tracking Number,Issue"];
+    for (let i = 0; i < 2100; i += 1) lines.push(`O-${i},DHL,T-${i},Delayed`);
+    expect(() => parseBulkTicketFile("tickets.csv", csv(lines.join("\n")))).toThrow(
+      "TOO_MANY_BULK_ROWS"
+    );
+  });
+
   it("reports missing required columns", () => {
     try {
       parseBulkTicketFile("tickets.csv", csv("Order ID,Courier\nORDER-1,DHL"))

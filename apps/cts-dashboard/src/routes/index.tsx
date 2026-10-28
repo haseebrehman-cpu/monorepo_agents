@@ -38,6 +38,7 @@ const privateRoutes: PrivateRoute[] = [
     { path: '/frequency', component: loadPage(() => import("../pages/dashboard/Reports/Frequency")), permission: P.REPORTS_FREQUENCY },
     { path: '/add-tickets', component: loadPage(() => import("../pages/dashboard/CTS/AddTickets")), permission: P.TRACKING_ADD },
     { path: '/add-bulk-tickets', component: loadPage(() => import("../pages/dashboard/CTS/AddBulkTickets")), permission: P.TRACKING_ADD_BULK },
+    { path: '/dropdown-values', component: loadPage(() => import("../pages/dashboard/DropdownValues/DropdownValues")), permission: P.LOOKUPS_MANAGE },
     { path: '/access', component: loadPage(() => import("../pages/dashboard/Access/AccessControl")) },
 ];
 

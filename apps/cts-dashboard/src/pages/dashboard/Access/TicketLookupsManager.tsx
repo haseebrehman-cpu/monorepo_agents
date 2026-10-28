@@ -439,7 +439,11 @@ function LookupColumn({
   );
 }
 
-export default function TicketLookupsManager() {
+export default function TicketLookupsManager({
+  showDepartments = true,
+}: {
+  showDepartments?: boolean;
+}) {
   const lookups = useTicketLookups();
 
   if (lookups.isLoading) {
@@ -462,8 +466,13 @@ export default function TicketLookupsManager() {
   const items = lookups.data ?? [];
 
   return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-      <DepartmentsManager />
+    <div
+      className={cn(
+        "grid grid-cols-1 gap-5 sm:grid-cols-2",
+        showDepartments ? "xl:grid-cols-4" : "xl:grid-cols-3",
+      )}
+    >
+      {showDepartments ? <DepartmentsManager /> : null}
       {GROUPS.map((group) => (
         <LookupColumn
           key={group.kind}

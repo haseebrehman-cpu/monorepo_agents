@@ -30,6 +30,7 @@ export const P = {
   LIVE_CHAT_REPLY: "live_chat.reply",
   LIVE_CHAT_ASSIGN: "live_chat.assign",
   LIVE_CHAT_RESOLVE: "live_chat.resolve",
+  LOOKUPS_MANAGE: "lookups.manage",
 } as const;
 
 export type PermissionCode = (typeof P)[keyof typeof P];
@@ -87,6 +88,7 @@ const NAV_PERMISSION: Record<string, string> = {
   reports_return: P.REPORTS_RETURN,
   frequency: P.REPORTS_FREQUENCY,
   live_chat: P.LIVE_CHAT_ACCESS,
+  dropdown_values: P.LOOKUPS_MANAGE,
 };
 
 export function canAccessNav(user: AuthLike | null | undefined, navId: string): boolean {
