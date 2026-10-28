@@ -23,5 +23,6 @@ RUN npm run build --workspace=@rdx/cts-backend \
 ENV NODE_ENV=production
 ENV PORT=8080
 WORKDIR /app/apps/cts-backend
+USER node
 EXPOSE 8080
 CMD ["node", "docker-entrypoint.mjs"]

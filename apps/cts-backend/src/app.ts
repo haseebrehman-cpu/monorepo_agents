@@ -1,4 +1,4 @@
-import express from "express";
+import express, { type NextFunction, type Request, type Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { pinoHttp } from "pino-http";
@@ -7,6 +7,9 @@ import { env } from "./config/env.js";
 import routes from "./routes/index.js";
 
 const app = express();
+if (env.TRUST_PROXY_HOPS > 0) {
+  app.set("trust proxy", env.TRUST_PROXY_HOPS);
+}
 const allowedOrigins = new Set(
   env.CORS_ORIGIN.split(",")
     .map((origin) => origin.trim())
@@ -42,7 +45,7 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({limit:"2mb"}));
-app.use(express.urlencoded({extended:true}));
+app.use(express.urlencoded({extended:true, limit:"100kb", parameterLimit:200}));
 
 app.use(pinoHttp({
     redact: [
@@ -62,6 +65,34 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/api", routes);
+
+app.use((_req, res) => {
+  res.status(404).json({ success: false, error: "NOT_FOUND" });
+});
+
+app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
+  if (res.headersSent) return next(err);
+  const status =
+    typeof err === "object" && err && "status" in err && typeof err.status === "number"
+      ? err.status
+      : 500;
+  if (status >= 500) {
+    if (req.log) req.log.error({ err }, "unhandled request error");
+    else console.error("[app] unhandled request error:", err);
+    return res.status(500).json({ success: false, error: "INTERNAL_SERVER_ERROR" });
+  }
+  const type =
+    typeof err === "object" && err && "type" in err && typeof err.type === "string"
+      ? err.type
+      : "";
+  const error =
+    type === "entity.too.large"
+      ? "PAYLOAD_TOO_LARGE"
+      : type === "entity.parse.failed"
+        ? "INVALID_JSON"
+        : "BAD_REQUEST";
+  return res.status(status).json({ success: false, error });
+});
 
 export default app;
 

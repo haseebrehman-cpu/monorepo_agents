@@ -13,7 +13,7 @@ import {
   TeamIcon,
   cn,
 } from "@rdx/ui";
-import { LogOutIcon, MessageCircleIcon, RefreshCcwIcon, RotateCwIcon, ShieldIcon } from "lucide-react";
+import { ListChecksIcon, LogOutIcon, MessageCircleIcon, RefreshCcwIcon, RotateCwIcon, ShieldIcon } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { isSuperAdminUser } from "../../lib/auth";
 import { filterNavItems } from "../../lib/permissions";
@@ -31,6 +31,7 @@ const NAV_ICONS: Record<NavId, ReactNode> = {
   performance: <ChartIcon />,
   manual_performance: <TeamIcon />,
   reports: <CreditCardIcon />,
+  dropdown_values: <ListChecksIcon className="h-5 w-5" />,
 };
 
 interface SidebarProps {

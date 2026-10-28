@@ -14,6 +14,7 @@ export type DepartmentRef = {
 
 export type UserAccess = {
   isActive: boolean;
+  sessionVersion: number;
   roles: string[];
   permissions: string[];
   department: DepartmentRef | null;
@@ -23,6 +24,7 @@ export async function loadUserAccess(userId: number): Promise<UserAccess> {
   const { rows } = await pool.query(
     `SELECT
        u.is_active,
+       u.session_version,
        d.id AS department_id,
        d.code AS department_code,
        d.name AS department_name,
@@ -41,14 +43,22 @@ export async function loadUserAccess(userId: number): Promise<UserAccess> {
      LEFT JOIN user_permissions up ON up.user_id = u.id
      LEFT JOIN permissions p ON p.id = up.permission_id
      WHERE u.id = $1
-     GROUP BY u.is_active, d.id, d.code, d.name`,
+     GROUP BY u.is_active, u.session_version, d.id, d.code, d.name`,
     [userId]
   );
   const row = rows[0];
   if (!row) {
-    return { isActive: false, roles: [], permissions: [], department: null };
+    return {
+      isActive: false,
+      sessionVersion: 0,
+      roles: [],
+      permissions: [],
+      department: null,
+    };
   }
   const roles = row.roles as string[];
+  const isActive = row.is_active as boolean;
+  const sessionVersion = Number(row.session_version ?? 0);
   const department = row.department_id
     ? {
         id: row.department_id as number,
@@ -58,12 +68,13 @@ export async function loadUserAccess(userId: number): Promise<UserAccess> {
     : null;
 
   if (roles.includes(ROLE.SUPER_ADMIN)) {
-    return { isActive: row.is_active as boolean, roles, permissions: [], department };
+    return { isActive, sessionVersion, roles, permissions: [], department };
   }
 
   if (roles.includes(ROLE.ADMIN)) {
     return {
-      isActive: row.is_active as boolean,
+      isActive,
+      sessionVersion,
       roles,
       permissions: [...FEATURE_CODES],
       department,
@@ -71,7 +82,8 @@ export async function loadUserAccess(userId: number): Promise<UserAccess> {
   }
 
   return {
-    isActive: row.is_active as boolean,
+    isActive,
+    sessionVersion,
     roles,
     permissions: row.permissions as string[],
     department,

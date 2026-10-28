@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Filters from "../../organisms/TrackingFilters/Filters";
 import RichTextEditor from "../../molecules/RichTextEditor";
+import QuickAddLookup from "../../molecules/QuickAddLookup";
 import { useCreateTicket, useTicketOptions } from "../../../lib/use-tickets";
 
 const AddNewTicket = () => {
@@ -76,12 +77,20 @@ const AddNewTicket = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                        <label
-                            htmlFor="courier"
-                            className="block text-sm font-medium text-slate-700"
-                        >
-                            Courier
-                        </label>
+                        <div className="flex items-center justify-between">
+                            <label
+                                htmlFor="courier"
+                                className="block text-sm font-medium text-slate-700"
+                            >
+                                Courier
+                            </label>
+                            <QuickAddLookup
+                                scope="ticket"
+                                kind="courier"
+                                fieldLabel="Courier"
+                                onAdded={setCourier}
+                            />
+                        </div>
                         <Filters
                             id="courier"
                             value={courier}
@@ -109,12 +118,20 @@ const AddNewTicket = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                        <label
-                            htmlFor="issue"
-                            className="block text-sm font-medium text-slate-700"
-                        >
-                            Issue
-                        </label>
+                        <div className="flex items-center justify-between">
+                            <label
+                                htmlFor="issue"
+                                className="block text-sm font-medium text-slate-700"
+                            >
+                                Issue
+                            </label>
+                            <QuickAddLookup
+                                scope="ticket"
+                                kind="issue"
+                                fieldLabel="Issue"
+                                onAdded={setIssue}
+                            />
+                        </div>
                         <Filters
                             id="issue"
                             value={issue}

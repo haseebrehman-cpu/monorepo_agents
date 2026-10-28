@@ -28,6 +28,7 @@ export const NAV_ITEMS = [
     { id: "reports_return", label: "Return" },
     { id: "frequency", label: "Frequency" },
   ] },
+  { id: "dropdown_values", label: "Dropdown Values" },
 ] as const;
 
 export type NavId = (typeof NAV_ITEMS)[number]["id"];

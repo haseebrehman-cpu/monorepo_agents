@@ -51,15 +51,21 @@ export const meService = {
 
     const ticketTypes: TicketTypeConfig[] = [];
 
-    for (const tt of ttQ.rows) {
-      const fieldsQ = await pool.query(
-        `SELECT field_key, label, field_type, is_required, default_value, options_json
-         FROM ticket_type_fields
-         WHERE ticket_type_id = $1
-         ORDER BY sort_order, id`,
-        [tt.id]
-      );
+    const fieldsQ = await pool.query(
+      `SELECT ticket_type_id, field_key, label, field_type, is_required, default_value, options_json
+       FROM ticket_type_fields
+       WHERE ticket_type_id = ANY($1::int[])
+       ORDER BY ticket_type_id, sort_order, id`,
+      [ttQ.rows.map((tt) => tt.id)]
+    );
+    const fieldsByType = new Map<number, any[]>();
+    for (const field of fieldsQ.rows) {
+      const list = fieldsByType.get(field.ticket_type_id) ?? [];
+      list.push(field);
+      fieldsByType.set(field.ticket_type_id, list);
+    }
 
+    for (const tt of ttQ.rows) {
       const allowedActions: string[] = [];
       const createPerm = TICKET_CREATE_PERMISSION[tt.code];
       const viewPerm = TICKET_VIEW_PERMISSION[tt.code] ?? P.TRACKING_ACCESS;
@@ -75,7 +81,7 @@ export const meService = {
         name: tt.name,
         description: tt.description,
         allowedActions,
-        fields: fieldsQ.rows.map((f) => ({
+        fields: (fieldsByType.get(tt.id) ?? []).map((f) => ({
           key: f.field_key,
           label: f.label,
           type: f.field_type,

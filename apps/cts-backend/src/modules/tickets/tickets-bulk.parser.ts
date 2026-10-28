@@ -64,6 +64,24 @@ function normalizeCell(value: unknown) {
   return String(value).trim();
 }
 
+function headerField(header: unknown): BulkTicketColumn | undefined {
+  const key = normalizeHeader(header);
+  return Object.hasOwn(HEADER_ALIASES, key) ? HEADER_ALIASES[key] : undefined;
+}
+
+// Leaves room for blank rows while stopping a huge sheet from being expanded into memory.
+const MAX_SHEET_ROWS = MAX_BULK_TICKET_ROWS * 4 + 1;
+
+function tooManyRowsError() {
+  return new BulkTicketFileError("TOO_MANY_BULK_ROWS", [
+    {
+      row: 1,
+      field: "file",
+      message: `A maximum of ${MAX_BULK_TICKET_ROWS} tickets can be uploaded at once`,
+    },
+  ]);
+}
+
 export function parseBulkTicketFile(fileName: string, buffer: Buffer): BulkTicketRow[] {
   let workbook: XLSX.WorkBook;
   try {
@@ -71,17 +89,27 @@ export function parseBulkTicketFile(fileName: string, buffer: Buffer): BulkTicke
       type: "buffer",
       raw: false,
       dense: true,
+      sheetRows: MAX_SHEET_ROWS,
+      sheets: 0,
+      cellFormula: false,
+      cellHTML: false,
+      cellStyles: false,
     });
   } catch {
     throw new BulkTicketFileError("INVALID_BULK_FILE");
   }
 
   const firstSheetName = workbook.SheetNames[0];
-  if (!firstSheetName) {
+  const sheet = firstSheetName ? workbook.Sheets[firstSheetName] : undefined;
+  if (!sheet) {
     throw new BulkTicketFileError("EMPTY_BULK_FILE");
   }
+  const fullRef = sheet["!fullref"];
+  if (fullRef && XLSX.utils.decode_range(fullRef).e.r + 1 > MAX_SHEET_ROWS) {
+    throw tooManyRowsError();
+  }
 
-  const rows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[firstSheetName], {
+  const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
     header: 1,
     defval: "",
     blankrows: false,
@@ -91,7 +119,7 @@ export function parseBulkTicketFile(fileName: string, buffer: Buffer): BulkTicke
     throw new BulkTicketFileError("EMPTY_BULK_FILE");
   }
 
-  const headers = rows[0].map((header) => HEADER_ALIASES[normalizeHeader(header)]);
+  const headers = rows[0].map(headerField);
   const missing = REQUIRED_FIELDS.filter((field) => !headers.includes(field));
   if (missing.length) {
     throw new BulkTicketFileError(
@@ -109,13 +137,7 @@ export function parseBulkTicketFile(fileName: string, buffer: Buffer): BulkTicke
     throw new BulkTicketFileError("EMPTY_BULK_FILE");
   }
   if (dataRows.length > MAX_BULK_TICKET_ROWS) {
-    throw new BulkTicketFileError("TOO_MANY_BULK_ROWS", [
-      {
-        row: 1,
-        field: "file",
-        message: `A maximum of ${MAX_BULK_TICKET_ROWS} tickets can be uploaded at once`,
-      },
-    ]);
+    throw tooManyRowsError();
   }
 
   const parsedRows: BulkTicketRow[] = [];

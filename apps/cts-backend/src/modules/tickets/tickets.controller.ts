@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { contentMatchesMimeType } from "../../core/file-signature.js";
 import {
   ALLOWED_ATTACHMENT_TYPES,
   MAX_ATTACHMENT_BYTES,
@@ -41,6 +42,9 @@ function validateAttachments(files: TicketAttachmentInput[]) {
     }
     if (file.sizeBytes > MAX_ATTACHMENT_BYTES) {
       return "ATTACHMENT_TOO_LARGE";
+    }
+    if (!contentMatchesMimeType(file.mimeType, file.fileData)) {
+      return "INVALID_ATTACHMENT_TYPE";
     }
   }
   return null;

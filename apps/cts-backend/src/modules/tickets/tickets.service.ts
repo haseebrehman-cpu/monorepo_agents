@@ -1,4 +1,5 @@
 import { pool } from "../../core/db.js";
+import { sanitizeRichText } from "../../core/html.js";
 import { ticketLookupsService } from "../ticket-lookups/ticket-lookups.service.js";
 import type {
   CreateReplyInput,
@@ -89,7 +90,7 @@ function mapTicket(row: Record<string, unknown>) {
     trackingNumber: row.tracking_number as string,
     issue: row.issue as string,
     status: row.status as string,
-    comment: row.comment_html as string,
+    comment: sanitizeRichText(row.comment_html as string | null),
     ticketDate: row.created_at,
     assignedTo: row.assigned_to as string,
     assignedDepartmentId: (row.assigned_department_id as number | null) ?? null,
@@ -132,8 +133,9 @@ function parseJsonArray(value: unknown) {
   return [];
 }
 
+// Numeric refs are database ids; longer digit strings would overflow INTEGER, so treat them as ticket numbers.
 function isTicketNumber(ref: string) {
-  return !/^\d+$/.test(ref);
+  return !/^\d{1,9}$/.test(ref);
 }
 
 async function findTicketRow(ticketRef: string) {
@@ -301,7 +303,7 @@ async function loadHistory(ticket: ReturnType<typeof mapTicket>) {
       authorDepartment: (row.author_department as string | null) ?? null,
       assignedToName: (row.assigned_to_name as string | null) ?? "Unassigned",
       assignedToDepartment: null,
-      bodyHtml: row.body_html as string,
+      bodyHtml: sanitizeRichText(row.body_html as string | null),
       fromStatus: null,
       toStatus: null,
       createdAt: row.created_at,
@@ -407,7 +409,7 @@ async function insertTicket(
       input.trackingNumber,
       input.issue,
       input.status,
-      input.comment ?? "",
+      sanitizeRichText(input.comment),
       input.assignedDepartmentId,
       createdById,
       closedById,
@@ -427,8 +429,10 @@ export const ticketsService = {
   async list(filters: TicketListFilters) {
     const { sql, countSql, values, countValues, page, pageSize } =
       buildListQuery(filters);
-    const countResult = await pool.query(countSql, countValues);
-    const { rows } = await pool.query(sql, values);
+    const [countResult, { rows }] = await Promise.all([
+      pool.query(countSql, countValues),
+      pool.query(sql, values),
+    ]);
     return {
       items: rows.map(mapTicketListItem),
       total: Number(countResult.rows[0]?.total ?? 0),
@@ -705,7 +709,7 @@ export const ticketsService = {
         `INSERT INTO ticket_replies (ticket_id, body_html, assigned_department_id, created_by_id)
          VALUES ($1, $2, $3, $4)
          RETURNING id`,
-        [ticket.dbId, input.comment, input.assignedDepartmentId, createdById]
+        [ticket.dbId, sanitizeRichText(input.comment), input.assignedDepartmentId, createdById]
       );
       const replyId = rows[0].id as number;
       await insertAttachments(client, ticket.dbId, attachments, replyId);

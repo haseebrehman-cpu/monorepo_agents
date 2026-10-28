@@ -53,6 +53,8 @@ export const P = {
   LIVE_CHAT_REPLY: "live_chat.reply",
   LIVE_CHAT_ASSIGN: "live_chat.assign",
   LIVE_CHAT_RESOLVE: "live_chat.resolve",
+
+  LOOKUPS_MANAGE: "lookups.manage",
 } as const;
 
 export type PermissionCode = (typeof P)[keyof typeof P];
@@ -302,6 +304,14 @@ export const FEATURES: FeatureDef[] = [
     kind: "action",
     parentCode: P.LIVE_CHAT_ACCESS,
     sortOrder: 73,
+  },
+
+  {
+    code: P.LOOKUPS_MANAGE,
+    label: "Manage Dropdown Values",
+    group: "Dropdown Values",
+    kind: "access",
+    sortOrder: 80,
   },
 ];
 

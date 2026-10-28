@@ -2,7 +2,10 @@ import { z } from "zod";
 
 export const createUserSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z
+    .string()
+    .min(8)
+    .refine((value) => Buffer.byteLength(value, "utf8") <= 72, "Password must be at most 72 bytes"),
   name: z.string().min(1),
   departmentId: z.number().int().positive(),
   roleId: z.number().int().positive(),
