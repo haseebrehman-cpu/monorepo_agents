@@ -4,19 +4,10 @@ import { Button, Input } from "@rdx/ui";
 import { FilterIcon, RotateCcwIcon } from "lucide-react";
 import { toast } from "react-toastify";
 import type { RefundListFilters, RefundOptions } from "../../../lib/refunds-api";
+import type { ResendOptions } from "../../../lib/resends-api";
 import { useRefundOptions } from "../../../lib/use-refunds";
+import { useResendOptions } from "../../../lib/use-resends";
 import type { CategoryTicketKind } from "../CategoryTicketForm";
-import {
-  ACCOUNTABLE_OPTIONS,
-  COURIER_OPTIONS,
-  COUNTRY_OPTIONS,
-  CURRENCY_OPTIONS,
-  ITEM_RETURNED_OPTIONS,
-  REASON_OPTIONS,
-  SALE_CHANNEL_OPTIONS,
-  TAG_OPTIONS,
-  TYPE_OPTIONS,
-} from "../CategoryTicketForm/options";
 
 type FilterId =
   | "type"
@@ -47,23 +38,11 @@ const FILTER_FIELDS: FilterField[] = [
   { id: "itemReturned", label: "Item Returned", placeholder: "-- Select --" },
 ];
 
-const STATIC_OPTIONS: Record<FilterId, string[]> = {
-  type: TYPE_OPTIONS,
-  salesChannel: SALE_CHANNEL_OPTIONS,
-  refundCurrency: CURRENCY_OPTIONS,
-  country: COUNTRY_OPTIONS,
-  courierService: COURIER_OPTIONS,
-  reason: REASON_OPTIONS,
-  tags: TAG_OPTIONS,
-  accountable: ACCOUNTABLE_OPTIONS,
-  itemReturned: ITEM_RETURNED_OPTIONS,
-};
-
-function refundFilterOptions(id: FilterId, options: RefundOptions | undefined) {
+function filterOptions(id: FilterId, options: RefundOptions | ResendOptions | undefined) {
   if (!options) return [];
   if (id === "type") return options.types;
   if (id === "salesChannel") return options.salesChannels;
-  if (id === "refundCurrency") return options.currencies;
+  if (id === "refundCurrency") return "currencies" in options ? options.currencies : [];
   if (id === "country") return options.countries;
   if (id === "reason") return options.reasons;
   if (id === "tags") return options.tags;
@@ -93,6 +72,8 @@ type CategoryTicketFilterPaneProps = {
 const CategoryTicketFilterPane = ({ kind, onApply, onReset }: CategoryTicketFilterPaneProps) => {
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const refundOptions = useRefundOptions(kind === "refund");
+  const resendOptions = useResendOptions(kind === "resend");
+  const options = kind === "refund" ? refundOptions.data : resendOptions.data;
   const fields = useMemo(
     () => FILTER_FIELDS.filter((field) => kind === "refund" || field.id !== "refundCurrency"),
     [kind],
@@ -118,11 +99,7 @@ const CategoryTicketFilterPane = ({ kind, onApply, onReset }: CategoryTicketFilt
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {fields.map((field) => {
-            const isCourierText = kind === "refund" && field.id === "courierService";
-            const options =
-              kind === "refund"
-                ? refundFilterOptions(field.id, refundOptions.data)
-                : STATIC_OPTIONS[field.id];
+            const isCourierText = field.id === "courierService";
 
             return (
               <div key={field.id} className="flex min-w-0 flex-col gap-1.5">
@@ -143,7 +120,7 @@ const CategoryTicketFilterPane = ({ kind, onApply, onReset }: CategoryTicketFilt
                     id={field.id}
                     value={filters[field.id]}
                     onChange={(next) => setFilters((prev) => ({ ...prev, [field.id]: next }))}
-                    options={options}
+                    options={filterOptions(field.id, options)}
                     placeholder={field.placeholder}
                   />
                 )}

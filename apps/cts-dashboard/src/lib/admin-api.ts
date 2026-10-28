@@ -167,6 +167,13 @@ export type RefundLookupKind =
   | "tag"
   | "accountable";
 
+export type ResendLookupKind = Exclude<RefundLookupKind, "currency">;
+
+export type CategoryLookupScope = "refund" | "resend";
+
+export type CategoryLookupKind<S extends CategoryLookupScope = CategoryLookupScope> =
+  S extends "resend" ? ResendLookupKind : RefundLookupKind;
+
 export type RefundLookup = {
   id: number;
   kind: RefundLookupKind;
@@ -175,26 +182,33 @@ export type RefundLookup = {
   sortOrder: number;
 };
 
-export function listRefundLookups() {
-  return authedApi().request<ListResponse<RefundLookup[]>>("/api/refund-lookups");
+export function listCategoryLookups(scope: CategoryLookupScope) {
+  return authedApi().request<ListResponse<RefundLookup[]>>(`/api/${scope}-lookups`);
 }
 
-export function createRefundLookup(input: { kind: RefundLookupKind; label: string }) {
-  return authedApi().request<ListResponse<RefundLookup>>("/api/refund-lookups", {
+export function createCategoryLookup<S extends CategoryLookupScope>(
+  scope: S,
+  input: { kind: CategoryLookupKind<S>; label: string },
+) {
+  return authedApi().request<ListResponse<RefundLookup>>(`/api/${scope}-lookups`, {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
-export function updateRefundLookup(id: number, input: { label?: string; isActive?: boolean }) {
-  return authedApi().request<ListResponse<RefundLookup>>(`/api/refund-lookups/${id}`, {
+export function updateCategoryLookup(
+  scope: CategoryLookupScope,
+  id: number,
+  input: { label?: string; isActive?: boolean },
+) {
+  return authedApi().request<ListResponse<RefundLookup>>(`/api/${scope}-lookups/${id}`, {
     method: "PATCH",
     body: JSON.stringify(input),
   });
 }
 
-export function deleteRefundLookup(id: number) {
-  return authedApi().request<{ success: true }>(`/api/refund-lookups/${id}`, {
+export function deleteCategoryLookup(scope: CategoryLookupScope, id: number) {
+  return authedApi().request<{ success: true }>(`/api/${scope}-lookups/${id}`, {
     method: "DELETE",
   });
 }

@@ -13,19 +13,23 @@ import {
   UserRoundIcon,
   type LucideIcon,
 } from "lucide-react";
-import type { RefundLookup, RefundLookupKind } from "../../../lib/admin-api";
+import type { CategoryLookupScope, RefundLookup, RefundLookupKind } from "../../../lib/admin-api";
 import {
-  useCreateRefundLookup,
-  useDeleteRefundLookup,
-  useRefundLookups,
-  useUpdateRefundLookup,
+  useCategoryLookups,
+  useCreateCategoryLookup,
+  useDeleteCategoryLookup,
+  useUpdateCategoryLookup,
 } from "../../../lib/use-admin";
+
+const SCOPE_LABEL: Record<CategoryLookupScope, string> = {
+  refund: "refund",
+  resend: "resend",
+};
 
 const GROUPS: {
   kind: RefundLookupKind;
   title: string;
   singular: string;
-  hint: string;
   icon: LucideIcon;
   iconBg: string;
   iconColor: string;
@@ -34,7 +38,6 @@ const GROUPS: {
     kind: "type",
     title: "Types",
     singular: "type",
-    hint: "Shown on the refund form",
     icon: TagIcon,
     iconBg: "bg-indigo-50",
     iconColor: "text-indigo-600",
@@ -43,7 +46,6 @@ const GROUPS: {
     kind: "sales_channel",
     title: "Sales channels",
     singular: "channel",
-    hint: "Shown on the refund form",
     icon: StoreIcon,
     iconBg: "bg-sky-50",
     iconColor: "text-sky-600",
@@ -52,7 +54,6 @@ const GROUPS: {
     kind: "currency",
     title: "Refund currencies",
     singular: "currency",
-    hint: "Shown on the refund form",
     icon: CoinsIcon,
     iconBg: "bg-amber-50",
     iconColor: "text-amber-600",
@@ -61,7 +62,6 @@ const GROUPS: {
     kind: "reason",
     title: "Reasons",
     singular: "reason",
-    hint: "Shown on the refund form",
     icon: AlertCircleIcon,
     iconBg: "bg-rose-50",
     iconColor: "text-rose-600",
@@ -70,7 +70,6 @@ const GROUPS: {
     kind: "tag",
     title: "Tags",
     singular: "tag",
-    hint: "Shown on the refund form",
     icon: TagIcon,
     iconBg: "bg-violet-50",
     iconColor: "text-violet-600",
@@ -79,7 +78,6 @@ const GROUPS: {
     kind: "accountable",
     title: "Accountable",
     singular: "department",
-    hint: "Shown on the refund form",
     icon: UserRoundIcon,
     iconBg: "bg-emerald-50",
     iconColor: "text-emerald-600",
@@ -87,18 +85,18 @@ const GROUPS: {
 ];
 
 function LookupColumn({
+  scope,
   kind,
   title,
   singular,
-  hint,
   items,
   icon: Icon,
   iconBg,
   iconColor,
-}: (typeof GROUPS)[number] & { items: RefundLookup[] }) {
-  const createLookup = useCreateRefundLookup();
-  const updateLookup = useUpdateRefundLookup();
-  const deleteLookup = useDeleteRefundLookup();
+}: (typeof GROUPS)[number] & { scope: CategoryLookupScope; items: RefundLookup[] }) {
+  const createLookup = useCreateCategoryLookup(scope);
+  const updateLookup = useUpdateCategoryLookup(scope);
+  const deleteLookup = useDeleteCategoryLookup(scope);
   const [label, setLabel] = useState("");
 
   const onAdd = (event: FormEvent<HTMLFormElement>) => {
@@ -123,7 +121,7 @@ function LookupColumn({
               {title}
               <span className="ml-1.5 text-xs font-normal text-slate-400">({items.length})</span>
             </h2>
-            <p className="text-xs text-slate-500">{hint}</p>
+            <p className="text-xs text-slate-500">Shown on the {SCOPE_LABEL[scope]} form</p>
           </div>
         </div>
       </div>
@@ -195,14 +193,16 @@ function LookupColumn({
   );
 }
 
-export default function RefundLookupsManager() {
-  const lookups = useRefundLookups();
+export default function CategoryLookupsManager({ scope }: { scope: CategoryLookupScope }) {
+  const lookups = useCategoryLookups(scope);
+  const scopeLabel = SCOPE_LABEL[scope];
+  const groups = GROUPS.filter((group) => scope === "refund" || group.kind !== "currency");
 
   if (lookups.isLoading) {
     return (
       <div className="flex items-center justify-center gap-2 py-24 text-sm text-slate-500">
         <LoaderCircleIcon className="h-4 w-4 animate-spin" />
-        Loading refund options...
+        Loading {scopeLabel} options...
       </div>
     );
   }
@@ -210,7 +210,7 @@ export default function RefundLookupsManager() {
   if (lookups.isError) {
     return (
       <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-8 text-center text-sm text-red-600">
-        Could not load refund options.
+        Could not load {scopeLabel} options.
       </div>
     );
   }
@@ -220,12 +220,13 @@ export default function RefundLookupsManager() {
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-slate-500">
-        These values fill the refund form dropdowns. Country lists every country, and Item Returned is True or False.
+        These values fill the {scopeLabel} form dropdowns. Country lists every country, and Item Returned is True or False.
       </p>
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-        {GROUPS.map((group) => (
+        {groups.map((group) => (
           <LookupColumn
-            key={group.kind}
+            key={`${scope}-${group.kind}`}
+            scope={scope}
             {...group}
             items={items.filter((item) => item.kind === group.kind)}
           />
