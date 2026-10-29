@@ -28,6 +28,28 @@ export default defineConfig({
     ],
   },
   base: '/cts-dashboard/',
+  build: {
+    target: "es2022",
+    rolldownOptions: {
+      output: {
+        minify: {
+          compress: { dropConsole: true, dropDebugger: true },
+          mangle: true,
+          codegen: { removeWhitespace: true },
+        },
+        comments: false,
+        codeSplitting: {
+          groups: [
+            {
+              name: "react-vendor",
+              test: /node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom)[\\/]/,
+              priority: 20,
+            },
+          ],
+        },
+      },
+    },
+  },
   server: {
     fs: {
       allow: [monorepoRoot],

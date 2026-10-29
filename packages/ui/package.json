@@ -4,6 +4,9 @@
   "private": true,
   "description": "Shared UI kit for the RDX apps",
   "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
   "main": "./index.ts",
   "types": "./index.ts",
   "imports": {
@@ -15,7 +18,7 @@
     ".": {
       "types": "./index.ts",
       "default": "./index.ts"
-    },
+    }, 
     "./styles.css": "./styles.css",
     "./components/*": "./components/*.tsx",
     "./lib/*": "./lib/*.ts",
