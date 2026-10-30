@@ -46,4 +46,7 @@ COPY --from=build --chown=node:node /app/apps/chatbot-next/public ./apps/chatbot
 
 USER node
 EXPOSE 3010
+# The slim image has no curl/wget, so probe with Node's fetch.
+HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=5 \
+  CMD ["node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3010)+'/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
 CMD ["node", "apps/chatbot-next/server.js"]
