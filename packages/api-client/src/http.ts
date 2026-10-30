@@ -101,7 +101,9 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     throw new Error("createApiClient requires a non-empty baseUrl");
   }
 
-  const fetchImpl = options.fetch ?? fetch;
+  // Browsers throw "Illegal invocation" if native fetch is called as a method
+  // of another object (client.fetch(...)), so it must not keep `this`.
+  const fetchImpl: typeof fetch = options.fetch ?? ((input, init) => fetch(input, init));
   const defaultHeaders = options.headers ?? {};
 
   return {
