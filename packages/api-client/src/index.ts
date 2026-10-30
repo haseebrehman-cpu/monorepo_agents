@@ -37,6 +37,20 @@ import {
   type StreamApi,
   type StreamChatHandlers,
 } from "./stream";
+import {
+  SUPPORT_MESSAGE_MAX_CHARS,
+  createSupportApi,
+  getSupportHealth,
+  listPageEvents,
+  lookupOrder,
+  sendPageEvent,
+  sendSupportMessage,
+  startConversation,
+  streamSupportMessage,
+  supportRequestId,
+  type SupportApi,
+  type SupportStreamHandlers,
+} from "./support";
 
 export type RdxApiClient = ApiClient & {
   chat: ChatApi;
@@ -46,6 +60,7 @@ export type RdxApiClient = ApiClient & {
   cart: CartApi;
   orders: OrdersApi;
   products: ProductsApi;
+  support: SupportApi;
 };
 
 /** Factory used by apps — attach namespaced API modules here as they grow. */
@@ -59,6 +74,7 @@ export function createRdxApiClient(options: ApiClientOptions): RdxApiClient {
     cart: createCartApi(client),
     orders: createOrdersApi(client),
     products: createProductsApi(client),
+    support: createSupportApi(client),
   });
 }
 
@@ -85,6 +101,16 @@ export {
   streamChatMessage,
   createSession,
   verifyOrder,
+  SUPPORT_MESSAGE_MAX_CHARS,
+  createSupportApi,
+  getSupportHealth,
+  listPageEvents,
+  lookupOrder,
+  sendPageEvent,
+  sendSupportMessage,
+  startConversation,
+  streamSupportMessage,
+  supportRequestId,
 };
 export type {
   ApiClient,
@@ -101,4 +127,6 @@ export type {
   SessionApi,
   StreamApi,
   StreamChatHandlers,
+  SupportApi,
+  SupportStreamHandlers,
 };

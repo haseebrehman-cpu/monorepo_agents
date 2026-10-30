@@ -3,14 +3,14 @@ import { NAV_ITEMS, type ActiveNavId, type NavId } from "../../Data/nav";
 import {
   BookIcon,
   Button,
-  ChannelIcon,
-  ChartIcon,
+  // ChannelIcon,
+  // ChartIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  CreditCardIcon,
+  // CreditCardIcon,
   HomeIcon,
   IntegrationIcon,
-  TeamIcon,
+  // TeamIcon,
   cn,
 } from "@rdx/ui";
 import { ListChecksIcon, LogOutIcon, MessageCircleIcon, RefreshCcwIcon, RotateCwIcon, ShieldIcon } from "lucide-react";
@@ -27,10 +27,10 @@ const NAV_ICONS: Record<NavId, ReactNode> = {
   refund: <BookIcon />,
   resend: <RefreshCcwIcon />,
   return: <RotateCwIcon />,
-  courier_invoices: <ChannelIcon />,
-  performance: <ChartIcon />,
-  manual_performance: <TeamIcon />,
-  reports: <CreditCardIcon />,
+  // courier_invoices: <ChannelIcon />,
+  // performance: <ChartIcon />,
+  // manual_performance: <TeamIcon />,
+  // reports: <CreditCardIcon />,
   dropdown_values: <ListChecksIcon className="h-5 w-5" />,
 };
 
@@ -50,25 +50,22 @@ export default function Sidebar({
   onToggleCollapse,
 }: SidebarProps) {
   const iconOnly = collapsed && !mobileOpen;
-  const [expandedIds, setExpandedIds] = useState<Partial<Record<NavId, boolean>>>(
-    {},
-  );
+  const [expandedIds] = useState<Partial<Record<NavId, boolean>>>({});
   const me = useMe();
   const logout = useLogout();
   const user = me.data?.user;
   const isSuperAdmin = isSuperAdminUser(user);
   const navItems = filterNavItems(NAV_ITEMS, user);
   const userDepartment = me.data?.user?.department?.name;
-  console.log(userDepartment);
-  
   const isCustomerSupport = userDepartment === "Customer Support";
   const isSupplyChain = userDepartment === "Supply Chain Management";
   const isCompliance = userDepartment === "Compliance";
 
 
-  const toggleExpanded = (id: NavId) => {
-    setExpandedIds((current) => ({ ...current, [id]: !current[id] }));
-  };
+  // Restore with nested nav items (Courier Invoices, Performance, Reports).
+  // const toggleExpanded = (id: NavId) => {
+  //   setExpandedIds((current) => ({ ...current, [id]: !current[id] }));
+  // };
 
   return (
     <aside
@@ -105,8 +102,11 @@ export default function Sidebar({
 
       <nav className="sidebar-scroll flex-1 space-y-1 overflow-y-auto p-3" aria-label="Main">
         {navItems.map((item) => {
-          const children = "children" in item ? item.children : undefined;
-          const childActive = children?.some((child) => child.id === activeId);
+          const children =
+            "children" in item && Array.isArray(item.children)
+              ? (item.children as readonly { id: string; label: string }[])
+              : undefined;
+          // const childActive = children?.some((child) => child.id === activeId);
           const expanded = Boolean(expandedIds[item.id]);
 
           return (
@@ -114,19 +114,12 @@ export default function Sidebar({
               key={item.id}
               icon={NAV_ICONS[item.id as NavId]}
               label={item.label}
-              active={activeId === item.id || Boolean(childActive)}
+              active={activeId === item.id}
               collapsed={iconOnly}
               expanded={expanded}
               items={children}
-              activeChildId={childActive ? String(activeId) : undefined}
-              onClick={() => {
-                if (children) {
-                  toggleExpanded(item.id);
-                  return;
-                }
-                onNavigate(item.id);
-              }}
-              onChildClick={(id) => onNavigate(id as ActiveNavId)}
+              activeChildId={undefined}
+              onClick={() => onNavigate(item.id)}
             />
           );
         })}

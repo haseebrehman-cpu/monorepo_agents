@@ -1,9 +1,7 @@
-const Dashboard_Home = () => {
-  return (
-    <div>
-      <h1>Dashboard Home</h1>
-    </div>
-  )
-}
+import HomeDashboard from "./Home/HomeDashboard";
 
-export default Dashboard_Home
+const Dashboard_Home = () => {
+  return <HomeDashboard />;
+};
+
+export default Dashboard_Home;

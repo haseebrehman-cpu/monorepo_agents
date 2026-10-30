@@ -1,5 +1,7 @@
 /** Shared chat/API contracts for the widget and dashboard (FastAPI). */
 
+export * from "./support";
+
 export type ChatRole = "user" | "assistant";
 
 export type MarketplaceCode = "uk" | "usa" | "ca" | "eu" | "uae" | "intl";

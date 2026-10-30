@@ -28,4 +28,4 @@ export function createDataGridTheme(isDark: boolean) {
   });
 }
 
-export const dataGridTheme = createDataGridTheme(false);
+export const dataGridTheme = /* @__PURE__ */ createDataGridTheme(false);
