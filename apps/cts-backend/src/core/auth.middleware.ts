@@ -32,14 +32,14 @@ export async function authenticate(
   res: Response,
   next: NextFunction
 ) {
-  const sessionToken = readSessionToken(req);
-  if (sessionToken) {
-    return authenticateSession(sessionToken, req, res, next);
-  }
-
   const serviceToken = readBearerToken(req.headers.authorization);
   if (serviceToken) {
     return authenticateServiceAccount(serviceToken, req, res, next);
+  }
+
+  const sessionToken = readSessionToken(req);
+  if (sessionToken) {
+    return authenticateSession(sessionToken, req, res, next);
   }
 
   return res.status(401).json({ success: false, error: "NO_TOKEN" });
