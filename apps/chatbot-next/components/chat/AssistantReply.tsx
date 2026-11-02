@@ -37,7 +37,7 @@ export function ReplyBody({ reply, isLatest }: AssistantReplyProps) {
           store={store}
           initialOrderNumber={reply.action.order_number}
           disabled={isTyping}
-          onAskAgent={(message) => send(message)}
+          onSubmitDetails={(message) => send(message)}
         />
       )}
 

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type {
   SupportOrder,
   SupportShipment,
@@ -117,17 +117,35 @@ interface TrackingFormProps {
   store: SupportStoreCode;
   initialOrderNumber?: string | null;
   disabled: boolean;
-  onAskAgent: (message: string) => void;
+  onSubmitDetails: (message: string) => void;
 }
 
-export default function TrackingForm({ store, initialOrderNumber, disabled, onAskAgent }: TrackingFormProps) {
+export default function TrackingForm({ store, initialOrderNumber, disabled, onSubmitDetails }: TrackingFormProps) {
   const [orderNumber, setOrderNumber] = useState(initialOrderNumber ?? "");
   const [contact, setContact] = useState("");
   const { lookup, clear, submitted, result, isLoading, error } = useOrderLookup(store);
+  const pending = useRef<{ orderNumber: string; contact: string } | null>(null);
+
+  // The chat message must wait for the lookup: the API rejects a new message
+  // with `conversation_busy` while the lookup holds the conversation.
+  useEffect(() => {
+    const details = pending.current;
+    if (!details || !submitted || isLoading || disabled) return;
+    if (submitted.orderNumber !== details.orderNumber || (submitted.email ?? submitted.postcode) !== details.contact) {
+      return;
+    }
+    if (!result && !error) return;
+    pending.current = null;
+    if (result?.verified) {
+      const contactLabel = submitted.email ? "Email" : "Postcode";
+      onSubmitDetails(`Order number: ${details.orderNumber}\n${contactLabel}: ${details.contact}`);
+    }
+  }, [submitted, result, error, isLoading, disabled, onSubmitDetails]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isLoading) return;
+    pending.current = { orderNumber: orderNumber.trim(), contact: contact.trim() };
     void lookup(orderNumber, contact);
   };
 
@@ -135,26 +153,16 @@ export default function TrackingForm({ store, initialOrderNumber, disabled, onAs
     return (
       <div className="mt-3 space-y-2">
         <OrderCard order={result.order} tracking={result.tracking} />
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              clear();
-              setOrderNumber("");
-            }}
-            className={secondaryButtonClass}
-          >
-            Track another
-          </button>
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => onAskAgent(`I have a question about order ${result.order.order_number}`)}
-            className={secondaryButtonClass}
-          >
-            Ask about it
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => {
+            clear();
+            setOrderNumber("");
+          }}
+          className={secondaryButtonClass}
+        >
+          Track another
+        </button>
       </div>
     );
   }
