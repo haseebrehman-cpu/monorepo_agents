@@ -1,6 +1,7 @@
 import { pool } from "../../core/db.js";
 import { sanitizeRichText } from "../../core/html.js";
 import { ticketLookupsService } from "../ticket-lookups/ticket-lookups.service.js";
+import { DEFAULT_TICKET_STATUS } from "./tickets.constants.js";
 import type {
   CreateReplyInput,
   CreateTicketInput,
@@ -478,15 +479,21 @@ export const ticketsService = {
   async create(
     input: CreateTicketInput,
     createdById: number,
-    attachments: TicketAttachmentInput[]
+    attachments: TicketAttachmentInput[],
+    { allowCustomLookups = false }: { allowCustomLookups?: boolean } = {}
   ) {
     if (input.assignedDepartmentId) {
       await assertDepartment(input.assignedDepartmentId);
     }
 
-    const courier = await ticketLookupsService.assertActive("courier", input.courier);
-    const issue = await ticketLookupsService.assertActive("issue", input.issue);
-    const status = await ticketLookupsService.assertActive("status", input.status);
+    const [courier, issue, status] = await Promise.all([
+      ticketLookupsService.assertActive("courier", input.courier, allowCustomLookups),
+      ticketLookupsService.assertActive("issue", input.issue, allowCustomLookups),
+      ticketLookupsService.assertActive("status", input.status).catch((error) => {
+        if (!allowCustomLookups) throw error;
+        return ticketLookupsService.assertActive("status", DEFAULT_TICKET_STATUS);
+      }),
+    ]);
     const resolvedInput: ResolvedTicketInput = {
       ...input,
       courier: courier.label,

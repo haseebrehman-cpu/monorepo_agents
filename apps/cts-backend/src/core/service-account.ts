@@ -2,6 +2,10 @@ import { pool } from "./db.js";
 
 export const CHATBOT_SERVICE_EMAIL = "csagent@cts.com";
 
+export function isChatbotServiceEmail(email: string) {
+  return email.trim().toLowerCase() === CHATBOT_SERVICE_EMAIL;
+}
+
 export async function findChatbotServiceAccount(): Promise<{
   id: number;
   email: string;

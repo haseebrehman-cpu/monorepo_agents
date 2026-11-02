@@ -123,19 +123,19 @@ function mapResend(row: Record<string, unknown>) {
   };
 }
 
-async function resolveChoices(input: CreateResendInput) {
+async function resolveChoices(input: CreateResendInput, allowCustom: boolean) {
   const [type, salesChannel, reason, tags, accountable] = await Promise.all([
-    resendLookupsService.assertActive("type", input.type),
-    resendLookupsService.assertActive("sales_channel", input.salesChannel),
-    resendLookupsService.assertActive("reason", input.reason),
-    resendLookupsService.assertActive("tag", input.tags),
-    resendLookupsService.assertActive("accountable", input.accountable),
+    resendLookupsService.assertActive("type", input.type, allowCustom),
+    resendLookupsService.assertActive("sales_channel", input.salesChannel, allowCustom),
+    resendLookupsService.assertActive("reason", input.reason, allowCustom),
+    resendLookupsService.assertActive("tag", input.tags, allowCustom),
+    resendLookupsService.assertActive("accountable", input.accountable, allowCustom),
   ]);
 
   return {
     type,
     salesChannel,
-    country: canonicalCountry(input.country),
+    country: canonicalCountry(input.country, allowCustom),
     courierService: input.courierService.trim(),
     reason,
     tags,
@@ -269,9 +269,10 @@ export const resendsService = {
   async create(
     input: CreateResendInput,
     createdById: number,
-    attachments: ResendAttachmentInput[]
+    attachments: ResendAttachmentInput[],
+    { allowCustomLookups = false }: { allowCustomLookups?: boolean } = {}
   ) {
-    const choices = await resolveChoices(input);
+    const choices = await resolveChoices(input, allowCustomLookups);
     const client = await pool.connect();
     try {
       await client.query("BEGIN");

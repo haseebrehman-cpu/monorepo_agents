@@ -235,7 +235,9 @@ export const ticketsController = {
     }
 
     try {
-      const ticket = await ticketsService.create(parsed.data, req.user.userId, files);
+      const ticket = await ticketsService.create(parsed.data, req.user.userId, files, {
+        allowCustomLookups: req.user.isChatbot,
+      });
       return res.status(201).json({ success: true, data: ticket });
     } catch (e: any) {
       const status = lookupErrorStatus(e.message);

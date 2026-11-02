@@ -127,21 +127,21 @@ function mapRefund(row: Record<string, unknown>) {
   };
 }
 
-async function resolveChoices(input: CreateRefundInput) {
+async function resolveChoices(input: CreateRefundInput, allowCustom: boolean) {
   const [type, salesChannel, refundCurrency, reason, tags, accountable] = await Promise.all([
-    refundLookupsService.assertActive("type", input.type),
-    refundLookupsService.assertActive("sales_channel", input.salesChannel),
-    refundLookupsService.assertActive("currency", input.refundCurrency),
-    refundLookupsService.assertActive("reason", input.reason),
-    refundLookupsService.assertActive("tag", input.tags),
-    refundLookupsService.assertActive("accountable", input.accountable),
+    refundLookupsService.assertActive("type", input.type, allowCustom),
+    refundLookupsService.assertActive("sales_channel", input.salesChannel, allowCustom),
+    refundLookupsService.assertActive("currency", input.refundCurrency, allowCustom),
+    refundLookupsService.assertActive("reason", input.reason, allowCustom),
+    refundLookupsService.assertActive("tag", input.tags, allowCustom),
+    refundLookupsService.assertActive("accountable", input.accountable, allowCustom),
   ]);
 
   return {
     type,
     salesChannel,
     refundCurrency,
-    country: canonicalCountry(input.country),
+    country: canonicalCountry(input.country, allowCustom),
     courierService: input.courierService.trim(),
     reason,
     tags,
@@ -279,9 +279,10 @@ export const refundsService = {
   async create(
     input: CreateRefundInput,
     createdById: number,
-    attachments: RefundAttachmentInput[]
+    attachments: RefundAttachmentInput[],
+    { allowCustomLookups = false }: { allowCustomLookups?: boolean } = {}
   ) {
-    const choices = await resolveChoices(input);
+    const choices = await resolveChoices(input, allowCustomLookups);
     const client = await pool.connect();
     try {
       await client.query("BEGIN");

@@ -138,7 +138,9 @@ export const refundsController = {
     }
 
     try {
-      const refund = await refundsService.create(parsed.data, req.user.userId, files);
+      const refund = await refundsService.create(parsed.data, req.user.userId, files, {
+        allowCustomLookups: req.user.isChatbot,
+      });
       return res.status(201).json({ success: true, data: refund });
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
