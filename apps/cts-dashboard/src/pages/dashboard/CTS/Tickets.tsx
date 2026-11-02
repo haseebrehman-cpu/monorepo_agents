@@ -107,7 +107,7 @@ const Tickets = () => {
         <DataTable
           columns={columns}
           data={ticketsQuery.data?.items ?? []}
-          loading={ticketsQuery.isFetching}
+          loading={ticketsQuery.isLoading || ticketsQuery.isPlaceholderData}
           rowCount={ticketsQuery.data?.total ?? 0}
           paginationModel={paginationModel}
           onPaginationModelChange={setPaginationModel}

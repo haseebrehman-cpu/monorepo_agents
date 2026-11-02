@@ -9,9 +9,6 @@ export const ALLOWED_ATTACHMENT_TYPES = new Set([
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 export const MAX_ATTACHMENTS = 10;
 
-export function canonicalItemReturned(value: string) {
-  const normalized = value.trim().toLowerCase();
-  if (normalized === "true" || normalized === "yes") return "True";
-  if (normalized === "false" || normalized === "no") return "False";
-  throw new Error("INVALID_ITEM_RETURNED");
+export function canonicalItemReturned(value: boolean) {
+  return value ? "True" : "False";
 }

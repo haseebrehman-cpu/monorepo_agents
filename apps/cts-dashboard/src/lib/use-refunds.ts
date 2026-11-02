@@ -47,6 +47,8 @@ export function useRefunds(filters: RefundListFilters, pagination: RefundListPar
     queryKey: ["refunds", applied, pagination],
     queryFn: async () => (await listRefunds(filters, pagination)).data,
     placeholderData: keepPreviousData,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
   });
 }
 

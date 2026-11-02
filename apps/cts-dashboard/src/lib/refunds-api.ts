@@ -91,7 +91,7 @@ export type CreateRefundInput = {
   reason: string;
   tags: string;
   accountable: string;
-  itemReturned: string;
+  itemReturned: boolean;
   buyerComment: string;
   comment: string;
   issueListing: boolean;
@@ -154,13 +154,13 @@ export function createRefund(input: CreateRefundInput) {
     "reason",
     "tags",
     "accountable",
-    "itemReturned",
     "buyerComment",
     "comment",
   ];
   for (const field of textFields) {
     form.append(field, String(input[field] ?? ""));
   }
+  form.append("itemReturned", String(input.itemReturned));
   form.append("issueListing", String(input.issueListing));
   form.append("issueWarehouse", String(input.issueWarehouse));
   form.append("issueLogistics", String(input.issueLogistics));

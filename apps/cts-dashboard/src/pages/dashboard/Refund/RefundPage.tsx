@@ -60,7 +60,7 @@ const RefundPage = () => {
           columns={refundColumns}
           data={refundsQuery.data?.items ?? []}
           label="Refunds"
-          loading={refundsQuery.isFetching}
+          loading={refundsQuery.isLoading || refundsQuery.isPlaceholderData}
           rowCount={refundsQuery.data?.total ?? 0}
           paginationModel={paginationModel}
           onPaginationModelChange={setPaginationModel}

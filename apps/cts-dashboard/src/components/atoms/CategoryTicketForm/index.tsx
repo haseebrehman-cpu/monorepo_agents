@@ -11,7 +11,6 @@ import {
   COURIER_OPTIONS,
   COUNTRY_OPTIONS,
   CURRENCY_OPTIONS,
-  ITEM_RETURNED_OPTIONS,
   REASON_OPTIONS,
   SALE_CHANNEL_OPTIONS,
   TAG_OPTIONS,
@@ -51,7 +50,6 @@ const SHARED_REQUIRED_FIELDS = [
   "reason",
   "tags",
   "accountable",
-  "itemReturned",
   "buyerComment",
 ] as const;
 
@@ -88,7 +86,7 @@ type FormState = {
   reason: string;
   tags: string;
   accountable: string;
-  itemReturned: string;
+  itemReturned: boolean;
   buyerComment: string;
   comment: string;
   issueListing: boolean;
@@ -117,7 +115,7 @@ const EMPTY_FORM: FormState = {
   reason: "",
   tags: "",
   accountable: "",
-  itemReturned: "",
+  itemReturned: false,
   buyerComment: "",
   comment: "",
   issueListing: false,
@@ -397,14 +395,14 @@ const CategoryTicketForm = ({ kind }: CategoryTicketFormProps) => {
             placeholder="--Select Department--"
           />
         </Field>
-        <Field label="Item Returned" htmlFor="itemReturned" required>
-          <SelectField
-            id="itemReturned"
-            value={form.itemReturned}
-            onChange={setField("itemReturned")}
-            options={usesApiLists ? (apiLists?.itemReturned ?? ["True", "False"]) : ITEM_RETURNED_OPTIONS}
-            placeholder="-- Select --"
-          />
+        <Field label="Item Returned" htmlFor="itemReturned">
+          <div className="flex h-full items-center">
+            <Checkbox
+              id="itemReturned"
+              checked={form.itemReturned}
+              onCheckedChange={(checked) => setField("itemReturned")(checked)}
+            />
+          </div>
         </Field>
         <Field label="Buyer Comment" htmlFor="buyerComment" required className="md:col-span-2">
           <Textarea

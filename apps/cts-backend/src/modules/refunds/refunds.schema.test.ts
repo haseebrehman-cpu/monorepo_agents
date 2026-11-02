@@ -16,7 +16,7 @@ const validRefund = {
   reason: "Damaged",
   tags: "Priority",
   accountable: "Warehouse",
-  itemReturned: "Yes",
+  itemReturned: "true",
   buyerComment: "Box was crushed",
   comment: "Approved",
   issueListing: "false",
