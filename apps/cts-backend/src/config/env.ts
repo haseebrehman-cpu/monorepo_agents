@@ -21,6 +21,7 @@ const envSchema = z.object({
     DB_CONNECTION_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
     DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
+    CHATBOT_SERVICE_TOKEN: z.string().default(""),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -38,6 +39,16 @@ if (
     process.exit(1);
 }
 
+const chatbotServiceToken = parsedEnv.data.CHATBOT_SERVICE_TOKEN.trim();
+if (
+    parsedEnv.data.NODE_ENV === "production" &&
+    chatbotServiceToken.length > 0 &&
+    chatbotServiceToken.length < 32
+) {
+    console.error("CHATBOT_SERVICE_TOKEN must be at least 32 characters in production.");
+    process.exit(1);
+}
+
 export const env: z.infer<typeof envSchema> = {
     NODE_ENV: require("NODE_ENV") as z.infer<typeof envSchema>["NODE_ENV"],
     PORT: parseInt(require("PORT")) as z.infer<typeof envSchema>["PORT"],
@@ -51,4 +62,5 @@ export const env: z.infer<typeof envSchema> = {
     DB_CONNECTION_TIMEOUT_MS: parsedEnv.data.DB_CONNECTION_TIMEOUT_MS,
     DB_STATEMENT_TIMEOUT_MS: parsedEnv.data.DB_STATEMENT_TIMEOUT_MS,
     TRUST_PROXY_HOPS: parsedEnv.data.TRUST_PROXY_HOPS,
+    CHATBOT_SERVICE_TOKEN: chatbotServiceToken,
 } satisfies z.infer<typeof envSchema>;

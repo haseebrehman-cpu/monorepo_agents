@@ -1,4 +1,4 @@
-import { authedApi } from "./auth";
+import { authedApi, authorizedFetch } from "./auth";
 import { CTS_API_BASE_URL } from "./api";
 import type { RefundRow } from "../pages/dashboard/Refund/tickets-table/columns";
 
@@ -176,7 +176,7 @@ export function createRefund(input: CreateRefundInput) {
 }
 
 export async function downloadRefundAttachment(attachmentId: number, fileName: string) {
-  const response = await fetch(
+  const response = await authorizedFetch(
     `${CTS_API_BASE_URL}/api/refunds/attachments/${attachmentId}`,
     { credentials: "include" }
   );
