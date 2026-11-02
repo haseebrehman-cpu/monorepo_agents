@@ -196,6 +196,13 @@ export interface SupportOrder {
   items: SupportOrderItem[];
 }
 
+export interface SupportTrackingEvent {
+  time: string | null;
+  status: string;
+  location?: string | null;
+  milestone?: string | null;
+}
+
 export interface SupportShipment {
   status?: string | null;
   shipped?: string | null;
@@ -207,6 +214,10 @@ export interface SupportShipment {
   tracking_links: string[];
   items: { title: string; quantity: number }[];
   source?: string | null;
+  /** Ship24 milestone, e.g. `in_transit`, `out_for_delivery`, `delivered`. */
+  status_milestone?: string | null;
+  /** Newest first. */
+  latest_events?: SupportTrackingEvent[];
 }
 
 export interface SupportTracking {
