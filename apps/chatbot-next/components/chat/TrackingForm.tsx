@@ -1,72 +1,24 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type {
   SupportOrder,
-  SupportOrderStatus,
   SupportShipment,
   SupportStoreCode,
   SupportTracking,
 } from "@rdx/chat-contract";
 import { cn } from "@rdx/ui/lib/utils";
 import { useOrderLookup } from "@/lib/api/use-order-lookup";
-import { formatDate, formatMoney } from "@/lib/chat/format";
+import { formatDate, formatDateTime, formatMoney } from "@/lib/chat/format";
 import { isSafeHref } from "@/lib/chat/links";
 import { cardClass, primaryButtonClass, secondaryButtonClass } from "./form-styles";
-import { BoxIcon, CheckIcon, ExternalIcon } from "./icons";
+import { BoxIcon, ExternalIcon } from "./icons";
 import Spinner from "./Spinner";
 import TextField from "./TextField";
-
-const STAGES = ["Placed", "Preparing", "Shipped", "Delivered"] as const;
-
-const STAGE_INDEX: Record<SupportOrderStatus, number> = {
-  "not shipped yet": 0,
-  "on hold": 0,
-  "being prepared": 1,
-  "partly shipped": 2,
-  shipped: 2,
-  delivered: 3,
-  cancelled: -1,
-};
-
-function StageProgress({ status }: { status: string }) {
-  const current = STAGE_INDEX[status as SupportOrderStatus] ?? 0;
-  if (current < 0) return null;
-  return (
-    <ol className="mt-3 grid grid-cols-4" aria-label="Order progress">
-      {STAGES.map((label, index) => {
-        const done = index <= current;
-        return (
-          <li key={label} className="flex flex-col items-center gap-1 text-center">
-            <span className="flex w-full items-center">
-              <span className={cn("h-0.5 flex-1", index === 0 ? "invisible" : done ? "bg-rdx-red" : "bg-neutral-200")} />
-              <span
-                className={cn(
-                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
-                  done ? "bg-rdx-red text-white" : "border border-neutral-300 bg-white",
-                )}
-              >
-                {done && <CheckIcon className="h-3 w-3" strokeWidth={3} />}
-              </span>
-              <span
-                className={cn(
-                  "h-0.5 flex-1",
-                  index === STAGES.length - 1 ? "invisible" : index < current ? "bg-rdx-red" : "bg-neutral-200",
-                )}
-              />
-            </span>
-            <span className={cn("text-[10px] font-medium", done ? "text-neutral-900" : "text-neutral-400")}>
-              {label}
-            </span>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
 
 function ShipmentCard({ shipment, index, total }: { shipment: SupportShipment; index: number; total: number }) {
   const links = shipment.tracking_links.filter(isSafeHref);
   const eta = formatDate(shipment.estimated_delivery);
   const delivered = formatDate(shipment.delivered);
+  const events = shipment.latest_events ?? [];
   return (
     <section className="mt-2 rounded-lg bg-neutral-50 px-2.5 py-2 text-xs text-neutral-700">
       <p className="font-semibold text-neutral-900">
@@ -78,8 +30,26 @@ function ShipmentCard({ shipment, index, total }: { shipment: SupportShipment; i
           {number}
         </p>
       ))}
-      {eta && <p className="mt-0.5">Estimated delivery {eta}</p>}
+      {!delivered && eta && <p className="mt-0.5">Estimated delivery {eta}</p>}
       {delivered && <p className="mt-0.5">Delivered {delivered}</p>}
+      {events.length > 0 && (
+        <ol className="mt-2 space-y-1.5 border-l border-neutral-200 pl-3" aria-label="Tracking updates">
+          {events.map((event, eventIndex) => (
+            <li key={`${event.time ?? ""}-${eventIndex}`} className="relative">
+              <span
+                className={cn(
+                  "absolute top-1 -left-[15.5px] h-2 w-2 rounded-full",
+                  eventIndex === 0 ? "bg-rdx-red" : "bg-neutral-300",
+                )}
+              />
+              <p className={cn(eventIndex === 0 ? "font-medium text-neutral-900" : "text-neutral-600")}>
+                {event.status}
+              </p>
+              {event.time && <p className="text-[10px] text-neutral-400">{formatDateTime(event.time)}</p>}
+            </li>
+          ))}
+        </ol>
+      )}
       {links.map((href) => (
         <a
           key={href}
@@ -98,6 +68,8 @@ function ShipmentCard({ shipment, index, total }: { shipment: SupportShipment; i
 function OrderCard({ order, tracking }: { order: SupportOrder; tracking: SupportTracking | null }) {
   const placed = formatDate(order.placed);
   const shipments = tracking?.shipments ?? [];
+  const carrierStatus = shipments.length === 1 ? shipments[0].status : null;
+  const heading = order.cancelled ? "Cancelled" : (carrierStatus ?? order.status);
   return (
     <article className="rounded-xl border border-neutral-200 bg-white p-3">
       <div className="flex items-start justify-between gap-2">
@@ -106,7 +78,7 @@ function OrderCard({ order, tracking }: { order: SupportOrder; tracking: Support
             Order {order.order_number}
           </p>
           <p className="mt-0.5 text-[15px] font-semibold text-neutral-900 first-letter:uppercase">
-            {order.cancelled ? "Cancelled" : order.status}
+            {heading}
           </p>
           <p className="text-[11px] text-neutral-500">
             {[placed && `Placed ${placed}`, order.total && formatMoney(order.total.amount, order.total.currency)]
@@ -118,8 +90,6 @@ function OrderCard({ order, tracking }: { order: SupportOrder; tracking: Support
           <BoxIcon />
         </span>
       </div>
-
-      {!order.cancelled && <StageProgress status={order.status} />}
 
       {shipments.map((shipment, index) => (
         <ShipmentCard key={index} shipment={shipment} index={index} total={shipments.length} />
@@ -147,17 +117,35 @@ interface TrackingFormProps {
   store: SupportStoreCode;
   initialOrderNumber?: string | null;
   disabled: boolean;
-  onAskAgent: (message: string) => void;
+  onSubmitDetails: (message: string) => void;
 }
 
-export default function TrackingForm({ store, initialOrderNumber, disabled, onAskAgent }: TrackingFormProps) {
+export default function TrackingForm({ store, initialOrderNumber, disabled, onSubmitDetails }: TrackingFormProps) {
   const [orderNumber, setOrderNumber] = useState(initialOrderNumber ?? "");
   const [contact, setContact] = useState("");
   const { lookup, clear, submitted, result, isLoading, error } = useOrderLookup(store);
+  const pending = useRef<{ orderNumber: string; contact: string } | null>(null);
+
+  // The chat message must wait for the lookup: the API rejects a new message
+  // with `conversation_busy` while the lookup holds the conversation.
+  useEffect(() => {
+    const details = pending.current;
+    if (!details || !submitted || isLoading || disabled) return;
+    if (submitted.orderNumber !== details.orderNumber || (submitted.email ?? submitted.postcode) !== details.contact) {
+      return;
+    }
+    if (!result && !error) return;
+    pending.current = null;
+    if (result?.verified) {
+      const contactLabel = submitted.email ? "Email" : "Postcode";
+      onSubmitDetails(`Order number: ${details.orderNumber}\n${contactLabel}: ${details.contact}`);
+    }
+  }, [submitted, result, error, isLoading, disabled, onSubmitDetails]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isLoading) return;
+    pending.current = { orderNumber: orderNumber.trim(), contact: contact.trim() };
     void lookup(orderNumber, contact);
   };
 
@@ -165,26 +153,16 @@ export default function TrackingForm({ store, initialOrderNumber, disabled, onAs
     return (
       <div className="mt-3 space-y-2">
         <OrderCard order={result.order} tracking={result.tracking} />
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              clear();
-              setOrderNumber("");
-            }}
-            className={secondaryButtonClass}
-          >
-            Track another
-          </button>
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => onAskAgent(`I have a question about order ${result.order.order_number}`)}
-            className={secondaryButtonClass}
-          >
-            Ask about it
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => {
+            clear();
+            setOrderNumber("");
+          }}
+          className={secondaryButtonClass}
+        >
+          Track another
+        </button>
       </div>
     );
   }

@@ -31,6 +31,20 @@ export function formatDate(value: string | null | undefined): string | null {
   return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date);
 }
 
+const dateTimeFormatter = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+/** Formats an ISO timestamp (`2026-10-31T10:01:00`) as `31 Oct, 10:01`. Unparseable values are shown as sent. */
+export function formatDateTime(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : dateTimeFormatter.format(date);
+}
+
 export function createId(prefix = "msg"): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return `${prefix}_${crypto.randomUUID()}`;
