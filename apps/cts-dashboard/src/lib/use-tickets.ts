@@ -65,6 +65,8 @@ export function useTickets(
     queryKey: ["tickets", applied, pagination],
     queryFn: async () => (await listTickets(filters, pagination)).data,
     placeholderData: keepPreviousData,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
   });
 }
 

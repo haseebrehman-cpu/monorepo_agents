@@ -45,6 +45,8 @@ export function useResends(filters: ResendListFilters, pagination: ResendListPar
     queryKey: ["resends", applied, pagination],
     queryFn: async () => (await listResends(filters, pagination)).data,
     placeholderData: keepPreviousData,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
   });
 }
 

@@ -60,7 +60,7 @@ const Resend = () => {
           columns={resendColumns}
           data={resendsQuery.data?.items ?? []}
           label="Resends"
-          loading={resendsQuery.isFetching}
+          loading={resendsQuery.isLoading || resendsQuery.isPlaceholderData}
           rowCount={resendsQuery.data?.total ?? 0}
           paginationModel={paginationModel}
           onPaginationModelChange={setPaginationModel}

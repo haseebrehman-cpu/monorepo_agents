@@ -14,7 +14,7 @@ const validResend = {
   reason: "Damaged",
   tags: "Priority",
   accountable: "Warehouse",
-  itemReturned: "No",
+  itemReturned: "false",
   buyerComment: "Box was crushed",
   comment: "Send a replacement",
   issueListing: "false",

@@ -38,7 +38,7 @@ export const createResendSchema = z.object({
   reason: requiredText,
   tags: requiredText,
   accountable: requiredText,
-  itemReturned: requiredText,
+  itemReturned: z.preprocess(formBoolean, z.boolean()),
   buyerComment: requiredText,
   comment: requiredText,
   issueListing: z.preprocess(formBoolean, z.boolean()),

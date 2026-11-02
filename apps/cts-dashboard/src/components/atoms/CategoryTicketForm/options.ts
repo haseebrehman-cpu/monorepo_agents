@@ -23,5 +23,4 @@ export const ACCOUNTABLE_OPTIONS = [
   "Factory",
   "Customer Service",
 ];
-export const ITEM_RETURNED_OPTIONS = ["Yes", "No"];
 export const CURRENCY_OPTIONS = ["GBP", "USD", "EUR"];
