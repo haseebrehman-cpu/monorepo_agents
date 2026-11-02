@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { ROLE } from "../config/features.js";
 import { env } from "../config/env.js";
+import { findChatbotServiceAccount } from "./service-account.js";
 import { loadUserAccess } from "./access.js";
 import {
   isSessionPayload,
@@ -9,6 +10,7 @@ import {
   readSessionToken,
   type SessionPayload,
 } from "./auth-session.js";
+import { readBearerToken, serviceTokensMatch } from "./bearer-token.js";
 
 export type AuthUser = {
   userId: number;
@@ -30,11 +32,25 @@ export async function authenticate(
   res: Response,
   next: NextFunction
 ) {
-  const token = readSessionToken(req);
-  if (!token) {
-    return res.status(401).json({ success: false, error: "NO_TOKEN" });
+  const sessionToken = readSessionToken(req);
+  if (sessionToken) {
+    return authenticateSession(sessionToken, req, res, next);
   }
 
+  const serviceToken = readBearerToken(req.headers.authorization);
+  if (serviceToken) {
+    return authenticateServiceAccount(serviceToken, req, res, next);
+  }
+
+  return res.status(401).json({ success: false, error: "NO_TOKEN" });
+}
+
+async function authenticateSession(
+  token: string,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   let payload: SessionPayload;
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: [JWT_ALGORITHM] });
@@ -60,6 +76,43 @@ export async function authenticate(
     };
   } catch (error) {
     console.error("[authenticate] failed to load user access:", error);
+    return res.status(500).json({ success: false, error: "INTERNAL_SERVER_ERROR" });
+  }
+
+  next();
+}
+
+async function authenticateServiceAccount(
+  presented: string,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  if (!env.CHATBOT_SERVICE_TOKEN || !serviceTokensMatch(presented, env.CHATBOT_SERVICE_TOKEN)) {
+    return res.status(401).json({ success: false, error: "INVALID_TOKEN" });
+  }
+
+  try {
+    const account = await findChatbotServiceAccount();
+    if (!account) {
+      return res.status(401).json({ success: false, error: "SERVICE_ACCOUNT_UNAVAILABLE" });
+    }
+
+    const access = await loadUserAccess(account.id);
+    if (!access.isActive) {
+      return res.status(401).json({ success: false, error: "USER_INACTIVE" });
+    }
+
+    // Logout bumps session_version for dashboard cookies. This token stays valid
+    // until it is rotated or the service user is deactivated.
+    req.user = {
+      userId: account.id,
+      email: account.email,
+      roles: access.roles,
+      permissions: access.permissions,
+    };
+  } catch (error) {
+    console.error("[authenticate] failed to load service account:", error);
     return res.status(500).json({ success: false, error: "INTERNAL_SERVER_ERROR" });
   }
 

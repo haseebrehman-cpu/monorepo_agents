@@ -3,7 +3,10 @@ import { authService } from "./auth.service.js";
 import { loginSchema } from "./auth.schema.js";
 import {
     clearSessionCookieOptions,
+    REFRESH_COOKIE_NAME,
     SESSION_COOKIE_NAME,
+    readCookie,
+    refreshCookieOptions,
     sessionCookieOptions,
 } from "../../core/auth-session.js";
 import { createAttemptLimiter } from "../../core/rate-limit.js";
@@ -30,7 +33,7 @@ export const authController = {
         try {
             const result = await authService.login(parsed.data);
             loginLimiter.reset(limiterKey);
-            res.cookie(SESSION_COOKIE_NAME, result.token, sessionCookieOptions);
+            setAuthCookies(res, result.token, result.refreshToken);
             return res.status(200).json({
                 success: true,
                 data: { user: result.user },
@@ -48,10 +51,32 @@ export const authController = {
         }
     },
 
+    async refresh(req: Request, res: Response) {
+        const refreshToken = readCookie(req, REFRESH_COOKIE_NAME);
+        if (!refreshToken) {
+            return res.status(401).json({ success: false, error: "INVALID_REFRESH_TOKEN" });
+        }
+
+        try {
+            const tokens = await authService.refresh(refreshToken);
+            setAuthCookies(res, tokens.token, tokens.refreshToken);
+            return res.json({ success: true });
+        } catch (e: any) {
+            if (e.message === "INVALID_REFRESH_TOKEN" || e.message === "User is not active") {
+                return res.status(401).json({
+                    success: false,
+                    error: e.message === "User is not active" ? "USER_INACTIVE" : "INVALID_REFRESH_TOKEN",
+                });
+            }
+            console.error("[auth.refresh] failed:", e);
+            return res.status(500).json({ success: false, error: "INTERNAL_SERVER_ERROR" });
+        }
+    },
+
     async logout(req: Request, res: Response) {
         try {
             await authService.logout(req.user!.userId);
-            res.clearCookie(SESSION_COOKIE_NAME, clearSessionCookieOptions);
+            clearAuthCookies(res);
             return res.json({ success: true });
         } catch (e: any) {
             if (e.message === "USER_NOT_FOUND") {
@@ -72,4 +97,14 @@ export const authController = {
             return res.status(500).json({ success: false, error: "SERVER_ERROR" });
         }
     }
+}
+
+function setAuthCookies(res: Response, sessionToken: string, refreshToken: string) {
+    res.cookie(SESSION_COOKIE_NAME, sessionToken, sessionCookieOptions);
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions);
+}
+
+function clearAuthCookies(res: Response) {
+    res.clearCookie(SESSION_COOKIE_NAME, clearSessionCookieOptions);
+    res.clearCookie(REFRESH_COOKIE_NAME, clearSessionCookieOptions);
 }

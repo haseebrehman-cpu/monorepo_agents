@@ -1,4 +1,4 @@
-import { authedApi } from "./auth";
+import { authedApi, authorizedFetch } from "./auth";
 import { CTS_API_BASE_URL } from "./api";
 import type { ResendRow } from "../pages/dashboard/Resend/tickets-table/columns";
 
@@ -169,7 +169,7 @@ export function createResend(input: CreateResendInput) {
 }
 
 export async function downloadResendAttachment(attachmentId: number, fileName: string) {
-  const response = await fetch(
+  const response = await authorizedFetch(
     `${CTS_API_BASE_URL}/api/resends/attachments/${attachmentId}`,
     { credentials: "include" }
   );

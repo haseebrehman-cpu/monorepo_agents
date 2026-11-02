@@ -1,4 +1,4 @@
-import { authedApi } from "./auth";
+import { authedApi, authorizedFetch } from "./auth";
 import { CTS_API_BASE_URL } from "./api";
 import type { Ticket } from "../pages/dashboard/CTS/tickets-table/columns";
 
@@ -222,7 +222,7 @@ export function addTicketReply(ticketId: string, input: CreateReplyInput) {
 }
 
 export async function downloadTicketAttachment(attachmentId: number, fileName: string) {
-  const response = await fetch(
+  const response = await authorizedFetch(
     `${CTS_API_BASE_URL}/api/tickets/attachments/${attachmentId}`,
     { credentials: "include" }
   );

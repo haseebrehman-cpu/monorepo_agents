@@ -1,5 +1,6 @@
 import { ApiError } from "@rdx/api-client";
 import { createCtsApi, ctsApi } from "./api";
+import { createRefreshGate } from "./refresh-gate";
 import {
   getHomePath as homePathForUser,
   isAdminUser as hasAdminRole,
@@ -71,17 +72,56 @@ function handleUnauthorized(): void {
   }
 }
 
+const refreshSession = createRefreshGate(() =>
+  ctsApi.request<{ success: true }>("/api/auth/refresh", { method: "POST" }).then(() => undefined)
+);
+
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === "string") return input;
+  if (input instanceof URL) return input.href;
+  return input.url;
+}
+
+async function isTerminalAuthFailure(response: Response): Promise<boolean> {
+  try {
+    const body = await response.clone().json();
+    return body?.error === "SESSION_REVOKED" || body?.error === "USER_INACTIVE";
+  } catch {
+    return false;
+  }
+}
+
+export async function authorizedFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+  fetchImpl: typeof fetch = fetch
+): Promise<Response> {
+  const response = await fetchImpl(input, init);
+  if (response.status !== 401 || requestUrl(input).includes("/api/auth/refresh")) {
+    return response;
+  }
+  if (await isTerminalAuthFailure(response)) {
+    handleUnauthorized();
+    return response;
+  }
+
+  try {
+    await refreshSession();
+  } catch {
+    handleUnauthorized();
+    return response;
+  }
+
+  const retry = await fetchImpl(input, init);
+  if (retry.status === 401) handleUnauthorized();
+  return retry;
+}
+
 export function authedApi() {
   const api = createCtsApi();
   const fetchRequest = api.fetch;
 
-  return createCtsApi(async (input, init) => {
-    const response = await fetchRequest(input, init);
-    if (response.status === 401) {
-      handleUnauthorized();
-    }
-    return response;
-  });
+  return createCtsApi((input, init) => authorizedFetch(input, init, fetchRequest));
 }
 
 export function login(input: LoginInput): Promise<LoginResponse> {
