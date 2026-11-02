@@ -7,6 +7,8 @@ export const ALLOWED_ATTACHMENT_TYPES = new Set([
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 export const MAX_ATTACHMENTS = 10;
 
+export const DEFAULT_TICKET_STATUS = "Not Started";
+
 export const MAX_BULK_FILE_BYTES = 5 * 1024 * 1024;
 export const MAX_BULK_TICKET_ROWS = 500;
 export const ALLOWED_BULK_FILE_EXTENSIONS = new Set([".csv", ".xls", ".xlsx"]);

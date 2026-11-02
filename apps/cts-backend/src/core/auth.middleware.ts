@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { ROLE } from "../config/features.js";
 import { env } from "../config/env.js";
-import { findChatbotServiceAccount } from "./service-account.js";
+import { findChatbotServiceAccount, isChatbotServiceEmail } from "./service-account.js";
 import { loadUserAccess } from "./access.js";
 import {
   isSessionPayload,
@@ -17,6 +17,8 @@ export type AuthUser = {
   email: string;
   roles: string[];
   permissions: string[];
+  // The chatbot submits free-text answers, so dropdown fields are not limited to lookup values.
+  isChatbot: boolean;
 };
 
 declare global {
@@ -73,6 +75,7 @@ async function authenticateSession(
       email: payload.email,
       roles: access.roles,
       permissions: access.permissions,
+      isChatbot: isChatbotServiceEmail(payload.email),
     };
   } catch (error) {
     console.error("[authenticate] failed to load user access:", error);
@@ -110,6 +113,7 @@ async function authenticateServiceAccount(
       email: account.email,
       roles: access.roles,
       permissions: access.permissions,
+      isChatbot: true,
     };
   } catch (error) {
     console.error("[authenticate] failed to load service account:", error);

@@ -131,7 +131,9 @@ export const resendsController = {
     }
 
     try {
-      const resend = await resendsService.create(parsed.data, req.user.userId, files);
+      const resend = await resendsService.create(parsed.data, req.user.userId, files, {
+        allowCustomLookups: req.user.isChatbot,
+      });
       return res.status(201).json({ success: true, data: resend });
     } catch (error) {
       const message = error instanceof Error ? error.message : "";

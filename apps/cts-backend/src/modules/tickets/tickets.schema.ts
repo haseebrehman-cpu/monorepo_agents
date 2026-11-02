@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DEFAULT_TICKET_STATUS } from "./tickets.constants.js";
 
 function emptyToUndefined(value: unknown) {
   if (value === "" || value === undefined) return undefined;
@@ -18,8 +19,8 @@ export const createTicketSchema = z.object({
   comment: z.preprocess(emptyToUndefined, z.string().optional().default("")),
   assignedDepartmentId: z.preprocess(emptyToNull, z.coerce.number().int().positive().nullable()),
   status: z.preprocess(
-    emptyToUndefined,
-    z.string().trim().optional().default("Not Started")
+    (value) => emptyToUndefined(typeof value === "string" ? value.trim() : value ?? undefined),
+    z.string().optional().default(DEFAULT_TICKET_STATUS)
   ),
 });
 

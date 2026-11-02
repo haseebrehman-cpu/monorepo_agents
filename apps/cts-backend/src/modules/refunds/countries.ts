@@ -20,10 +20,13 @@ export function listCountries() {
   return cachedCountries;
 }
 
-export function canonicalCountry(value: string) {
+export function canonicalCountry(value: string, allowCustom = false) {
   const match = listCountries().find(
     (country) => country.toLowerCase() === value.trim().toLowerCase()
   );
-  if (!match) throw new Error("INVALID_COUNTRY");
+  if (!match) {
+    if (allowCustom) return value.trim();
+    throw new Error("INVALID_COUNTRY");
+  }
   return match;
 }

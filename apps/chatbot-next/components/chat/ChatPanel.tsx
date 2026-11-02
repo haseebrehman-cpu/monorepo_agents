@@ -119,7 +119,7 @@ export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose
         "group/panel animate-rdx-pop fixed z-50 flex flex-col overflow-hidden bg-white text-left shadow-[0_30px_80px_-20px_rgba(0,0,0,0.55)] ring-1 ring-black/10 transition-[inset,width,height,border-radius] duration-300",
         expanded
           ? "inset-0 rounded-none sm:inset-6 sm:rounded-3xl"
-          : "right-3 bottom-24 left-3 h-[min(680px,calc(100dvh-7.5rem))] rounded-3xl sm:right-5 sm:left-auto sm:w-[420px]",
+          : "right-3 bottom-24 left-3 h-[min(680px,calc(100dvh-7.5rem))] rounded-3xl sm:right-5 sm:left-auto sm:w-[min(560px,calc(100vw-2.5rem))]",
       )}
     >
       <ChatHeader

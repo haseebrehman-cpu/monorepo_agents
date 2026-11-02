@@ -50,14 +50,17 @@ export const refundLookupsService = {
     return grouped;
   },
 
-  async assertActive(kind: RefundLookupKind, label: string) {
+  async assertActive(kind: RefundLookupKind, label: string, allowCustom = false) {
     const { rows } = await pool.query(
       `SELECT label
        FROM refund_lookups
        WHERE kind = $1 AND lower(label) = lower($2) AND is_active = TRUE`,
       [kind, label]
     );
-    if (!rows.length) throw new Error(REFUND_LOOKUP_ERRORS[kind]);
+    if (!rows.length) {
+      if (allowCustom) return label.trim();
+      throw new Error(REFUND_LOOKUP_ERRORS[kind]);
+    }
     return rows[0].label as string;
   },
 

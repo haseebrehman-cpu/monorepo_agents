@@ -51,7 +51,7 @@ export const ticketLookupsService = {
     return { couriers, issues, statuses, closedStatuses };
   },
 
-  async assertActive(kind: TicketLookupKind, label: string) {
+  async assertActive(kind: TicketLookupKind, label: string, allowCustom = false) {
     const { rows } = await pool.query(
       `SELECT label, is_closed
        FROM ticket_lookups
@@ -59,6 +59,7 @@ export const ticketLookupsService = {
       [kind, label]
     );
     if (!rows.length) {
+      if (allowCustom) return { label: label.trim(), isClosed: false };
       const errors: Record<TicketLookupKind, string> = {
         courier: "INVALID_COURIER",
         issue: "INVALID_ISSUE",
