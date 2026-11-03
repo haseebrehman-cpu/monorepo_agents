@@ -1,5 +1,4 @@
 import type { Client, PoolClient } from "pg";
-import { createDbClient } from "../../core/db.js";
 import { EVENTS_CHANNEL, MAX_EVENT_IDS } from "./live-chat.constants.js";
 
 /** Carries ids only. Desks refetch through the permission-checked API. */
@@ -105,6 +104,8 @@ function createDeskEventHub() {
   async function ensureListening() {
     if (listener || connecting || subscribers.size === 0) return connecting ?? undefined;
     connecting = (async () => {
+      // Loaded on first subscriber so importing this module does not require a database.
+      const { createDbClient } = await import("../../core/db.js");
       const client = createDbClient();
       client.on("notification", (message) => {
         if (message.channel !== EVENTS_CHANNEL) return;
