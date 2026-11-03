@@ -73,8 +73,15 @@ export function useDeskConversations(enabled: boolean) {
   });
 }
 
+export type DeskTranscripts = {
+  byId: Map<string, LiveConversation>;
+  /** Open chats whose transcript has not arrived yet. */
+  loadingIds: Set<string>;
+  failedIds: Set<string>;
+};
+
 /** Full transcripts for the chats on screen. */
-export function useDeskConversationDetails(ids: string[]) {
+export function useDeskConversationDetails(ids: string[]): DeskTranscripts {
   return useQueries({
     queries: ids.map((id) => ({
       queryKey: liveChatKeys.conversation(id),
@@ -84,8 +91,16 @@ export function useDeskConversationDetails(ids: string[]) {
     })),
     combine: (results) => {
       const byId = new Map<string, LiveConversation>();
-      for (const result of results) if (result.data) byId.set(result.data.id, result.data);
-      return byId;
+      const loadingIds = new Set<string>();
+      const failedIds = new Set<string>();
+      results.forEach((result, index) => {
+        const id = ids[index];
+        if (!id) return;
+        if (result.data) byId.set(result.data.id, result.data);
+        if (!result.data && result.isError && !result.isFetching) failedIds.add(id);
+        else if (!result.data) loadingIds.add(id);
+      });
+      return { byId, loadingIds, failedIds };
     },
   });
 }

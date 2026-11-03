@@ -8,9 +8,9 @@ export interface ChatActions {
   store: SupportStoreCode;
   isTyping: boolean;
   send: (text: string, options?: SendOptions) => void;
-  addToBag: (product: SupportProduct) => void;
+  addToBag: (product: SupportProduct, variantId: string) => void;
   viewProduct: (product: SupportProduct) => void;
-  quantityInBag: (productId: string) => number;
+  quantityInBag: (variantId: string) => number;
 }
 
 const ChatActionsContext = createContext<ChatActions | null>(null);

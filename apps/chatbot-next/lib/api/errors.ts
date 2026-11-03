@@ -1,7 +1,7 @@
 import { ApiError, supportRequestId } from "@rdx/api-client";
 import type { SupportErrorCode } from "@rdx/chat-contract";
 
-export type ErrorContext = "message" | "lookup" | "event" | "conversation";
+export type ErrorContext = "message" | "lookup" | "event" | "conversation" | "cart";
 
 const MESSAGE_COPY: Partial<Record<SupportErrorCode, string>> = {
   conversation_busy: "I'm still working on your last message. Please wait a moment.",
@@ -10,6 +10,14 @@ const MESSAGE_COPY: Partial<Record<SupportErrorCode, string>> = {
   rate_limited: "You're sending messages quickly. Please wait a moment and try again.",
   upstream_unavailable: "Our assistant is temporarily unavailable. Please try again shortly.",
   internal_error: "Something went wrong on our side. Please try again.",
+};
+
+const CART_COPY: Partial<Record<SupportErrorCode, string>> = {
+  cart_rejected: "That item can't be added. It may be unavailable or not for sale.",
+  cart_unavailable: "The store checkout is temporarily unavailable. Please try again shortly.",
+  invalid_request: "That item couldn't be updated. Please try another size.",
+  conversation_not_found: "Your bag expired. Please add the item again.",
+  store_mismatch: "This bag belongs to another store. Please add the item again.",
 };
 
 const LOOKUP_COPY: Partial<Record<SupportErrorCode, string>> = {
@@ -41,14 +49,21 @@ export function retryAfterMs(error: unknown, fallbackSeconds = 2): number {
 /** Customer-facing wording chosen by `error.code`, never by the server's message. */
 export function friendlyError(error: unknown, context: ErrorContext = "message"): string {
   const code = errorCode(error) as SupportErrorCode | undefined;
-  const copy = context === "lookup" ? { ...MESSAGE_COPY, ...LOOKUP_COPY } : MESSAGE_COPY;
+  const copy =
+    context === "lookup"
+      ? { ...MESSAGE_COPY, ...LOOKUP_COPY }
+      : context === "cart"
+        ? { ...MESSAGE_COPY, ...CART_COPY }
+        : MESSAGE_COPY;
   if (code && copy[code]) return copy[code]!;
   if (error instanceof TypeError) {
-    return "We couldn't reach the assistant. Check your connection and try again.";
+    return context === "cart"
+      ? "We couldn't reach the store. Check your connection and try again."
+      : "We couldn't reach the assistant. Check your connection and try again.";
   }
-  return context === "lookup"
-    ? "We couldn't check that order right now. Please try again."
-    : "Something went wrong. Please try again.";
+  if (context === "lookup") return "We couldn't check that order right now. Please try again.";
+  if (context === "cart") return "We couldn't update your bag. Please try again.";
+  return "Something went wrong. Please try again.";
 }
 
 export function reportError(error: unknown, context: ErrorContext): string | undefined {

@@ -39,7 +39,9 @@ import {
 } from "./stream";
 import {
   SUPPORT_MESSAGE_MAX_CHARS,
+  addSupportCartItem,
   createSupportApi,
+  getSupportCart,
   getSupportHealth,
   listPageEvents,
   lookupOrder,
@@ -48,6 +50,7 @@ import {
   startConversation,
   streamSupportMessage,
   supportRequestId,
+  updateSupportCartItem,
   type SupportApi,
   type SupportStreamHandlers,
 } from "./support";
@@ -102,7 +105,9 @@ export {
   createSession,
   verifyOrder,
   SUPPORT_MESSAGE_MAX_CHARS,
+  addSupportCartItem,
   createSupportApi,
+  getSupportCart,
   getSupportHealth,
   listPageEvents,
   lookupOrder,
@@ -111,6 +116,7 @@ export {
   startConversation,
   streamSupportMessage,
   supportRequestId,
+  updateSupportCartItem,
 };
 export type {
   ApiClient,

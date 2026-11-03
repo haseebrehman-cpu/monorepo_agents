@@ -32,10 +32,10 @@ export function ReplyBody({ reply, isLatest }: AssistantReplyProps) {
       <Markdown content={reply.text} />
       {reply.handoff && <HandoffNotice reference={reply.handoff.reference} />}
 
-      {reply.type === "action" && reply.action?.name === "track_order" && (
+      {reply.type === "action" && reply.intent?.label === "track_order" && (
         <TrackingForm
           store={store}
-          initialOrderNumber={reply.action.order_number}
+          initialOrderNumber={reply?.action?.order_number}
           disabled={isTyping}
           onSubmitDetails={(message) => send(message)}
         />
@@ -49,9 +49,16 @@ export function ReplyBody({ reply, isLatest }: AssistantReplyProps) {
         />
       )}
 
-      {reply.type === "input_request" && reply.input && isLatest && (
-        <InputRequestForm input={reply.input} disabled={isTyping} onAnswer={(text) => send(text)} />
-      )}
+      {reply.input &&
+        isLatest &&
+        (reply.type === "input_request" || reply.intent?.label === "human_handoff") && (
+          <InputRequestForm
+            input={reply.input}
+            handoff={reply.intent?.label === "human_handoff"}
+            disabled={isTyping}
+            onAnswer={(text) => send(text)}
+          />
+        )}
 
       {reply.sources && reply.sources.length > 0 && <SourceList sources={reply.sources} />}
     </>
@@ -69,7 +76,7 @@ export function ReplyProducts({ reply }: { reply: SupportReply }) {
         <ProductCard
           key={product.product_id}
           product={product}
-          quantityInBag={quantityInBag(product.product_id)}
+          quantityInBag={quantityInBag}
           onAdd={addToBag}
           onView={viewProduct}
         />

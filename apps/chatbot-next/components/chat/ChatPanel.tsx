@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SupportProduct, SupportStoreCode } from "@rdx/chat-contract";
 import { cn } from "@rdx/ui/lib/utils";
+import { friendlyError } from "@/lib/api/errors";
+import { useSupportCart } from "@/lib/api/use-cart";
 import { usePageEvent } from "@/lib/api/use-page-event";
-import { useBag } from "@/lib/bag/bag-store";
 import { STORE_NAME } from "@/lib/chat/constants";
 import { isHome } from "@/lib/chat/transcript";
 import { useSupportChat } from "@/lib/chat/use-support-chat";
@@ -22,14 +23,14 @@ interface ChatPanelProps {
   onClose: () => void;
 }
 
-function productEventData(product: Pick<SupportProduct, "product_id" | "title">, quantity?: number) {
-  return { product_id: product.product_id, title: product.title, ...(quantity ? { quantity } : {}) };
+function productEventData(product: Pick<SupportProduct, "product_id" | "title">) {
+  return { product_id: product.product_id, title: product.title };
 }
 
 export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose }: ChatPanelProps) {
   const chat = useSupportChat(store);
-  const bag = useBag(store);
-  const { track, conversationId } = usePageEvent(store, chat.pendingInput !== null);
+  const bag = useSupportCart(store);
+  const { track } = usePageEvent(store, chat.pendingInput !== null);
   const [input, setInput] = useState("");
   const [bagOpen, setBagOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -49,52 +50,57 @@ export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose
     if (!bagOpen) inputRef.current?.focus();
   }, [bagOpen]);
 
+  const { refresh } = bag;
+  useEffect(() => {
+    if (bagOpen) void refresh();
+  }, [bagOpen, refresh]);
+
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(null), 3000);
     return () => clearTimeout(timer);
   }, [notice]);
 
-  const { add: addLine, setQuantity, remove, lines } = bag;
+  const { cart, addItem, updateItem } = bag;
 
   const actions = useMemo<ChatActions>(
     () => ({
       store,
       isTyping,
       send,
-      addToBag: (product) => {
-        addLine(product);
-        setNotice(`${product.title} added to your bag.`);
-        track({ type: "cart_add", data: productEventData(product, 1) });
+      addToBag: (product, variantId) => {
+        void addItem({ variantId })
+          .then(() => setNotice(`${product.title} added to your bag.`))
+          .catch((error: unknown) => setNotice(friendlyError(error, "cart")));
       },
       viewProduct: (product) => track({ type: "product_viewed", data: productEventData(product) }),
-      quantityInBag: (productId) => lines.find((line) => line.productId === productId)?.quantity ?? 0,
+      quantityInBag: (variantId) =>
+        cart.items.find((line) => line.variant_id === variantId)?.quantity ?? 0,
     }),
-    [addLine, isTyping, lines, send, store, track],
+    [addItem, cart.items, isTyping, send, store, track],
   );
 
   const handleQuantity = useCallback(
-    (productId: string, quantity: number) => {
-      const line = lines.find((l) => l.productId === productId);
-      setQuantity(productId, quantity);
-      if (line) {
-        track({
-          type: "cart_update",
-          data: { product_id: productId, title: line.title, quantity },
-        });
-      }
+    (variantId: string, quantity: number) => {
+      void updateItem({ variantId, quantity }).catch((error: unknown) =>
+        setNotice(friendlyError(error, "cart")),
+      );
     },
-    [lines, setQuantity, track],
+    [updateItem],
   );
 
   const handleRemove = useCallback(
-    (productId: string) => {
-      const line = lines.find((l) => l.productId === productId);
-      remove(productId);
-      if (line) track({ type: "cart_remove", data: { product_id: productId, title: line.title } });
+    (variantId: string) => {
+      void updateItem({ variantId, quantity: 0 }).catch((error: unknown) =>
+        setNotice(friendlyError(error, "cart")),
+      );
     },
-    [lines, remove, track],
+    [updateItem],
   );
+
+  const handleCheckout = useCallback((checkoutUrl: string) => {
+    window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+  }, []);
 
   const handleSubmit = useCallback(() => {
     if (isTyping || !input.trim()) return;
@@ -127,7 +133,7 @@ export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose
         isTyping={isTyping}
         expanded={expanded}
         cartOpen={bagOpen}
-        cartCount={bag.itemCount}
+        cartCount={bag.cart.item_count}
         onToggleExpand={onToggleExpand}
         onToggleCart={() => setBagOpen((open) => !open)}
         onNewChat={handleNewChat}
@@ -149,11 +155,12 @@ export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose
 
           {bagOpen ? (
             <BagPanel
-              store={store}
-              bag={bag}
-              conversationId={conversationId}
+              cart={bag.cart}
+              isLoading={bag.isLoading}
+              pendingVariantId={bag.pendingVariantId}
               onQuantityChange={handleQuantity}
               onRemove={handleRemove}
+              onCheckout={handleCheckout}
               onClose={() => setBagOpen(false)}
             />
           ) : (
