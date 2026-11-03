@@ -14,6 +14,9 @@ export const supportKeys = {
   conversation: (store: SupportStoreCode) => [...supportKeys.all, "conversation", store] as const,
   events: (store: SupportStoreCode, conversationId: string) =>
     [...supportKeys.conversation(store), conversationId, "events"] as const,
+  cartIdle: (store: SupportStoreCode) => [...supportKeys.conversation(store), "cart"] as const,
+  cart: (store: SupportStoreCode, conversationId: string) =>
+    [...supportKeys.conversation(store), conversationId, "cart"] as const,
   orderLookupIdle: () => [...supportKeys.all, "order-lookup", "idle"] as const,
   orderLookup: (params: OrderLookupParams) =>
     [

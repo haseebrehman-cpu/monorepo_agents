@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Button, cn } from "@rdx/ui";
+import { cn } from "@rdx/ui";
 import {
   ArrowLeftIcon,
   ArrowRightLeftIcon,
@@ -13,7 +13,8 @@ import {
   XIcon,
 } from "lucide-react";
 import { CANNED, fillCanned } from "./catalog";
-import { MAX_OPEN_CHATS } from "./open-chats";
+import { ActionButton, TranscriptPlaceholder, type ChatActivity } from "./desk-feedback";
+import { MAX_FLOATING_CHATS } from "./open-chats";
 import { StatusChip } from "./ConversationList";
 import { avatarColor, formatMessageTime, formatQueueTime, initials } from "./format";
 import type { ChatMessage, ComposerMode, LiveConversation } from "./types";
@@ -42,6 +43,7 @@ export default function ConversationThread({
   onBack,
   onOpenDetails,
   onCloseChat,
+  activity,
 }: {
   conversation: LiveConversation | null;
   agentName: string;
@@ -65,6 +67,7 @@ export default function ConversationThread({
   onOpenDetails: () => void;
   /** Close this chat from the open slots (main + floating). */
   onCloseChat?: () => void;
+  activity: ChatActivity;
 }) {
   if (!conversation) {
     return (
@@ -73,8 +76,8 @@ export default function ConversationThread({
         <h2 className="mt-3 text-sm font-semibold text-slate-900">Select a chat</h2>
         <p className="mt-1 max-w-sm text-sm leading-6 text-slate-600">
           New chats are assigned automatically. Active fills up to your limit with chats you own and waiting chats assigned to you.
-          User Queue holds chats nobody has room for yet. Take over a waiting chat from Active before you reply. Open up to{" "}
-          {MAX_OPEN_CHATS} chats at once.
+          User Queue holds chats nobody has room for yet. Take over a waiting chat from Active before you reply. Active can keep{" "}
+          {MAX_FLOATING_CHATS} chats open in side windows.
         </p>
       </section>
     );
@@ -102,6 +105,7 @@ export default function ConversationThread({
       onBack={onBack}
       onOpenDetails={onOpenDetails}
       onCloseChat={onCloseChat}
+      activity={activity}
     />
   );
 }
@@ -127,6 +131,7 @@ function ThreadView({
   onBack,
   onOpenDetails,
   onCloseChat,
+  activity,
 }: {
   conversation: LiveConversation;
   agentName: string;
@@ -149,6 +154,7 @@ function ThreadView({
   onBack: () => void;
   onOpenDetails: () => void;
   onCloseChat?: () => void;
+  activity: ChatActivity;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const ownsChat = conversation.ownerId === viewerId && conversation.status === "active";
@@ -177,6 +183,12 @@ function ThreadView({
     conversation.status !== "resolved" &&
     (noteMode || ownsChat);
   const canSend = canCompose && draft.trim().length > 0 && !draft.trim().startsWith("/");
+  const { pending, actionsLocked } = activity;
+  const taking = pending?.type === "take";
+  const transferring = pending?.type === "transfer";
+  const closing = pending?.type === "resolve";
+  const reopening = pending?.type === "reopen";
+  const sending = pending?.type === "message";
 
   useEffect(() => {
     if (focusToken === 0) return;
@@ -239,26 +251,54 @@ function ThreadView({
             <PanelRightIcon className="h-4 w-4" />
           </IconAction>
           {canTransfer ? (
-            <Button size="sm" variant="outline" className="cursor-pointer" onClick={onOpenTransfer}>
+            <ActionButton
+              size="sm"
+              variant="outline"
+              pending={transferring}
+              pendingLabel="Transferring…"
+              disabled={actionsLocked}
+              onClick={onOpenTransfer}
+            >
               <ArrowRightLeftIcon className="h-3.5 w-3.5" aria-hidden="true" />
               Transfer
-            </Button>
+            </ActionButton>
           ) : null}
           {canTake ? (
-            <Button size="sm" variant="primary" className="cursor-pointer" onClick={onTake}>
+            <ActionButton
+              size="sm"
+              variant="primary"
+              pending={taking}
+              pendingLabel="Taking over…"
+              disabled={actionsLocked}
+              onClick={onTake}
+            >
               Take over
-            </Button>
+            </ActionButton>
           ) : null}
           {canClose ? (
-            <Button size="sm" variant="outline" className="cursor-pointer" onClick={onResolve}>
+            <ActionButton
+              size="sm"
+              variant="outline"
+              pending={closing}
+              pendingLabel="Closing…"
+              disabled={actionsLocked}
+              onClick={onResolve}
+            >
               Close
-            </Button>
+            </ActionButton>
           ) : null}
           {canReopen ? (
-            <Button size="sm" variant="outline" className="cursor-pointer" onClick={onReopen}>
+            <ActionButton
+              size="sm"
+              variant="outline"
+              pending={reopening}
+              pendingLabel="Reopening…"
+              disabled={actionsLocked}
+              onClick={onReopen}
+            >
               <RotateCcwIcon className="h-3.5 w-3.5" aria-hidden="true" />
               Reopen
-            </Button>
+            </ActionButton>
           ) : null}
           {onCloseChat ? (
             <button
@@ -276,16 +316,30 @@ function ThreadView({
         </div>
       </header>
 
-      <MessageList messages={conversation.messages} agentName={agentName} typing={conversation.typing} customerName={conversation.customerName} />
+      <MessageList
+        messages={conversation.messages}
+        agentName={agentName}
+        typing={conversation.typing}
+        customerName={conversation.customerName}
+        transcriptStatus={activity.transcriptStatus}
+        onRetryTranscript={activity.onRetryTranscript}
+      />
 
       <footer className="border-t border-slate-200 bg-white p-3">
         {conversation.status === "resolved" ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5 ring-1 ring-slate-200">
             <p className="text-sm text-slate-600">This chat is closed. Reopen it if the customer comes back.</p>
             {canReopen ? (
-              <Button size="sm" variant="outline" className="cursor-pointer" onClick={onReopen}>
+              <ActionButton
+                size="sm"
+                variant="outline"
+                pending={reopening}
+                pendingLabel="Reopening…"
+                disabled={actionsLocked}
+                onClick={onReopen}
+              >
                 Reopen
-              </Button>
+              </ActionButton>
             ) : null}
           </div>
         ) : (
@@ -302,9 +356,16 @@ function ThreadView({
                       : "Waiting for an agent with room. It moves into someone's Active tab when a slot opens."}
                 </p>
                 {canTake ? (
-                  <Button size="sm" variant="primary" className="cursor-pointer" onClick={onTake}>
+                  <ActionButton
+                    size="sm"
+                    variant="primary"
+                    pending={taking}
+                    pendingLabel="Taking over…"
+                    disabled={actionsLocked}
+                    onClick={onTake}
+                  >
                     Take over
-                  </Button>
+                  </ActionButton>
                 ) : null}
               </div>
             ) : conversation.status === "active" && !ownsChat ? (
@@ -314,9 +375,16 @@ function ThreadView({
                   {canTake ? "You can take it over, or leave a private note." : "They can transfer it to you. You can leave a private note."}
                 </p>
                 {canTake ? (
-                  <Button size="sm" variant="primary" className="cursor-pointer" onClick={onTake}>
+                  <ActionButton
+                    size="sm"
+                    variant="primary"
+                    pending={taking}
+                    pendingLabel="Taking over…"
+                    disabled={actionsLocked}
+                    onClick={onTake}
+                  >
                     Take over
-                  </Button>
+                  </ActionButton>
                 ) : null}
               </div>
             ) : null}
@@ -329,6 +397,8 @@ function ThreadView({
                 canSend={canSend}
                 canCompose={canCompose}
                 canTake={canTake}
+                sending={sending}
+                actionsLocked={actionsLocked}
                 onMode={setMode}
                 onDraft={onDraft}
                 onSend={() => onSend(mode)}
@@ -384,6 +454,8 @@ function Composer({
   canSend,
   canCompose,
   canTake,
+  sending,
+  actionsLocked,
   onMode,
   onDraft,
   onSend,
@@ -394,6 +466,8 @@ function Composer({
   canSend: boolean;
   canCompose: boolean;
   canTake: boolean;
+  sending: boolean;
+  actionsLocked: boolean;
   onMode: (mode: ComposerMode) => void;
   onDraft: (value: string) => void;
   onSend: () => void;
@@ -498,7 +572,7 @@ function Composer({
                 ? "Take over this chat to reply, or switch to a private note."
                 : "Take over from Active when this chat is assigned to you, or switch to a private note."
         }
-        disabled={!canCompose}
+        disabled={!canCompose || actionsLocked}
         aria-describedby="live-chat-reply-hint"
         className={cn(
           "w-full resize-none border-0 bg-transparent px-3 py-2 text-sm leading-6 outline-none placeholder:text-slate-500 disabled:bg-slate-50",
@@ -511,10 +585,17 @@ function Composer({
           {noteMode ? <StickyNoteIcon className="h-3.5 w-3.5 text-amber-600" aria-hidden="true" /> : null}
           {noteMode ? "Only agents can see private notes." : "Enter to send. Shift+Enter for a new line."}
         </p>
-        <Button type="submit" size="sm" variant="primary" className="cursor-pointer" disabled={!canSend}>
+        <ActionButton
+          type="submit"
+          size="sm"
+          variant="primary"
+          pending={sending}
+          pendingLabel={noteMode ? "Saving…" : "Sending…"}
+          disabled={!canSend || actionsLocked}
+        >
           <SendIcon className="h-4 w-4" aria-hidden="true" />
           {noteMode ? "Save note" : "Send"}
-        </Button>
+        </ActionButton>
       </div>
     </form>
   );
@@ -542,21 +623,37 @@ function MessageList({
   agentName,
   typing,
   customerName,
+  transcriptStatus,
+  onRetryTranscript,
 }: {
   messages: ChatMessage[];
   agentName: string;
   typing: boolean;
   customerName: string;
+  transcriptStatus: ChatActivity["transcriptStatus"];
+  onRetryTranscript: () => void;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
-  }, [messages, typing]);
+  }, [messages, typing, transcriptStatus]);
 
   return (
     <div aria-label="Conversation" className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-5">
-      {messages.map((message, index) => (
+      {transcriptStatus === "ready" ? (
+        messages.length === 0 ? (
+          <TranscriptPlaceholder status="empty" customerName={customerName} />
+        ) : null
+      ) : (
+        <TranscriptPlaceholder
+          status={transcriptStatus}
+          customerName={customerName}
+          onRetry={onRetryTranscript}
+        />
+      )}
+      {transcriptStatus === "ready"
+        ? messages.map((message, index) => (
         <MessageBubble
           key={message.id}
           message={message}
@@ -569,8 +666,9 @@ function MessageList({
             message.author !== "note"
           }
         />
-      ))}
-      {typing ? (
+      ))
+        : null}
+      {typing && transcriptStatus === "ready" ? (
         <p className="text-xs font-medium text-slate-500" role="status">
           {customerName} is typing…
         </p>

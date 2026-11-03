@@ -39,6 +39,18 @@ export const conversationQuery = (store: SupportStoreCode) =>
     retryDelay: (_attempt, error) => retryAfterMs(error),
   });
 
+/** The Shopify cart for this conversation. Empty, with no checkout link, before the first add. */
+export const cartQuery = (store: SupportStoreCode, conversationId: string | null) =>
+  queryOptions({
+    queryKey: conversationId ? supportKeys.cart(store, conversationId) : supportKeys.cartIdle(store),
+    queryFn: conversationId
+      ? ({ signal }) => api.support.getCart(conversationId, store, signal)
+      : skipToken,
+    staleTime: 15_000,
+    retry: shouldRetryQuery,
+    retryDelay: (_attempt, error) => retryAfterMs(error),
+  });
+
 export const pageEventsQuery = (store: SupportStoreCode, conversationId: string) =>
   queryOptions({
     queryKey: supportKeys.events(store, conversationId),

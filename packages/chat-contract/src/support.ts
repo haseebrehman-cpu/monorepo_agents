@@ -1,5 +1,5 @@
 /**
- * Contracts for the support chat API (`/v1/conversations`, `/v1/orders/lookup`).
+ * Contracts for the support chat API (`/v1/conversations`, cart, `/v1/orders/lookup`).
  * Clients must ignore fields they don't know: the API adds optional fields
  * without bumping the version.
  */
@@ -43,6 +43,16 @@ export interface SupportIntent {
   probabilities?: Record<string, number>;
 }
 
+export interface SupportVariant {
+  /** Digits only. Posted to the cart as `variant_id`. */
+  variant_id: string;
+  title?: string | null;
+  size?: string | null;
+  colour?: string | null;
+  price?: number | null;
+  available?: boolean | null;
+}
+
 export interface SupportProduct {
   product_id: string;
   title: string;
@@ -53,6 +63,8 @@ export interface SupportProduct {
   currency: string;
   available: boolean | null;
   image_url: string | null;
+  /** One entry per size and colour. Absent when the card cannot be added to the cart. */
+  variants?: SupportVariant[] | null;
 }
 
 export interface SupportSource {
@@ -97,7 +109,7 @@ export interface SupportInputField {
 export type SupportInputOption = string | { value: string; label?: string | null };
 
 export interface SupportInputRequest {
-  /** `verify_order` or `confirm_action`. */
+  /** `verify_order`, `confirm_action`, or `handoff_contact`. */
   kind: string;
   fields?: SupportInputField[] | null;
   options?: SupportInputOption[] | null;
@@ -133,6 +145,41 @@ export type SupportStreamEvent =
   | { event: "tool"; data: { tool: string; outcome: SupportToolOutcome } }
   | { event: "reply"; data: { reply: SupportReply } }
   | { event: "error"; data: SupportErrorBody };
+
+export interface SupportCartItem {
+  variant_id: string;
+  title?: string | null;
+  quantity: number;
+  /** Major units in the cart currency, such as `12.99`. */
+  price?: number | null;
+  total?: number | null;
+  image_url?: string | null;
+}
+
+/** The conversation's Shopify cart. `checkout_url` is null until the first add, and changes on every cart response. */
+export interface SupportCart {
+  cart_id?: string | null;
+  currency: string;
+  items: SupportCartItem[];
+  item_count: number;
+  subtotal: number;
+  total: number;
+  checkout_url?: string | null;
+  expires_at?: string | null;
+}
+
+export interface SupportAddCartItemRequest {
+  store: SupportStoreCode;
+  variant_id: string;
+  /** 1 to 99. Defaults to 1. Adding a variant already in the cart increases its quantity. */
+  quantity?: number;
+}
+
+export interface SupportUpdateCartItemRequest {
+  store: SupportStoreCode;
+  /** 1 to 99 sets the quantity. 0 removes the item. */
+  quantity: number;
+}
 
 export interface SupportPageEventRequest {
   store: SupportStoreCode;
@@ -243,6 +290,8 @@ export type SupportErrorCode =
   | "rate_limited"
   | "upstream_unavailable"
   | "order_lookup_unavailable"
+  | "cart_rejected"
+  | "cart_unavailable"
   | "internal_error";
 
 export interface SupportErrorBody {

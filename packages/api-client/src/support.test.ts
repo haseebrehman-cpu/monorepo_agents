@@ -141,6 +141,82 @@ describe("support api", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("reads the conversation cart for its store", async () => {
+    const cart = {
+      cart_id: null,
+      currency: "GBP",
+      items: [],
+      item_count: 0,
+      subtotal: 0,
+      total: 0,
+      checkout_url: null,
+    };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(cart));
+
+    await expect(client(fetchMock).support.getCart("a1b2c3d4e5f6", "uk")).resolves.toEqual(cart);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.com/v1/conversations/a1b2c3d4e5f6/cart?store=uk",
+      expect.anything(),
+    );
+  });
+
+  it("adds a variant and returns the cart, including its checkout link", async () => {
+    const cart = {
+      currency: "GBP",
+      items: [{ variant_id: "47346215551286", quantity: 1, price: 12.99, total: 12.99 }],
+      item_count: 1,
+      subtotal: 12.99,
+      total: 12.99,
+      checkout_url: "https://rdx-sports-store.myshopify.com/cart/c/abc?key=secret",
+    };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(cart));
+
+    const result = await client(fetchMock).support.addCartItem("a1b2c3d4e5f6", {
+      store: "uk",
+      variant_id: " 47346215551286 ",
+    });
+
+    expect(result.checkout_url).toBe(cart.checkout_url);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.com/v1/conversations/a1b2c3d4e5f6/cart/items",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ store: "uk", variant_id: "47346215551286", quantity: 1 }),
+      }),
+    );
+  });
+
+  it("sets a cart quantity, where 0 removes the item", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ currency: "GBP", items: [], item_count: 0, subtotal: 0, total: 0 }),
+    );
+
+    await client(fetchMock).support.updateCartItem("a1b2c3d4e5f6", "47346215551286", {
+      store: "eu",
+      quantity: 0,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.com/v1/conversations/a1b2c3d4e5f6/cart/items/47346215551286",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ store: "eu", quantity: 0 }),
+      }),
+    );
+  });
+
+  it("rejects a variant id that is not digits before calling the cart", async () => {
+    const fetchMock = vi.fn();
+
+    await expect(
+      client(fetchMock).support.addCartItem("a1b2c3d4e5f6", {
+        store: "uk",
+        variant_id: "gid://shopify/ProductVariant/1",
+      }),
+    ).rejects.toMatchObject({ code: "invalid_request" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("validates page event types", async () => {
     const fetchMock = vi.fn();
 

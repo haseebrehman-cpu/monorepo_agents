@@ -1,5 +1,5 @@
-/** Main panel plus side windows. One slot is the main conversation. */
-export const MAX_OPEN_CHATS = 5;
+/** Side windows. The main panel is separate and does not count toward this cap. */
+export const MAX_FLOATING_CHATS = 3;
 
 export const FLOAT_PILL_WIDTH = 240;
 export const FLOAT_WINDOW_WIDTH = 352;
@@ -36,7 +36,10 @@ export function openChat(
     return { session: promoteToMain(session, id), status: "focused" };
   }
 
-  if (session.openIds.length >= MAX_OPEN_CHATS) {
+  const addingFloat = !options.promote && session.mainId !== null;
+  const demotingMain = Boolean(options.promote && session.mainId);
+  const nextFloats = floatingIds(session).length + (addingFloat || demotingMain ? 1 : 0);
+  if (nextFloats > MAX_FLOATING_CHATS) {
     return { session, status: "limit" };
   }
 
@@ -63,7 +66,7 @@ export function openChatInMain(
   const floats = session.openIds.filter((chatId) => chatId !== id && chatId !== previous && canFloat(chatId));
   const keptPrevious = previous && previous !== id && canFloat(previous) ? [previous] : [];
   let openIds = [...floats, ...keptPrevious];
-  while (openIds.length >= MAX_OPEN_CHATS) openIds.shift();
+  while (openIds.length > MAX_FLOATING_CHATS) openIds.shift();
   openIds = [...openIds, id];
   return {
     openIds,

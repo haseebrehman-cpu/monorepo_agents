@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { LoaderCircleIcon } from "lucide-react";
@@ -6,6 +7,7 @@ import { cn } from "@rdx/ui";
 import { hasPermission, isAdminUser, P } from "../../../lib/permissions";
 import { useMe } from "../../../lib/use-me";
 import {
+  liveChatKeys,
   useDeskAction,
   useDeskConversationDetails,
   useDeskConversations,
@@ -26,13 +28,14 @@ import {
   MIN_QUEUE_LIMIT,
 } from "./assignment";
 import ConversationList from "./ConversationList";
+import type { ChatActivity } from "./desk-feedback";
 import TransferDialog from "./TransferDialog";
 import ConversationThread from "./ConversationThread";
 import CustomerContext from "./CustomerContext";
 import FloatingChatWindow from "./FloatingChatWindow";
 import {
   CUSTOMER_PANEL_WIDTH,
-  MAX_OPEN_CHATS,
+  MAX_FLOATING_CHATS,
   closeOpenChat,
   collapseFloat,
   createOpenChatSession,
@@ -81,7 +84,15 @@ function mergeConversations(rows: LiveConversation[], details: Map<string, LiveC
   return merged;
 }
 
+const idleActivity: ChatActivity = {
+  pending: null,
+  actionsLocked: false,
+  transcriptStatus: "ready",
+  onRetryTranscript: () => undefined,
+};
+
 export default function LiveChatPage() {
+  const queryClient = useQueryClient();
   const me = useMe();
   const user = me.data?.user;
   const agentName = user?.name?.trim() || "You";
@@ -105,7 +116,9 @@ export default function LiveChatPage() {
   const resolvedTotal = listQuery.data?.resolvedTotal ?? 0;
 
   const [storedSession, setChatSession] = useState<OpenChatSession>(() => createOpenChatSession());
-  const details = useDeskConversationDetails(storedSession.openIds);
+  const transcripts = useDeskConversationDetails(storedSession.openIds);
+  const details = transcripts.byId;
+  const pendingAction = action.isPending ? action.variables : null;
   const conversations = useMemo(() => mergeConversations(rows, details), [rows, details]);
   const byId = useMemo(() => new Map(conversations.map((conv) => [conv.id, conv])), [conversations]);
 
@@ -170,6 +183,24 @@ export default function LiveChatPage() {
     setAnnouncement((current) => ({ id: current.id + 1, text }));
   };
 
+  const confirm = (text: string) => {
+    announce(text);
+    toast.success(text);
+  };
+
+  const chatActivity = (conversation: LiveConversation): ChatActivity => ({
+    pending: pendingAction?.id === conversation.id ? pendingAction : null,
+    actionsLocked: action.isPending,
+    transcriptStatus: conversation.messagesLoaded
+      ? "ready"
+      : transcripts.failedIds.has(conversation.id)
+        ? "error"
+        : "loading",
+    onRetryTranscript: () => {
+      void queryClient.invalidateQueries({ queryKey: liveChatKeys.conversation(conversation.id) });
+    },
+  });
+
   const closeChat = (id: string) => {
     const next = closeOpenChat(chatSession, id);
     setChatSession(next);
@@ -183,8 +214,10 @@ export default function LiveChatPage() {
     setTransferOpen(false);
     setDeskView("chats");
 
-    if (!canFloat(id)) {
-      const next = openChatInMain(chatSession, id, canFloat);
+    const floatAllowed = queueFilter === "active" && canFloat(id);
+    if (!floatAllowed) {
+      const alreadyFloating = new Set(sessionFloatingIds(chatSession));
+      const next = openChatInMain(chatSession, id, (chatId) => alreadyFloating.has(chatId) && canFloat(chatId));
       setChatSession(next);
       if (options?.openThread !== false) {
         setShowThreadOnMobile(true);
@@ -201,7 +234,7 @@ export default function LiveChatPage() {
       (chatSession.mainId !== null && !canFloat(chatSession.mainId));
     const result = openChat(chatSession, id, { promote });
     if (result.status === "limit") {
-      const text = `You can have at most ${MAX_OPEN_CHATS} chats open. Close one to open another.`;
+      const text = `Max ${MAX_FLOATING_CHATS} side chats allowed.`;
       announce(text);
       toast.info(text);
       return;
@@ -239,7 +272,7 @@ export default function LiveChatPage() {
     run({ type: "take", id }, () => {
       setFilter("active");
       setDeskView("chats");
-      announce(`You took the conversation with ${conv.customerName}.`);
+      confirm(`You took the chat with ${conv.customerName}.`);
     });
   };
 
@@ -251,7 +284,7 @@ export default function LiveChatPage() {
     if (!target || target.id === viewerId) return;
     run({ type: "transfer", id, memberId }, () => {
       setFilter(isDeskAdmin ? "team" : "active");
-      announce(`Chat with ${conv.customerName} transferred to ${target.name}.`);
+      confirm(`Transferred ${conv.customerName} to ${target.name}.`);
       setTransferOpen(false);
       setTransferTargetId(null);
     });
@@ -262,7 +295,7 @@ export default function LiveChatPage() {
     if (!conv || !canResolve || conv.status !== "active" || conv.ownerId !== viewerId) return;
     run({ type: "resolve", id }, () => {
       setFilter("closed");
-      announce(`Conversation with ${conv.customerName} closed.`);
+      confirm(`Closed the chat with ${conv.customerName}.`);
     });
   };
 
@@ -271,7 +304,7 @@ export default function LiveChatPage() {
     if (!conv || !canAssign || conv.status !== "resolved" || conv.ownerId !== viewerId) return;
     run({ type: "reopen", id }, () => {
       setFilter("active");
-      announce(`Conversation with ${conv.customerName} reopened.`);
+      confirm(`Reopened the chat with ${conv.customerName}.`);
     });
   };
 
@@ -283,7 +316,7 @@ export default function LiveChatPage() {
     if (!body || body.startsWith("/")) return;
     run({ type: "message", id, kind: mode, body }, () => {
       setDrafts((current) => ({ ...current, [id]: "" }));
-      announce(
+      confirm(
         mode === "note" ? `Private note saved on ${conv.customerName}.` : `Reply sent to ${conv.customerName}.`,
       );
     });
@@ -335,7 +368,13 @@ export default function LiveChatPage() {
 
   const changeAccepting = (nextAccepting: boolean) => {
     if (!canChangePresence) return;
-    presence.mutate({ accepting: nextAccepting });
+    presence.mutate(
+      { accepting: nextAccepting },
+      {
+        onSuccess: () =>
+          toast.success(nextAccepting ? "You are online for new chats." : "You are offline for new chats."),
+      },
+    );
     announce(
       nextAccepting
         ? "You are accepting new handoffs. Open slots in Active fill from the oldest waiting chats."
@@ -403,7 +442,7 @@ export default function LiveChatPage() {
   const floatWidth = Math.max(0, deskWidth - (detailsDocked ? CUSTOMER_PANEL_WIDTH : 0) - 24);
   const floatLayout = layoutFloats(floatingIds, new Set(chatSession.collapsedIds), floatWidth, narrowDesk);
   const mainVisible = deskView === "chats" && (!narrowDesk || showThreadOnMobile);
-  const floatsVisible = deskView === "chats" && !detailsModal && !transferOpen;
+  const floatsVisible = deskView === "chats" && queueFilter === "active" && !detailsModal && !transferOpen;
   const watching = [
     mainVisible ? selectedId : null,
     ...(floatsVisible ? floatLayout.filter((item) => !item.minimized).map((item) => item.id) : []),
@@ -487,6 +526,10 @@ export default function LiveChatPage() {
               onAccepting={changeAccepting}
               onLimit={changeOwnLimit}
               dockInset={floatLayout.length > 0}
+              refreshing={listQuery.isFetching}
+              presencePending={presence.isPending}
+              busyId={pendingAction?.id ?? null}
+              loadingIds={transcripts.loadingIds}
               onSelect={openConversation}
             />
           </div>
@@ -545,6 +588,7 @@ export default function LiveChatPage() {
                 ? () => closeChat(visibleSelected.id)
                 : undefined
             }
+            activity={visibleSelected ? chatActivity(visibleSelected) : { ...idleActivity, actionsLocked: action.isPending }}
           />
         )}
       </div>
@@ -575,6 +619,11 @@ export default function LiveChatPage() {
         <TransferDialog
           customerName={transferConversation.customerName}
           members={members.filter((member) => member.id !== viewerId)}
+          pendingMemberId={
+            pendingAction?.type === "transfer" && pendingAction.id === transferConversation.id
+              ? pendingAction.memberId
+              : null
+          }
           onClose={() => {
             setTransferOpen(false);
             setTransferTargetId(null);
@@ -585,7 +634,7 @@ export default function LiveChatPage() {
         />
       ) : null}
 
-      {deskView === "chats" && !detailsModal && !transferOpen && floatLayout.length > 0 ? (
+      {floatsVisible && floatLayout.length > 0 ? (
         <div
           className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-end px-3 pb-3"
           style={detailsDocked ? { right: CUSTOMER_PANEL_WIDTH } : undefined}
@@ -624,6 +673,7 @@ export default function LiveChatPage() {
                 onFocus={() => focusChat(conv.id)}
                 onToggleMinimized={() => toggleFloat(conv.id)}
                 onClose={() => closeChat(conv.id)}
+                activity={chatActivity(conv)}
               />
             );
           })}

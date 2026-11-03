@@ -4,7 +4,7 @@ import {
   FLOAT_GAP,
   FLOAT_PILL_WIDTH,
   FLOAT_WINDOW_WIDTH,
-  MAX_OPEN_CHATS,
+  MAX_FLOATING_CHATS,
   closeOpenChat,
   collapseFloat,
   createOpenChatSession,
@@ -46,11 +46,12 @@ test("opening a side window again parks the previous main as the newest float", 
   assert.deepEqual(floatingIds(focused.session), ["c", "a"]);
 });
 
-test("the open cap rejects another chat and keeps the session", () => {
-  let session = createOpenChatSession();
-  for (let index = 0; index < MAX_OPEN_CHATS; index += 1) {
-    session = openChat(session, `c${index}`, { promote: index === 0 }).session;
+test("a fourth side chat is rejected and the session stays as it is", () => {
+  let session = openChat(createOpenChatSession(), "main", { promote: true }).session;
+  for (let index = 0; index < MAX_FLOATING_CHATS; index += 1) {
+    session = openChat(session, `f${index}`, { promote: false }).session;
   }
+  assert.equal(floatingIds(session).length, MAX_FLOATING_CHATS);
   const blocked = openChat(session, "extra", { promote: false });
   assert.equal(blocked.status, "limit");
   assert.equal(blocked.session, session);
@@ -126,6 +127,16 @@ test("expanding a window collapses older expanded windows until it fits", () => 
   const layout = layoutFloats(floatingIds(expanded), new Set(expanded.collapsedIds), oneWindow, false);
   assert.equal(layout.find((item) => item.id === "a")?.minimized, false);
   assert.equal(layout.filter((item) => !item.minimized).length, 1);
+});
+
+test("opening a chat outside Active does not turn the main chat into a side window", () => {
+  const session = openChat(openChat(createOpenChatSession(), "active-a", { promote: true }).session, "active-b", {
+    promote: false,
+  }).session;
+  const alreadyFloating = new Set(floatingIds(session));
+  const next = openChatInMain(session, "queue-c", (id) => alreadyFloating.has(id));
+  assert.equal(next.mainId, "queue-c");
+  assert.deepEqual(floatingIds(next), ["active-b"]);
 });
 
 test("a chat outside Active opens in the main panel and does not stay as a side window", () => {

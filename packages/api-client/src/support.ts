@@ -1,4 +1,6 @@
 import type {
+  SupportAddCartItemRequest,
+  SupportCart,
   SupportConversation,
   SupportErrorBody,
   SupportHealthResponse,
@@ -11,6 +13,7 @@ import type {
   SupportReply,
   SupportStoreCode,
   SupportStreamEvent,
+  SupportUpdateCartItemRequest,
 } from "@rdx/chat-contract";
 import { withRetry } from "./errors";
 import {
@@ -34,6 +37,8 @@ const STATUS_BY_CODE: Record<string, number> = {
   rate_limited: 429,
   upstream_unavailable: 503,
   order_lookup_unavailable: 503,
+  cart_rejected: 422,
+  cart_unavailable: 503,
   internal_error: 500,
 };
 
@@ -42,6 +47,25 @@ export function supportRequestId(error: unknown): string | undefined {
   if (!(error instanceof ApiError)) return undefined;
   const body = error.body as Partial<SupportErrorBody> | null | undefined;
   return body?.error?.request_id;
+}
+
+const VARIANT_ID = /^\d{1,20}$/;
+
+function assertVariantId(variantId: string): string {
+  const id = variantId.trim();
+  if (!VARIANT_ID.test(id)) {
+    throw new ApiError("variant_id must be digits.", 422, null, { code: "invalid_request" });
+  }
+  return id;
+}
+
+function assertQuantity(quantity: number, minimum: number): number {
+  if (!Number.isInteger(quantity) || quantity < minimum || quantity > 99) {
+    throw new ApiError(`quantity must be a whole number from ${minimum} to 99.`, 422, null, {
+      code: "invalid_request",
+    });
+  }
+  return quantity;
 }
 
 function conversationPath(conversationId: string, suffix = ""): string {
@@ -215,6 +239,52 @@ export async function streamSupportMessage(
   throw new ApiError("The stream ended without a reply.", 502, null, { code: "internal_error" });
 }
 
+export async function getSupportCart(
+  client: ApiClient,
+  conversationId: string,
+  store: SupportStoreCode,
+  signal?: AbortSignal,
+): Promise<SupportCart> {
+  const query = new URLSearchParams({ store }).toString();
+  return withRetry(() =>
+    client.request<SupportCart>(conversationPath(conversationId, `/cart?${query}`), { signal }),
+  );
+}
+
+export async function addSupportCartItem(
+  client: ApiClient,
+  conversationId: string,
+  request: SupportAddCartItemRequest,
+  signal?: AbortSignal,
+): Promise<SupportCart> {
+  const variantId = assertVariantId(request.variant_id);
+  const quantity = assertQuantity(request.quantity ?? 1, 1);
+  return client.request<SupportCart>(conversationPath(conversationId, "/cart/items"), {
+    method: "POST",
+    body: JSON.stringify({ store: request.store, variant_id: variantId, quantity }),
+    signal,
+  });
+}
+
+export async function updateSupportCartItem(
+  client: ApiClient,
+  conversationId: string,
+  variantId: string,
+  request: SupportUpdateCartItemRequest,
+  signal?: AbortSignal,
+): Promise<SupportCart> {
+  const id = assertVariantId(variantId);
+  const quantity = assertQuantity(request.quantity, 0);
+  return client.request<SupportCart>(
+    conversationPath(conversationId, `/cart/items/${encodeURIComponent(id)}`),
+    {
+      method: "PATCH",
+      body: JSON.stringify({ store: request.store, quantity }),
+      signal,
+    },
+  );
+}
+
 export async function sendPageEvent(
   client: ApiClient,
   conversationId: string,
@@ -296,6 +366,22 @@ export type SupportApi = {
     store: SupportStoreCode,
     signal?: AbortSignal,
   ) => Promise<SupportPageEventsResponse>;
+  getCart: (
+    conversationId: string,
+    store: SupportStoreCode,
+    signal?: AbortSignal,
+  ) => Promise<SupportCart>;
+  addCartItem: (
+    conversationId: string,
+    request: SupportAddCartItemRequest,
+    signal?: AbortSignal,
+  ) => Promise<SupportCart>;
+  updateCartItem: (
+    conversationId: string,
+    variantId: string,
+    request: SupportUpdateCartItemRequest,
+    signal?: AbortSignal,
+  ) => Promise<SupportCart>;
   lookupOrder: (
     request: SupportOrderLookupRequest,
     signal?: AbortSignal,
@@ -310,6 +396,10 @@ export function createSupportApi(client: ApiClient): SupportApi {
     streamMessage: (id, request, handlers) => streamSupportMessage(client, id, request, handlers),
     sendEvent: (id, event, signal) => sendPageEvent(client, id, event, signal),
     listEvents: (id, store, signal) => listPageEvents(client, id, store, signal),
+    getCart: (id, store, signal) => getSupportCart(client, id, store, signal),
+    addCartItem: (id, request, signal) => addSupportCartItem(client, id, request, signal),
+    updateCartItem: (id, variantId, request, signal) =>
+      updateSupportCartItem(client, id, variantId, request, signal),
     lookupOrder: (request, signal) => lookupOrder(client, request, signal),
   };
 }

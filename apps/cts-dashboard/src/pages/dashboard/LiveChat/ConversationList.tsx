@@ -1,6 +1,6 @@
 import { useState, useRef, type KeyboardEvent } from "react";
 import { cn } from "@rdx/ui";
-import { InboxIcon, SearchIcon } from "lucide-react";
+import { InboxIcon, LoaderCircleIcon, SearchIcon } from "lucide-react";
 import { lastPreview, matchesInbox, MAX_QUEUE_LIMIT, memberName, MIN_QUEUE_LIMIT, workloadFor } from "./assignment";
 import { tagById } from "./catalog";
 import { avatarColor, formatQueueTime, formatQueueTimeLabel, initials } from "./format";
@@ -57,6 +57,10 @@ export default function ConversationList({
   onLimit,
   onSelect,
   dockInset = false,
+  refreshing = false,
+  presencePending = false,
+  busyId = null,
+  loadingIds,
 }: {
   conversations: LiveConversation[];
   selectedId: string | null;
@@ -78,6 +82,13 @@ export default function ConversationList({
   onSelect: (id: string, options?: { openThread?: boolean; focusThread?: boolean }) => void;
   /** Leave room so the last rows stay above side-chat pills. */
   dockInset?: boolean;
+  /** The inbox is refetching after the first load. */
+  refreshing?: boolean;
+  presencePending?: boolean;
+  /** Conversation with an action in flight. */
+  busyId?: string | null;
+  /** Open chats whose transcript is still loading. */
+  loadingIds?: ReadonlySet<string>;
 }) {
   const filters = isDeskAdmin ? ADMIN_FILTERS : AGENT_FILTERS;
   const listRef = useRef<HTMLDivElement>(null);
@@ -167,14 +178,18 @@ export default function ConversationList({
     >
       <div className="border-b border-slate-200 px-4 py-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 id="live-chat-queue-title" className="text-sm font-semibold text-slate-900">
+          <h2 id="live-chat-queue-title" className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
             Chats
+            {refreshing ? (
+              <LoaderCircleIcon className="h-3.5 w-3.5 animate-spin text-slate-400" aria-label="Refreshing chats" />
+            ) : null}
           </h2>
           <button
             type="button"
             role="switch"
             aria-checked={accepting}
-            disabled={!canChangePresence}
+            aria-busy={presencePending || undefined}
+            disabled={!canChangePresence || presencePending}
             onClick={() => onAccepting(!accepting)}
             className={cn(
               "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-semibold ring-1 ring-inset",
@@ -184,10 +199,14 @@ export default function ConversationList({
                 : "bg-slate-100 text-slate-600 ring-slate-200",
             )}
           >
-            <span
-              className={cn("h-1.5 w-1.5 rounded-full", accepting ? "bg-emerald-500" : "bg-red-400")}
-              aria-hidden="true"
-            />
+            {presencePending ? (
+              <LoaderCircleIcon className="h-3 w-3 animate-spin" aria-hidden="true" />
+            ) : (
+              <span
+                className={cn("h-1.5 w-1.5 rounded-full", accepting ? "bg-emerald-500" : "bg-red-400")}
+                aria-hidden="true"
+              />
+            )}
             {accepting ? "Online" : "Offline"}
           </button>
         </div>
@@ -304,6 +323,8 @@ export default function ConversationList({
               const selected = conversation.id === selectedId;
               const active = conversation.id === activeId;
               const isOpen = openChatIds.includes(conversation.id);
+              const rowBusy = conversation.id === busyId;
+              const opening = !conversation.messagesLoaded && (loadingIds?.has(conversation.id) ?? false);
               const waited = formatQueueTime(conversation.handedOffAt);
               const tags = conversation.tags.map((id) => tagById(id)).filter((tag) => tag !== null);
               return (
@@ -342,7 +363,15 @@ export default function ConversationList({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-semibold text-slate-900">{conversation.customerName}</span>
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span className="truncate text-sm font-semibold text-slate-900">{conversation.customerName}</span>
+                        {rowBusy || opening ? (
+                          <LoaderCircleIcon
+                            className="h-3.5 w-3.5 shrink-0 animate-spin text-indigo-600"
+                            aria-label={rowBusy ? "Updating chat" : "Opening chat"}
+                          />
+                        ) : null}
+                      </span>
                       <time dateTime={conversation.updatedAt} className="shrink-0 text-[11px] font-medium text-slate-500">
                         {formatQueueTime(conversation.updatedAt)}
                       </time>

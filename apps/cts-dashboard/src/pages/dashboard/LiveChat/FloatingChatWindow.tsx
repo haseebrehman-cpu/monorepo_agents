@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, cn } from "@rdx/ui";
+import { cn } from "@rdx/ui";
 import {
   Maximize2Icon,
   Minimize2Icon,
@@ -9,6 +9,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { StatusChip } from "./ConversationList";
+import { ActionButton, TranscriptPlaceholder, type ChatActivity } from "./desk-feedback";
 import { avatarColor, formatMessageTime, formatQueueTime, initials } from "./format";
 import type { ChatMessage, ComposerMode, LiveConversation } from "./types";
 
@@ -36,6 +37,7 @@ export default function FloatingChatWindow({
   onFocus,
   onToggleMinimized,
   onClose,
+  activity,
 }: {
   conversation: LiveConversation;
   agentName: string;
@@ -59,6 +61,7 @@ export default function FloatingChatWindow({
   onFocus: () => void;
   onToggleMinimized: () => void;
   onClose: () => void;
+  activity: ChatActivity;
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const pinnedToBottom = useRef(true);
@@ -84,6 +87,12 @@ export default function FloatingChatWindow({
   const noteMode = mode === "note";
   const canCompose = canReply && conversation.status !== "resolved" && (noteMode || ownsChat);
   const canSend = canCompose && draft.trim().length > 0 && !draft.trim().startsWith("/");
+  const { pending, actionsLocked } = activity;
+  const taking = pending?.type === "take";
+  const transferring = pending?.type === "transfer";
+  const closing = pending?.type === "resolve";
+  const reopening = pending?.type === "reopen";
+  const sending = pending?.type === "message";
   const waited = formatQueueTime(conversation.handedOffAt);
 
   useEffect(() => {
@@ -208,10 +217,23 @@ export default function FloatingChatWindow({
             }}
             className="min-h-0 flex-1 space-y-2 overflow-y-auto bg-[#f4f6f8] px-3 py-3"
           >
-            {conversation.messages.map((message) => (
-              <FloatingMessage key={message.id} message={message} agentName={agentName} />
-            ))}
-            {conversation.typing ? (
+            {activity.transcriptStatus === "ready" ? (
+              conversation.messages.length === 0 ? (
+                <TranscriptPlaceholder status="empty" customerName={conversation.customerName} compact />
+              ) : (
+                conversation.messages.map((message) => (
+                  <FloatingMessage key={message.id} message={message} agentName={agentName} />
+                ))
+              )
+            ) : (
+              <TranscriptPlaceholder
+                status={activity.transcriptStatus}
+                customerName={conversation.customerName}
+                onRetry={activity.onRetryTranscript}
+                compact
+              />
+            )}
+            {conversation.typing && activity.transcriptStatus === "ready" ? (
               <p className="text-[11px] font-medium text-slate-500" role="status">
                 {conversation.customerName} is typing…
               </p>
@@ -223,9 +245,18 @@ export default function FloatingChatWindow({
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[11px] text-slate-600">This chat is closed.</p>
                 {canReopen ? (
-                  <Button size="sm" variant="outline" className="h-7 cursor-pointer px-2 text-xs" onClick={onReopen}>
+                  <ActionButton
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2 text-xs"
+                    spinnerClassName="h-3 w-3"
+                    pending={reopening}
+                    pendingLabel="Reopening…"
+                    disabled={actionsLocked}
+                    onClick={onReopen}
+                  >
                     Reopen
-                  </Button>
+                  </ActionButton>
                 ) : null}
               </div>
             ) : conversation.status === "waiting" ? (
@@ -234,9 +265,18 @@ export default function FloatingChatWindow({
                   {canTake ? "Assigned to you. Take it over before you reply." : "Waiting for an agent with room."}
                 </p>
                 {canTake ? (
-                  <Button size="sm" variant="primary" className="h-7 cursor-pointer px-2 text-xs" onClick={onTake}>
+                  <ActionButton
+                    size="sm"
+                    variant="primary"
+                    className="h-7 px-2 text-xs"
+                    spinnerClassName="h-3 w-3"
+                    pending={taking}
+                    pendingLabel="Taking over…"
+                    disabled={actionsLocked}
+                    onClick={onTake}
+                  >
                     Take over
-                  </Button>
+                  </ActionButton>
                 ) : null}
               </div>
             ) : (
@@ -244,14 +284,32 @@ export default function FloatingChatWindow({
                 {ownsChat ? (
                   <div className="flex flex-wrap gap-1">
                     {canTransfer ? (
-                      <Button size="sm" variant="outline" className="h-6 cursor-pointer px-1.5 text-[10px]" onClick={onOpenTransfer}>
+                      <ActionButton
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-1.5 text-[10px]"
+                        spinnerClassName="h-3 w-3"
+                        pending={transferring}
+                        pendingLabel="Transferring…"
+                        disabled={actionsLocked}
+                        onClick={onOpenTransfer}
+                      >
                         Transfer
-                      </Button>
+                      </ActionButton>
                     ) : null}
                     {canClose ? (
-                      <Button size="sm" variant="outline" className="h-6 cursor-pointer px-1.5 text-[10px]" onClick={onResolve}>
+                      <ActionButton
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-1.5 text-[10px]"
+                        spinnerClassName="h-3 w-3"
+                        pending={closing}
+                        pendingLabel="Closing…"
+                        disabled={actionsLocked}
+                        onClick={onResolve}
+                      >
                         Close
-                      </Button>
+                      </ActionButton>
                     ) : null}
                   </div>
                 ) : (
@@ -309,7 +367,7 @@ export default function FloatingChatWindow({
                           if (canSend) onSend(mode);
                         }
                       }}
-                      disabled={!canCompose}
+                      disabled={!canCompose || actionsLocked}
                       placeholder={noteMode ? "Private note…" : `Reply to ${conversation.customerName}…`}
                       className={cn(
                         "w-full resize-none border-0 bg-transparent px-2 py-1.5 text-xs leading-5 outline-none placeholder:text-slate-400 disabled:bg-slate-50",
@@ -321,10 +379,19 @@ export default function FloatingChatWindow({
                         {noteMode ? <StickyNoteIcon className="h-3 w-3 text-amber-600" aria-hidden="true" /> : null}
                         {noteMode ? "Visible to agents" : "Enter to send"}
                       </span>
-                      <Button type="submit" size="sm" variant="primary" className="h-6 cursor-pointer px-2 text-[10px]" disabled={!canSend}>
+                      <ActionButton
+                        type="submit"
+                        size="sm"
+                        variant="primary"
+                        className="h-6 px-2 text-[10px]"
+                        spinnerClassName="h-3 w-3"
+                        pending={sending}
+                        pendingLabel={noteMode ? "Saving…" : "Sending…"}
+                        disabled={!canSend || actionsLocked}
+                      >
                         <SendIcon className="h-3 w-3" aria-hidden="true" />
                         {noteMode ? "Save" : "Send"}
-                      </Button>
+                      </ActionButton>
                     </div>
                   </form>
                 ) : null}
