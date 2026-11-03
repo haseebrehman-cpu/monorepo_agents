@@ -1,7 +1,5 @@
 import Image from "next/image";
-import { useQuery } from "@tanstack/react-query";
 import type { SupportStoreCode } from "@rdx/chat-contract";
-import { pageEventsQuery } from "@/lib/api/queries";
 import type { Bag } from "@/lib/bag/bag-store";
 import { formatMoney } from "@/lib/chat/format";
 import { isSafeHref } from "@/lib/chat/links";
@@ -15,18 +13,15 @@ interface BagPanelProps {
   onRemove: (productId: string) => void;
   onClose: () => void;
 }
-
+git add <div className="git c"></div>
 export default function BagPanel({
-  store,
   bag,
-  conversationId,
   onQuantityChange,
   onRemove,
   onClose,
 }: BagPanelProps) {
   const empty = bag.lines.length === 0;
 
-  console.log(bag);
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-neutral-100/70">
       <div className="flex items-center gap-2 border-b border-neutral-200 bg-white px-3 py-2.5">
