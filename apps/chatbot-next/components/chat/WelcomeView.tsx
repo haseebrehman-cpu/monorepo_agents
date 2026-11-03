@@ -111,7 +111,7 @@ export default function WelcomeView({
         </div>
       </section>
 
-      <section aria-label="Popular questions">
+      {/* <section aria-label="Popular questions">
         <p className="mb-2 flex items-center gap-1.5 px-1 text-[11px] font-semibold tracking-[0.14em] text-neutral-500 uppercase">
           <SparkIcon className="h-3.5 w-3.5 text-rdx-red" />
           Popular right now
@@ -129,7 +129,7 @@ export default function WelcomeView({
             </button>
           ))}
         </div>
-      </section>
+      </section> */}
     </div>
   );
 }
