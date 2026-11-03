@@ -1,3 +1,5 @@
+import type { NextFunction, Request, Response } from "express";
+
 type AttemptEntry = {
   count: number;
   resetAt: number;
@@ -59,5 +61,30 @@ export function createAttemptLimiter({
     reset(key: string) {
       entries.delete(key);
     },
+  };
+}
+
+/** Fixed-window request limit per key. State is per process. */
+export function rateLimit({
+  windowMs,
+  maxRequests,
+  key,
+  error = "TOO_MANY_REQUESTS",
+}: {
+  windowMs: number;
+  maxRequests: number;
+  key: (req: Request) => string;
+  error?: string;
+}) {
+  const limiter = createAttemptLimiter({ windowMs, maxAttempts: maxRequests });
+  return (req: Request, res: Response, next: NextFunction) => {
+    const limiterKey = key(req);
+    const retryAfter = limiter.retryAfterSeconds(limiterKey);
+    if (retryAfter > 0) {
+      res.setHeader("Retry-After", String(retryAfter));
+      return res.status(429).json({ success: false, error });
+    }
+    limiter.recordFailure(limiterKey);
+    next();
   };
 }

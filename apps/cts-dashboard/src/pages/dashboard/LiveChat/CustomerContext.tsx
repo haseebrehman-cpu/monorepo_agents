@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cn } from "@rdx/ui";
-import { CheckIcon, CopyIcon, GlobeIcon, MapPinIcon, XIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, XIcon } from "lucide-react";
 import { StatusChip } from "./ConversationList";
 import { avatarColor, formatMessageTime, formatQueueTime, initials } from "./format";
 import type { LiveConversation } from "./types";
@@ -88,27 +88,8 @@ export default function CustomerContext({
           />
           <Detail term="Assigned to" value={assigneeName ?? "Unassigned"} />
           <Detail term="Queued" value={handedOff} />
-          <Detail term="Visits" value={String(conversation.visits)} />
+          <Detail term="Location" value={conversation.location || "Unknown"} />
         </dl>
-
-        <section aria-labelledby="live-chat-visit" className="space-y-2">
-          <h3 id="live-chat-visit" className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
-            Current visit
-          </h3>
-          <p className="flex items-start gap-2 text-sm text-slate-800">
-            <MapPinIcon className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
-            {conversation.location}
-          </p>
-          <p className="flex items-start gap-2 text-sm text-slate-800">
-            <GlobeIcon className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
-            <span className="min-w-0">
-              <span className="block font-mono text-xs">{conversation.currentPage}</span>
-              <span className="mt-0.5 block text-xs text-slate-500">
-                {conversation.browser} · from {conversation.referrer}
-              </span>
-            </span>
-          </p>
-        </section>
 
         <section aria-labelledby="live-chat-handoff-reason">
           <h3 id="live-chat-handoff-reason" className="text-xs font-semibold tracking-wide text-slate-500 uppercase">

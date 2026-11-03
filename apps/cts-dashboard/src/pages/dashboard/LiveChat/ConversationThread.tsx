@@ -49,7 +49,7 @@ export default function ConversationThread({
   canReply: boolean;
   canAssign: boolean;
   canResolve: boolean;
-  /** Take over is offered only for waiting chats opened from Active. */
+  /** Whether the viewer may take this chat from where it was opened. */
   allowTake?: boolean;
   viewerId: string;
   assigneeName: string | null;
@@ -72,8 +72,9 @@ export default function ConversationThread({
         <MessageSquareIcon className="h-8 w-8 text-slate-400" aria-hidden="true" />
         <h2 className="mt-3 text-sm font-semibold text-slate-900">Select a chat</h2>
         <p className="mt-1 max-w-sm text-sm leading-6 text-slate-600">
-          User Queue lists every waiting handoff. Active fills up to your limit with chats you own and waiting chats assigned to you.
-          Take over a waiting chat from Active before you reply. Open up to {MAX_OPEN_CHATS} chats at once.
+          New chats are assigned automatically. Active fills up to your limit with chats you own and waiting chats assigned to you.
+          User Queue holds chats nobody has room for yet. Take over a waiting chat from Active before you reply. Open up to{" "}
+          {MAX_OPEN_CHATS} chats at once.
         </p>
       </section>
     );
@@ -165,8 +166,7 @@ function ThreadView({
   const setMode = (next: ComposerMode) => {
     setModeChoice({ conversationId: conversation.id, ownsChat, mode: next });
   };
-  const canTake =
-    allowTake && conversation.status === "waiting" && canAssign && conversation.queuedForId === viewerId;
+  const canTake = allowTake && canAssign;
   const canTransfer = ownsChat && canAssign;
   const canClose = ownsChat && canResolve;
   const canReopen = conversation.status === "resolved" && conversation.ownerId === viewerId && canAssign;
@@ -294,10 +294,12 @@ function ThreadView({
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
                 <p className="text-sm text-amber-950">
                   {canTake
-                    ? "This chat is assigned to you. Take it over before you reply."
+                    ? conversation.queuedForId === viewerId
+                      ? "This chat is assigned to you. Take it over before you reply."
+                      : "Take this chat to reply to the customer."
                     : conversation.queuedForId === viewerId
                       ? "This chat is in your Active tab. Open Active to take it over."
-                      : "Every waiting chat is listed in User Queue. Take over is only available in Active, and only for chats assigned to you."}
+                      : "Waiting for an agent with room. It moves into someone's Active tab when a slot opens."}
                 </p>
                 {canTake ? (
                   <Button size="sm" variant="primary" className="cursor-pointer" onClick={onTake}>
@@ -306,9 +308,17 @@ function ThreadView({
                 ) : null}
               </div>
             ) : conversation.status === "active" && !ownsChat ? (
-              <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-sm text-slate-700 ring-1 ring-slate-200" role="status">
-                {assigneeName ?? "Another person"} has this chat. They can transfer it to you. You can leave a private note.
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5 ring-1 ring-slate-200">
+                <p className="text-sm text-slate-700" role="status">
+                  {assigneeName ?? "Another person"} has this chat.{" "}
+                  {canTake ? "You can take it over, or leave a private note." : "They can transfer it to you. You can leave a private note."}
+                </p>
+                {canTake ? (
+                  <Button size="sm" variant="primary" className="cursor-pointer" onClick={onTake}>
+                    Take over
+                  </Button>
+                ) : null}
+              </div>
             ) : null}
 
             {canReply ? (

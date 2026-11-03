@@ -77,8 +77,7 @@ export default function FloatingChatWindow({
   const setMode = (next: ComposerMode) => {
     setModeChoice({ conversationId: conversation.id, ownsChat, mode: next });
   };
-  const canTake =
-    allowTake && conversation.status === "waiting" && canAssign && conversation.queuedForId === viewerId;
+  const canTake = allowTake && canAssign;
   const canTransfer = ownsChat && canAssign;
   const canClose = ownsChat && canResolve;
   const canReopen = conversation.status === "resolved" && conversation.ownerId === viewerId && canAssign;
@@ -232,7 +231,7 @@ export default function FloatingChatWindow({
             ) : conversation.status === "waiting" ? (
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[11px] text-amber-950">
-                  {canTake ? "Assigned to you. Take it over before you reply." : "Waiting. Take over from Active when it is assigned to you."}
+                  {canTake ? "Assigned to you. Take it over before you reply." : "Waiting for an agent with room."}
                 </p>
                 {canTake ? (
                   <Button size="sm" variant="primary" className="h-7 cursor-pointer px-2 text-xs" onClick={onTake}>

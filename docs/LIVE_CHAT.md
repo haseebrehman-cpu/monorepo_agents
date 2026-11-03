@@ -182,11 +182,7 @@ Per member: name, role, status (`Not accepting` / `At limit` / `Open`), waiting 
 | `updatedAt` | ISO-8601 | List time and non-queue sort |
 | `unread` | number | Badge. Clear on view |
 | `tags` | string[] | Ids below. UI shows the first two and does not edit them |
-| `location` | string | Current visit |
-| `currentPage` | string | Current visit |
-| `visits` | number | Customer panel |
-| `browser` | string | Current visit |
-| `referrer` | string | Current visit |
+| `location` | string | Customer panel |
 | `typing` | boolean | `{name} is typing…` while the customer is typing |
 | `messages` | ChatMessage[] | Full transcript, including AI turns before the handoff |
 
@@ -280,13 +276,12 @@ Not called by the dashboard.
 
 `POST /live-chat/handoffs`
 
-Create `waiting` with the pre-handoff transcript, reason, AI summary, customer, order, visit context, and tags. Run placement and push the result to connected desks.
+Create `waiting` with the customer, reason, AI summary, order, channel, location, and tags. The page, visit count, browser, referrer, and transcript are not part of this request. Run placement and push the result to connected desks. The transcript will arrive through a separate streaming API.
 
 Also accept, on an existing conversation:
 
 - a new customer message (increments `unread` for agents who are not viewing it, sets `typing` false, bumps `updatedAt`)
 - customer typing start and stop
-- visit updates (`location`, `currentPage`, `browser`, `referrer`, `visits`)
 
 ### Realtime
 

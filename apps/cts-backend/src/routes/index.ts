@@ -10,6 +10,7 @@ import refundsRoutes from "../modules/refunds/refunds.routes.js";
 import refundLookupsRoutes from "../modules/refund-lookups/refund-lookups.routes.js";
 import resendsRoutes from "../modules/resends/resends.routes.js";
 import resendLookupsRoutes from "../modules/resends/resend-lookups.routes.js";
+import liveChatRoutes from "../modules/live-chat/live-chat.routes.js";
 
 const router = Router();
 router.use("/auth", authRoutes);
@@ -23,4 +24,5 @@ router.use("/refunds", refundsRoutes);
 router.use("/refund-lookups", refundLookupsRoutes);
 router.use("/resends", resendsRoutes);
 router.use("/resend-lookups", resendLookupsRoutes);
+router.use("/live-chat", liveChatRoutes);
 export default router;

@@ -1,19 +1,20 @@
 import { cn } from "@rdx/ui";
-import { activeFor, MAX_QUEUE_LIMIT, MIN_QUEUE_LIMIT, queuedFor, workloadFor } from "./assignment";
+import { activeFor, MAX_QUEUE_LIMIT, MIN_QUEUE_LIMIT, queuedFor } from "./assignment";
 import type { LiveConversation, SupportMember } from "./types";
 
 export default function TeamAnalytics({
   members,
   conversations,
+  resolvedTotal,
   onLimit,
 }: {
   members: SupportMember[];
   conversations: LiveConversation[];
+  resolvedTotal: number;
   onLimit: (memberId: string, limit: number) => void;
 }) {
   const waiting = conversations.filter((conversation) => conversation.status === "waiting");
   const active = conversations.filter((conversation) => conversation.status === "active");
-  const closed = conversations.filter((conversation) => conversation.status === "resolved");
   const unassigned = waiting.filter((conversation) => !conversation.queuedForId).length;
   const accepting = members.filter((member) => member.accepting).length;
 
@@ -24,14 +25,14 @@ export default function TeamAnalytics({
           Customer support
         </h2>
         <p className="mt-1 text-sm text-slate-600">
-          Active fills up to each person's limit with chats they own and waiting chats assigned to them. User Queue lists every waiting handoff. Taken chats stay with the person who took them over.
+          New chats are assigned automatically. Active fills up to each person's limit with chats they own and waiting chats assigned to them. User Queue holds chats nobody has room for. Taken chats stay with the person who took them over.
         </p>
       </header>
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
         <div className="grid gap-3 sm:grid-cols-4">
           <Stat label="Incoming" value={waiting.length} hint={unassigned === 0 ? "All assigned" : `${unassigned} over capacity`} />
           <Stat label="Taken" value={active.length} hint="Visible to the owner" />
-          <Stat label="Closed" value={closed.length} hint="Resolved chats" />
+          <Stat label="Closed" value={resolvedTotal} hint="Resolved chats" />
           <Stat label="Accepting" value={`${accepting}/${members.length}`} hint="Open to new handoffs" />
         </div>
 
@@ -47,10 +48,17 @@ export default function TeamAnalytics({
               </tr>
             </thead>
             <tbody>
+              {members.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-sm text-slate-500">
+                    No one in your department can take live chats yet.
+                  </td>
+                </tr>
+              ) : null}
               {members.map((member) => {
-                const queued = queuedFor(conversations, member.id);
-                const taken = activeFor(conversations, member.id);
-                const load = workloadFor(conversations, member.id);
+                const queued = member.queued ?? queuedFor(conversations, member.id);
+                const taken = member.taken ?? activeFor(conversations, member.id);
+                const load = queued + taken;
                 const full = member.accepting && load >= member.limit;
                 return (
                   <tr key={member.id} className="border-t border-slate-100">

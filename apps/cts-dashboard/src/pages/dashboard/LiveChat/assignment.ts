@@ -1,19 +1,7 @@
 import type { LiveConversation, QueueFilter, SupportMember } from "./types.js";
 
-export const VIEWER_ID = "you";
-export const SUPPORT_ADMIN_ID = "support-admin";
 export const MIN_QUEUE_LIMIT = 1;
 export const MAX_QUEUE_LIMIT = 12;
-
-export function createSupportTeam(name: string): SupportMember[] {
-  return [
-    { id: VIEWER_ID, name, role: "agent", limit: 6, accepting: true },
-    { id: SUPPORT_ADMIN_ID, name: "Rania Osman", role: "admin", limit: 6, accepting: true },
-    { id: "noah", name: "Noah Patel", role: "agent", limit: 4, accepting: true },
-    { id: "maya", name: "Maya Hassan", role: "agent", limit: 3, accepting: true },
-    { id: "leo", name: "Leo Ferreira", role: "agent", limit: 2, accepting: false },
-  ];
-}
 
 export function memberName(members: SupportMember[], id: string | null) {
   if (!id) return null;
@@ -36,9 +24,12 @@ export function workloadFor(conversations: LiveConversation[], memberId: string)
   return queuedFor(conversations, memberId) + activeFor(conversations, memberId);
 }
 
+/** Mirrors the server: agents see unassigned waiting chats, their queued chats, and chats they own. */
 export function canSeeConversation(conversation: LiveConversation, isAdmin: boolean, viewerId: string) {
   if (isAdmin) return true;
-  if (conversation.status === "waiting") return true;
+  if (conversation.status === "waiting") {
+    return conversation.queuedForId === null || conversation.queuedForId === viewerId;
+  }
   return conversation.ownerId === viewerId;
 }
 
@@ -48,65 +39,49 @@ export function matchesInbox(
   viewerId: string,
   isDeskAdmin: boolean,
 ) {
-  if (filter === "user_queue") return conversation.status === "waiting";
+  if (filter === "user_queue") return conversation.status === "waiting" && conversation.queuedForId === null;
   if (filter === "active") {
     return (
       (conversation.status === "active" && conversation.ownerId === viewerId) ||
       (conversation.status === "waiting" && conversation.queuedForId === viewerId)
     );
   }
-  if (filter === "team") return isDeskAdmin && conversation.status === "active" && conversation.ownerId !== viewerId;
+  if (filter === "team") {
+    return (
+      isDeskAdmin &&
+      ((conversation.status === "active" && conversation.ownerId !== viewerId) ||
+        (conversation.status === "waiting" &&
+          conversation.queuedForId !== null &&
+          conversation.queuedForId !== viewerId))
+    );
+  }
   return conversation.status === "resolved" && (isDeskAdmin || conversation.ownerId === viewerId);
+}
+
+/**
+ * Agents take only waiting chats queued to them. Admins can also take any
+ * waiting chat, or take over an active chat someone else owns.
+ */
+export function canTakeConversation(
+  conversation: LiveConversation,
+  viewerId: string,
+  isDeskAdmin: boolean,
+  canAssign: boolean,
+) {
+  if (!canAssign) return false;
+  if (conversation.status === "waiting") return isDeskAdmin || conversation.queuedForId === viewerId;
+  return isDeskAdmin && conversation.status === "active" && conversation.ownerId !== viewerId;
 }
 
 export function assigneeId(conversation: LiveConversation) {
   return conversation.status === "waiting" ? conversation.queuedForId : conversation.ownerId;
 }
 
-/**
- * Fill each accepting member's Active tab up to their limit.
- * Owned active chats occupy slots first and are never moved.
- * Remaining slots receive the oldest waiting chats, one at a time.
- */
-export function rebalance(conversations: LiveConversation[], members: SupportMember[]): LiveConversation[] {
-  const waiting = conversations
-    .filter((conversation) => conversation.status === "waiting")
-    .sort((left, right) => new Date(left.handedOffAt).getTime() - new Date(right.handedOffAt).getTime());
-  const rest = conversations.filter((conversation) => conversation.status !== "waiting");
-  const counts = new Map(members.map((member) => [member.id, activeFor(conversations, member.id)]));
-
-  const hasRoom = (id: string) => {
-    const member = members.find((entry) => entry.id === id);
-    if (!member?.accepting) return false;
-    return (counts.get(id) ?? 0) < member.limit;
-  };
-
-  const kept: LiveConversation[] = [];
-  const loose: LiveConversation[] = [];
-
-  for (const conversation of waiting) {
-    if (conversation.queuedForId && hasRoom(conversation.queuedForId)) {
-      counts.set(conversation.queuedForId, (counts.get(conversation.queuedForId) ?? 0) + 1);
-      kept.push(conversation);
-    } else {
-      loose.push(conversation);
-    }
-  }
-
-  for (const conversation of loose) {
-    const next = members
-      .filter((member) => member.accepting && (counts.get(member.id) ?? 0) < member.limit)
-      .sort(
-        (left, right) =>
-          (counts.get(left.id) ?? 0) - (counts.get(right.id) ?? 0) || left.name.localeCompare(right.name),
-      )[0];
-    if (!next) {
-      kept.push({ ...conversation, queuedForId: null });
-      continue;
-    }
-    counts.set(next.id, (counts.get(next.id) ?? 0) + 1);
-    kept.push({ ...conversation, queuedForId: next.id });
-  }
-
-  return [...rest, ...kept];
+export function lastPreview(conversation: LiveConversation) {
+  const message = conversation.messagesLoaded
+    ? [...conversation.messages].reverse().find((entry) => entry.author !== "system")
+    : (conversation.lastMessage ?? undefined);
+  if (!message) return "Handed off from the AI assistant";
+  if (message.author === "note") return `Note: ${message.body}`;
+  return message.body;
 }

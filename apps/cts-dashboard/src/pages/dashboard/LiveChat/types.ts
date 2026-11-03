@@ -26,12 +26,12 @@ export type LiveConversation = {
   unread: number;
   tags: string[];
   location: string;
-  currentPage: string;
-  visits: number;
-  browser: string;
-  referrer: string;
   typing: boolean;
   messages: ChatMessage[];
+  /** Latest non-system message, for list rows whose transcript is not loaded. */
+  lastMessage?: ChatMessage | null;
+  /** False for list rows. The full transcript loads when the chat is opened. */
+  messagesLoaded?: boolean;
 };
 
 export type QueueFilter = "user_queue" | "active" | "team" | "closed";
@@ -44,4 +44,8 @@ export type SupportMember = {
   role: "agent" | "admin";
   limit: number;
   accepting: boolean;
+  /** Waiting chats queued to this member, as counted by the server. */
+  queued?: number;
+  /** Active chats this member owns, as counted by the server. */
+  taken?: number;
 };
