@@ -17,6 +17,7 @@ export type AuthUser = {
   email: string;
   roles: string[];
   permissions: string[];
+  departmentId: number | null;
   // The chatbot submits free-text answers, so dropdown fields are not limited to lookup values.
   isChatbot: boolean;
 };
@@ -47,6 +48,19 @@ export async function authenticate(
   return res.status(401).json({ success: false, error: "NO_TOKEN" });
 }
 
+/** Accepts only the chatbot service token. Dashboard session cookies are ignored. */
+export async function authenticateServiceToken(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  const serviceToken = readBearerToken(req.headers.authorization);
+  if (!serviceToken) {
+    return res.status(401).json({ success: false, error: "NO_TOKEN" });
+  }
+  return authenticateServiceAccount(serviceToken, req, res, next);
+}
+
 async function authenticateSession(
   token: string,
   req: Request,
@@ -75,6 +89,7 @@ async function authenticateSession(
       email: payload.email,
       roles: access.roles,
       permissions: access.permissions,
+      departmentId: access.department?.id ?? null,
       isChatbot: isChatbotServiceEmail(payload.email),
     };
   } catch (error) {
@@ -113,6 +128,7 @@ async function authenticateServiceAccount(
       email: account.email,
       roles: access.roles,
       permissions: access.permissions,
+      departmentId: access.department?.id ?? null,
       isChatbot: true,
     };
   } catch (error) {
@@ -120,6 +136,28 @@ async function authenticateServiceAccount(
     return res.status(500).json({ success: false, error: "INTERNAL_SERVER_ERROR" });
   }
 
+  next();
+}
+
+/** For routes that only people should call, never the chatbot service account. */
+export function rejectServiceAccount(req: Request, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({ success: false, error: "UNAUTHENTICATED" });
+  }
+  if (req.user.isChatbot) {
+    return res.status(403).json({ success: false, error: "SERVICE_ACCOUNT_NOT_ALLOWED" });
+  }
+  next();
+}
+
+/** Super admins manage access only. They never work in department tools. */
+export function rejectSuperAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({ success: false, error: "UNAUTHENTICATED" });
+  }
+  if (req.user.roles.includes(ROLE.SUPER_ADMIN)) {
+    return res.status(403).json({ success: false, error: "FORBIDDEN" });
+  }
   next();
 }
 

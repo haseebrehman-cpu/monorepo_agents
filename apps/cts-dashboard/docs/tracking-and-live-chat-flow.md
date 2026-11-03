@@ -231,9 +231,13 @@ Delete (tracking.delete only)
 
 Live Chat is the agent desk for chats that an AI assistant has already handed to a person. Route: `/live-chat`. Permission to open the page: `live_chat.access`.
 
-There is no live-chat module in `cts-backend`. Conversations, the support roster, queue limits, and messages live in React state. Sample chats are created in `apps/cts-dashboard/src/pages/dashboard/LiveChat/sample-conversations.ts`. The **New handoff** button fabricates another waiting chat in the browser. Nothing is saved, and a refresh wipes it.
+Conversations, the support roster, queue limits, and messages are stored by the `live-chat` module in `cts-backend` (`/api/live-chat`). The chatbot backend creates a chat with `POST /api/live-chat/handoffs`, using the chatbot service token. The server assigns it automatically by each person's limit. The desk reads and acts through the other `/api/live-chat` routes (`apps/cts-dashboard/src/lib/use-live-chat.ts`).
 
-The customer chatbot is also separate. It can detect “I want a human” and collect a name and email, but it does not create a conversation this desk can see. A backend handoff has to be the bridge between that widget and this desk.
+Desk data is scoped by department. Admins see unassigned chats plus chats queued to or owned by members of their own department, and the Team tab, transfer list and limit changes cover their department only. Super admins cannot open the desk and are never listed as members.
+
+`GET /api/live-chat/events` is a server-sent event stream that carries chat ids only. The desk refetches what changed. `LiveChatNotifier` in the dashboard layout shows a toast with an **Open chat** link when a chat is assigned to you, and tells admins when a chat lands in User Queue.
+
+The handoff does not accept a transcript, the current page, the visit count, the browser, or the referrer. Not built yet: the streaming API for chat messages, delivering agent replies back to the customer, and live typing or visit updates.
 
 ### Permissions
 
@@ -244,7 +248,7 @@ The customer chatbot is also separate. It can detect “I want a human” and co
 | `live_chat.assign` | Take a waiting chat, transfer it, reopen it, and be treated as someone who can own chats |
 | `live_chat.resolve` | Close an active chat they own |
 
-Dashboard admins (`super_admin` / `admin`) see every chat and the Team tab. A normal agent does not.
+Department admins (`admin`) see their department's chats and the Team tab, but they are not team members and do not receive chats. A normal agent does not see the Team tab. Super admins have no desk access.
 
 ### Conversation the desk expects
 
@@ -257,7 +261,7 @@ ownerId: string | null       // set once someone takes it; stays set after close
 messages[].author: "customer" | "assistant" | "agent" | "system" | "note"
 ```
 
-Other fields the panels render: `customerName`, `customerEmail`, `channel`, `orderNumber`, `handoffReason`, `aiSummary`, `handedOffAt`, `updatedAt`, `unread`, `tags`, `location`, `currentPage`, `visits`, `browser`, `referrer`, `typing`.
+Other fields the panels render: `customerName`, `customerEmail`, `channel`, `orderNumber`, `handoffReason`, `aiSummary`, `handedOffAt`, `updatedAt`, `unread`, `tags`, `location`, `typing`.
 
 `note` messages are internal. They must not be delivered to the customer. `assistant` messages are the AI transcript from before the handoff. `system` messages are the audit lines the desk appends (“X took this conversation”, transfer, close, reopen).
 
@@ -273,8 +277,8 @@ Customer asks the chatbot for a person
   -> backend creates a conversation
        status = waiting
        ownerId = null
-       transcript so far kept as assistant + customer messages
        handoffReason + aiSummary stored
+       transcript arrives later on the streaming API
   -> queue assignment (below) sets queuedForId
   -> agents with live_chat.access see it
 ```

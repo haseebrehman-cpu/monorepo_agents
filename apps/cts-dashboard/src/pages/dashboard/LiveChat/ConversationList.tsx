@@ -1,7 +1,7 @@
 import { useState, useRef, type KeyboardEvent } from "react";
 import { cn } from "@rdx/ui";
 import { InboxIcon, SearchIcon } from "lucide-react";
-import { matchesInbox, memberName, workloadFor } from "./assignment";
+import { lastPreview, matchesInbox, MAX_QUEUE_LIMIT, memberName, MIN_QUEUE_LIMIT, workloadFor } from "./assignment";
 import { tagById } from "./catalog";
 import { avatarColor, formatQueueTime, formatQueueTimeLabel, initials } from "./format";
 import type { LiveConversation, QueueFilter, SupportMember } from "./types";
@@ -31,13 +31,6 @@ function matchesFilter(
   return matchesInbox(conversation, filter, viewerId, isDeskAdmin);
 }
 
-function lastPreview(conversation: LiveConversation) {
-  const message = [...conversation.messages].reverse().find((entry) => entry.author !== "system");
-  if (!message) return "Handed off from the AI assistant";
-  if (message.author === "note") return `Note: ${message.body}`;
-  return message.body;
-}
-
 function optionLabel(conversation: LiveConversation) {
   const unread =
     conversation.unread > 0
@@ -57,6 +50,7 @@ export default function ConversationList({
   viewerId,
   members,
   queueLimit,
+  canChangePresence,
   onFilter,
   onQuery,
   onAccepting,
@@ -75,6 +69,8 @@ export default function ConversationList({
   viewerId: string;
   members: SupportMember[];
   queueLimit: number;
+  /** Online status and limit need `live_chat.assign`. */
+  canChangePresence: boolean;
   onFilter: (filter: QueueFilter) => void;
   onQuery: (query: string) => void;
   onAccepting: (accepting: boolean) => void;
@@ -178,6 +174,7 @@ export default function ConversationList({
             type="button"
             role="switch"
             aria-checked={accepting}
+            disabled={!canChangePresence}
             onClick={() => onAccepting(!accepting)}
             className={cn(
               "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-semibold ring-1 ring-inset",
@@ -196,16 +193,17 @@ export default function ConversationList({
         </div>
         <p className="mt-1 text-xs leading-5 text-slate-600">
           {accepting
-            ? `Active holds ${workloadFor(conversations, viewerId)} of ${queueLimit}, counting chats you own and waiting chats assigned to you. User Queue lists every waiting chat.`
-            : "You are offline, so Active is not receiving new chats. User Queue still lists every waiting chat."}
+            ? `Active holds ${workloadFor(conversations, viewerId)} of ${queueLimit}, counting chats you own and waiting chats assigned to you. New chats are assigned automatically.`
+            : "You are offline, so no new chats are assigned to you. Chats you already own stay in Active."}
         </p>
         <label className="mt-3 flex items-center justify-between gap-3 text-xs font-medium text-slate-700">
           Active limit
           <input
             type="number"
-            min={1}
-            max={12}
+            min={MIN_QUEUE_LIMIT}
+            max={MAX_QUEUE_LIMIT}
             value={queueLimit}
+            disabled={!canChangePresence}
             aria-label="Active chat limit"
             onChange={(event) => {
               const next = Number(event.target.value);

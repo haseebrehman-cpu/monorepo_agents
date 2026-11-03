@@ -1,6 +1,15 @@
-import {Pool} from "pg";
+import {Client, Pool} from "pg";
 import {env} from "../config/env.js";
 import {connectionStringForPool, schemaSearchPathOption} from "./postgres-config.js";
+
+/** A dedicated connection outside the pool, for long-lived LISTEN sessions. */
+export function createDbClient() {
+    return new Client({
+        connectionString: connectionStringForPool(env.DATABASE_URL),
+        connectionTimeoutMillis: env.DB_CONNECTION_TIMEOUT_MS,
+        options: schemaSearchPathOption(),
+    });
+}
 
 export const pool = new Pool({
     connectionString: connectionStringForPool(env.DATABASE_URL),

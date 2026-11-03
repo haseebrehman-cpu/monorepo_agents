@@ -1,4 +1,5 @@
 import Header from "../components/organisms/Header";
+import LiveChatNotifier from "../components/organisms/LiveChatNotifier";
 import Sidebar from "../components/organisms/Sidebar";
 import { getNavLabel, type ActiveNavId } from "../Data/nav";
 import { useEffect, useState } from "react";
@@ -49,6 +50,7 @@ export default function DashboardLayout({
 
     return (
         <div className="flex h-dvh overflow-hidden bg-slate-50">
+            <LiveChatNotifier />
             <a
                 href="#main-content"
                 className="sr-only focus:not-sr-only focus:absolute focus:z-[60] focus:m-3 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:text-slate-900"

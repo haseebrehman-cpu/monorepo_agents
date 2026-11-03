@@ -16,25 +16,6 @@ interface BagPanelProps {
   onClose: () => void;
 }
 
-function SharedActivity({ store, conversationId }: { store: SupportStoreCode; conversationId: string }) {
-  const { data: events = [] } = useQuery(pageEventsQuery(store, conversationId));
-  const recent = events.slice(-3).reverse();
-  if (recent.length === 0) return null;
-
-  return (
-    <section className="mt-4 rounded-2xl border border-dashed border-neutral-300 bg-white/60 p-3">
-      <p className="text-[10px] font-semibold tracking-[0.12em] text-neutral-500 uppercase">
-        Shared with the assistant
-      </p>
-      <ul className="mt-1.5 space-y-1 text-xs text-neutral-600">
-        {recent.map((event, index) => (
-          <li key={index}>{event.summary || event.type.replace(/_/g, " ")}</li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 export default function BagPanel({
   store,
   bag,
@@ -45,6 +26,7 @@ export default function BagPanel({
 }: BagPanelProps) {
   const empty = bag.lines.length === 0;
 
+  console.log(bag);
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-neutral-100/70">
       <div className="flex items-center gap-2 border-b border-neutral-200 bg-white px-3 py-2.5">
@@ -147,7 +129,6 @@ export default function BagPanel({
               ))}
             </ul>
           )}
-          {conversationId && <SharedActivity store={store} conversationId={conversationId} />}
         </div>
       </div>
 
