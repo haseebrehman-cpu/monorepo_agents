@@ -91,7 +91,7 @@ function FieldForm({
 
 /** Renders what a paused conversation is waiting for. The customer can also just type. */
 export default function InputRequestForm({ input, handoff = false, disabled, onAnswer }: InputRequestFormProps) {
-  if (handoff || input.kind === "handoff_contact") {
+  if (handoff && input.kind === "handoff_contact") {
     const fields = input.fields ?? [];
     if (fields.length === 0) return null;
     return (
