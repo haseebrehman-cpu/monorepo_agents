@@ -13,7 +13,7 @@ interface BagPanelProps {
   onRemove: (productId: string) => void;
   onClose: () => void;
 }
-git add <div className="git c"></div>
+
 export default function BagPanel({
   bag,
   onQuantityChange,
