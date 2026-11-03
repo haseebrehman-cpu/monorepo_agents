@@ -26,6 +26,11 @@ function HandoffNotice({ reference }: { reference?: string | null }) {
 export function ReplyBody({ reply, isLatest }: AssistantReplyProps) {
   const { store, isTyping, send } = useChatActions();
   const interactive = isLatest && !isTyping;
+  const isHandoff = reply.intent?.label === "human_handoff";
+  const showInput =
+    Boolean(reply.input) &&
+    isLatest &&
+    (isHandoff || (reply.type === "input_request" && reply.input?.kind !== "handoff_contact"));
 
   return (
     <>
@@ -49,16 +54,14 @@ export function ReplyBody({ reply, isLatest }: AssistantReplyProps) {
         />
       )}
 
-      {reply.input &&
-        isLatest &&
-        (reply.type === "input_request" || reply.intent?.label === "human_handoff") && (
-          <InputRequestForm
-            input={reply.input}
-            handoff={reply.intent?.label === "human_handoff"}
-            disabled={isTyping}
-            onAnswer={(text) => send(text)}
-          />
-        )}
+      {showInput && reply.input && (
+        <InputRequestForm
+          input={reply.input}
+          handoff={isHandoff}
+          disabled={isTyping}
+          onAnswer={(text) => send(text)}
+        />
+      )}
 
       {reply.sources && reply.sources.length > 0 && <SourceList sources={reply.sources} />}
     </>
