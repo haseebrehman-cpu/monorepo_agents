@@ -9,6 +9,7 @@ import { usePageEvent } from "@/lib/api/use-page-event";
 import { STORE_NAME } from "@/lib/chat/constants";
 import { isHome } from "@/lib/chat/transcript";
 import { useSupportChat } from "@/lib/chat/use-support-chat";
+import { liveChatIsConfigured } from "@/lib/live-chat/base";
 import { liveChatHandoffFromReply, useLiveChatSession } from "@/lib/live-chat/session";
 import { useLiveChat, type LiveChat } from "@/lib/live-chat/use-live-chat";
 import BagPanel, { CheckoutFollowUp } from "./BagPanel";
@@ -61,8 +62,10 @@ export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose
   const { session: liveSession, open: openLiveChat } = live;
   const home = isHome(messages);
 
+  const liveChatReady = liveChatIsConfigured();
+
   useEffect(() => {
-    if (liveSession) return;
+    if (!liveChatReady || liveSession) return;
     for (let index = messages.length - 1; index >= 0; index -= 1) {
       const message = messages[index];
       if (message.role !== "assistant" || message.kind !== "reply") continue;
@@ -71,7 +74,7 @@ export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose
       openLiveChat(handoff);
       return;
     }
-  }, [liveSession, messages, openLiveChat]);
+  }, [liveChatReady, liveSession, messages, openLiveChat]);
 
   useEffect(() => {
     const node = scrollRef.current;

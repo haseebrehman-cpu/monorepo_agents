@@ -3,12 +3,10 @@ import type {
   LiveChatMessage,
   LiveChatSendMessageRequest,
 } from "@rdx/chat-contract";
+import { liveChatBase } from "./base";
 import { createSseParser, type SseMessage } from "./sse";
 
 /** e.g. `https://cts-api.example.com/api/live-chat/customer`. Live chat stays off without it. */
-const API_BASE = process.env.NEXT_PUBLIC_LIVE_CHAT_API_BASE?.trim().replace(/\/+$/, "") || null;
-
-export const isLiveChatConfigured = API_BASE !== null;
 
 export class LiveChatApiError extends Error {
   constructor(
@@ -32,8 +30,9 @@ async function toError(response: Response): Promise<LiveChatApiError> {
 }
 
 function url(path: string): string {
-  if (!API_BASE) throw new Error("NEXT_PUBLIC_LIVE_CHAT_API_BASE is not set");
-  return `${API_BASE}${path}`;
+  const base = liveChatBase();
+  if (!base) throw new Error("NEXT_PUBLIC_LIVE_CHAT_API_BASE is not set");
+  return `${base}${path}`;
 }
 
 /** Asks cts-backend for a customer token for a handoff the assistant already returned. */

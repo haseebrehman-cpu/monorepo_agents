@@ -81,7 +81,7 @@ function AssistantBubble({
 }) {
   const isError = message.kind === "error";
   return (
-    <div className="animate-rdx-rise flex items-start gap-2">
+    <div className="animate-rdx-rise flex min-w-0 items-start gap-2">
       <BotAvatar />
       <div className="min-w-0 flex-1">
         <div
@@ -123,11 +123,11 @@ export default function MessageList({ messages, scrollRef }: MessageListProps) {
   return (
     <div
       ref={scrollRef}
-      className="rdx-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain bg-neutral-100/70 px-4 py-4"
+      className="rdx-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-neutral-100/70 px-4 py-4"
       aria-live="polite"
       aria-busy={isTyping}
     >
-      <div className="mx-auto w-full space-y-4 group-data-[expanded=true]/panel:max-w-3xl">
+      <div className="mx-auto w-full min-w-0 space-y-4 group-data-[expanded=true]/panel:max-w-3xl">
         {messages.map((message) => {
           if (message.role === "user") return <UserBubble key={message.id} message={message} />;
           if (message.kind === "welcome") {

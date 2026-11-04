@@ -21,11 +21,14 @@ RUN npm ci
 COPY apps/chatbot-next apps/chatbot-next
 COPY packages packages
 
-# NEXT_PUBLIC_* values are baked in at build time.
+# NEXT_PUBLIC_* values are baked in at build time. Coolify only passes a
+# build arg that this file declares, so an undeclared one never reaches Next.
 ARG NEXT_PUBLIC_CHAT_API_BASE
 ARG NEXT_PUBLIC_STORE_NAME
+ARG NEXT_PUBLIC_LIVE_CHAT_API_BASE
 ENV NEXT_PUBLIC_CHAT_API_BASE=$NEXT_PUBLIC_CHAT_API_BASE \
     NEXT_PUBLIC_STORE_NAME=$NEXT_PUBLIC_STORE_NAME \
+    NEXT_PUBLIC_LIVE_CHAT_API_BASE=$NEXT_PUBLIC_LIVE_CHAT_API_BASE \
     NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build --workspace=@rdx/chatbot-next

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Inter, Oswald } from "next/font/google";
+import { liveChatApiBaseFromRuntime } from "@/lib/live-chat/runtime-config";
 import Providers from "./providers";
 import "./globals.css";
 
@@ -29,7 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
-        <Providers>{children}</Providers>
+        <Providers liveChatApiBase={liveChatApiBaseFromRuntime()}>{children}</Providers>
       </body>
     </html>
   );

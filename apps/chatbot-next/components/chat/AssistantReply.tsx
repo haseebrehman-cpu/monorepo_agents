@@ -73,7 +73,7 @@ export function ReplyProducts({ reply }: { reply: SupportReply }) {
   if (products.length === 0) return null;
 
   return (
-    <div className="rdx-scroll -mx-1 mt-2 flex snap-x gap-2 overflow-x-auto px-1 pb-2 group-data-[expanded=true]/panel:grid group-data-[expanded=true]/panel:grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] group-data-[expanded=true]/panel:overflow-visible">
+    <div className="rdx-scroll mt-2 flex w-full min-w-0 snap-x gap-2 overflow-x-auto overflow-y-hidden px-1 pb-2 group-data-[expanded=true]/panel:grid group-data-[expanded=true]/panel:grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] group-data-[expanded=true]/panel:overflow-visible">
       {products.map((product) => (
         <ProductCard
           key={product.product_id}

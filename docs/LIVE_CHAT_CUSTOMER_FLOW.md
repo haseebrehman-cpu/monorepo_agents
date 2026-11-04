@@ -262,9 +262,10 @@ Rate-limit windows and the handoff route limit are in `live-chat.constants.ts`.
 | `CHATBOT_SERVICE_TOKEN` | cts-backend | The AI service sends it to create a handoff |
 | `JWT_SECRET` | cts-backend | The customer token is derived from it |
 | `CORS_ORIGIN` | cts-backend | Must include the chatbot origin, for example `http://localhost:3010` |
-| `NEXT_PUBLIC_LIVE_CHAT_API_BASE` | chatbot-next | Base URL of `/api/live-chat/customer`. Unset means the widget never switches. Restart the Next dev server after changing it |
+| `NEXT_PUBLIC_LIVE_CHAT_API_BASE` | chatbot-next | Base URL of `/api/live-chat/customer`. Unset means the widget never switches. Locally, restart the Next dev server after changing it. In Docker, declare it as a build arg (`apps/chatbot-next/Dockerfile`) and rebuild. A running container does not pick up a value that was missing at `next build`. |
+| `LIVE_CHAT_API_BASE` | chatbot-next | Same URL, read when the server starts. Use it when the Docker image was built without the public variable. The page passes it into the widget. |
 
-Until `NEXT_PUBLIC_LIVE_CHAT_API_BASE` is set, a handoff still creates the desk conversation and the widget still shows "Passed to our support team". It does not open the live thread. With that base URL set, a Live Chat handoff opens the thread even when the assistant reply has no `customer_token`. The widget fetches one from `POST /customer/session`.
+Until one of those is set, a handoff still creates the desk conversation and the widget still shows "Passed to our support team". It does not open the live thread. With that base URL set, a Live Chat handoff opens the thread even when the assistant reply has no `customer_token`. The widget fetches one from `POST /customer/session`. The chatbot origin must be in `CORS_ORIGIN` on cts-backend, or the browser request that opens the thread is rejected.
 
 ---
 

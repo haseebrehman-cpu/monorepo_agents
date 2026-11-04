@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SupportReply, SupportStoreCode } from "@rdx/chat-contract";
 import { readJson, removeItem, writeJson } from "@/lib/chat/storage";
-import { claimLiveChatToken, isLiveChatConfigured } from "./api";
+import { claimLiveChatToken } from "./api";
+import { liveChatIsConfigured } from "./base";
 import { liveChatHandoffFromReply as readHandoff, type LiveChatHandoff } from "./handoff";
 
 export type { LiveChatHandoff };
@@ -25,7 +26,7 @@ function storedSession(store: SupportStoreCode): LiveChatSession | null {
 
 /** Uses the widget's live-chat config. Tests call `liveChatHandoffFromReply` in `handoff.ts` directly. */
 export function liveChatHandoffFromReply(reply: SupportReply): LiveChatSession | null {
-  return readHandoff(reply, isLiveChatConfigured);
+  return readHandoff(reply, liveChatIsConfigured());
 }
 
 /** Kept in sessionStorage per store once a token exists, so a reload stays in the live chat. */

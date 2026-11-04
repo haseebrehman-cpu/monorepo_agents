@@ -160,7 +160,7 @@ export default function LiveChatView({
     <>
       <div
         ref={scrollRef}
-        className="rdx-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain bg-neutral-100/70 px-4 py-4"
+        className="rdx-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-neutral-100/70 px-4 py-4"
         aria-live="polite"
       >
         <div className="mx-auto w-full space-y-4 group-data-[expanded=true]/panel:max-w-3xl">
