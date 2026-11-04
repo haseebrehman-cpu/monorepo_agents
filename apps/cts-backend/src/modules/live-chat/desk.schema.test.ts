@@ -65,6 +65,7 @@ describe("eventForUser", () => {
       assignedToYou: ["a"],
       queued: [],
       members: true,
+      live: false,
     });
     expect(eventForUser(event, 3).assignedToYou).toEqual([]);
   });
