@@ -62,6 +62,35 @@ export function useSupportCart(store: SupportStoreCode) {
     onError: (error) => reportError(error, "cart"),
   });
 
+  const clearCart = useMutation({
+    mutationFn: () =>
+      withConversation(async (id) => {
+        let cart =
+          queryClient.getQueryData<SupportCart>(supportKeys.cart(store, id)) ?? EMPTY_CART;
+        const attempted = new Set<string>();
+        try {
+          // Quantity 0 removes a line. Run one at a time so each response is the
+          // cart the next removal starts from.
+          for (;;) {
+            const next = cart.items.find((item) => !attempted.has(item.variant_id));
+            if (!next || attempted.size > 100) break;
+            attempted.add(next.variant_id);
+            cart = await api.support.updateCartItem(id, next.variant_id, {
+              store,
+              quantity: 0,
+            });
+            await remember(id, cart);
+          }
+        } catch (error) {
+          await remember(id, cart);
+          throw error;
+        }
+        return { id, cart };
+      }),
+    onSuccess: ({ id, cart }) => remember(id, cart),
+    onError: (error) => reportError(error, "cart"),
+  });
+
   const pendingVariantId = addItem.isPending
     ? addItem.variables?.variantId
     : updateItem.isPending
@@ -71,10 +100,12 @@ export function useSupportCart(store: SupportStoreCode) {
   return {
     cart: query.data ?? EMPTY_CART,
     isLoading: query.isLoading && Boolean(conversationId),
-    isUpdating: addItem.isPending || updateItem.isPending,
+    isUpdating: addItem.isPending || updateItem.isPending || clearCart.isPending,
+    isClearing: clearCart.isPending,
     pendingVariantId: pendingVariantId ?? null,
     refresh: query.refetch,
     addItem: addItem.mutateAsync,
     updateItem: updateItem.mutateAsync,
+    clearCart: () => clearCart.mutateAsync().then(({ cart }) => cart),
   };
 }

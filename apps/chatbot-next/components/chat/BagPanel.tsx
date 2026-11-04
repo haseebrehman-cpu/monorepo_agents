@@ -1,16 +1,19 @@
 import Image from "next/image";
+import { useEffect, useId, useRef, useState } from "react";
 import type { SupportCart } from "@rdx/chat-contract";
 import { formatMoney } from "@/lib/chat/format";
 import { isSafeHref } from "@/lib/chat/links";
-import { ArrowLeftIcon, BagIcon, GloveGlyph, MinusIcon, PlusIcon, TrashIcon } from "./icons";
+import { ArrowLeftIcon, BagIcon, ExternalIcon, GloveGlyph, MinusIcon, PlusIcon, TrashIcon } from "./icons";
 import Spinner from "./Spinner";
 
 interface BagPanelProps {
   cart: SupportCart;
   isLoading: boolean;
+  isClearing: boolean;
   pendingVariantId: string | null;
   onQuantityChange: (variantId: string, quantity: number) => void;
   onRemove: (variantId: string) => void;
+  onEmpty: () => Promise<unknown>;
   onCheckout: (checkoutUrl: string) => void;
   onClose: () => void;
 }
@@ -18,15 +21,76 @@ interface BagPanelProps {
 export default function BagPanel({
   cart,
   isLoading,
+  isClearing,
   pendingVariantId,
   onQuantityChange,
   onRemove,
+  onEmpty,
   onCheckout,
   onClose,
 }: BagPanelProps) {
   const empty = cart.items.length === 0;
   const checkoutUrl = isSafeHref(cart.checkout_url) ? cart.checkout_url : null;
-  const busy = pendingVariantId !== null;
+  const busy = pendingVariantId !== null || isClearing;
+  const [confirming, setConfirming] = useState(false);
+  const confirmTitleId = useId();
+  const confirmDescId = useId();
+  const dialogId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const keepRef = useRef<HTMLButtonElement>(null);
+  const emptyingRef = useRef(false);
+  const clearingRef = useRef(isClearing);
+  clearingRef.current = isClearing;
+  const showConfirm = confirming && !empty;
+  const itemLabel = `${cart.item_count} ${cart.item_count === 1 ? "item" : "items"}`;
+
+  useEffect(() => {
+    if (empty) setConfirming(false);
+  }, [empty]);
+
+  useEffect(() => {
+    if (!showConfirm) return;
+    const node = dialogRef.current;
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    keepRef.current?.focus();
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        // Capture phase so Escape dismisses this dialog before the chat widget closes.
+        event.preventDefault();
+        event.stopPropagation();
+        if (clearingRef.current) return;
+        setConfirming(false);
+        return;
+      }
+      if (event.key !== "Tab" || !node) return;
+      const focusable = [...node.querySelectorAll<HTMLElement>("button:not(:disabled)")];
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKey, true);
+    return () => {
+      document.removeEventListener("keydown", onKey, true);
+      previouslyFocused?.focus();
+    };
+  }, [showConfirm]);
+
+  const requestEmpty = () => {
+    if (isClearing || emptyingRef.current) return;
+    emptyingRef.current = true;
+    void onEmpty().finally(() => {
+      emptyingRef.current = false;
+    });
+  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-neutral-100/70">
@@ -41,13 +105,95 @@ export default function BagPanel({
         </button>
         <p className="flex-1 text-sm font-semibold text-neutral-900">Your bag</p>
         {!empty && (
-          <span className="text-xs text-neutral-500">
-            {cart.item_count} {cart.item_count === 1 ? "item" : "items"}
-          </span>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <span className="text-xs text-neutral-500">{itemLabel}</span>
+            <button
+              type="button"
+              aria-label="Empty bag"
+              aria-expanded={showConfirm}
+              aria-controls={showConfirm ? dialogId : undefined}
+              disabled={isClearing || (busy && !showConfirm)}
+              onClick={() => {
+                if (isClearing) return;
+                setConfirming((open) => !open);
+              }}
+              className={`inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                showConfirm
+                  ? "bg-red-50 text-rdx-red"
+                  : "text-neutral-500 hover:bg-red-50 hover:text-rdx-red"
+              }`}
+            >
+              <TrashIcon className="h-3.5 w-3.5" />
+              Empty
+            </button>
+          </div>
         )}
       </div>
 
-      <div className="rdx-scroll min-h-0 flex-1 overflow-y-auto px-4 py-3">
+      <div className="relative min-h-0 flex-1">
+        {showConfirm && (
+          <div
+            className="absolute inset-0 z-20 flex items-start justify-center bg-neutral-900/25 px-4 pt-8 backdrop-blur-[2px]"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget && !isClearing) setConfirming(false);
+            }}
+          >
+            <div
+              ref={dialogRef}
+              id={dialogId}
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby={confirmTitleId}
+              aria-describedby={confirmDescId}
+              className="w-full max-w-sm animate-rdx-rise rounded-2xl bg-white p-4 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.55)] ring-1 ring-black/5"
+            >
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50 text-rdx-red">
+                  <TrashIcon className="h-4 w-4" />
+                </span>
+                <p id={confirmTitleId} className="text-sm font-semibold text-neutral-900">
+                  Empty your bag?
+                </p>
+              </div>
+              <p id={confirmDescId} className="mt-3 text-xs leading-relaxed text-neutral-500">
+                This removes {itemLabel}. You can add {cart.item_count === 1 ? "it" : "them"} again from the chat.
+              </p>
+              {isClearing && (
+                <p role="status" className="mt-3 text-xs font-medium text-neutral-600">
+                  Removing {itemLabel}…
+                </p>
+              )}
+              <div className="mt-4 flex gap-2">
+                <button
+                  ref={keepRef}
+                  type="button"
+                  disabled={isClearing}
+                  onClick={() => setConfirming(false)}
+                  className="h-9 flex-1 cursor-pointer rounded-full border border-neutral-200 bg-white text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Keep items
+                </button>
+                <button
+                  type="button"
+                  disabled={isClearing}
+                  onClick={requestEmpty}
+                  className="inline-flex h-9 flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-rdx-red text-xs font-semibold text-white transition hover:bg-rdx-red-hover disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isClearing ? (
+                    <>
+                      <Spinner />
+                      Emptying…
+                    </>
+                  ) : (
+                    "Empty bag"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      <div className="rdx-scroll h-full overflow-y-auto px-4 py-3">
         <div className="mx-auto group-data-[expanded=true]/panel:max-w-3xl">
           {isLoading ? (
             <div className="flex justify-center pt-12">
@@ -73,7 +219,7 @@ export default function BagPanel({
           ) : (
             <ul className="space-y-2">
               {cart.items.map((line) => {
-                const lineBusy = pendingVariantId === line.variant_id;
+                const lineBusy = isClearing || pendingVariantId === line.variant_id;
                 const amount = line.total ?? (line.price != null ? line.price * line.quantity : null);
                 return (
                   <li key={line.variant_id} className="flex gap-3 rounded-2xl border border-neutral-200 bg-white p-2.5">
@@ -133,9 +279,14 @@ export default function BagPanel({
           )}
         </div>
       </div>
+      </div>
 
       {!empty && (
-        <div className="border-t border-neutral-200 bg-white px-4 py-3">
+        <div
+          className={`border-t border-neutral-200 bg-white px-4 py-3 transition ${
+            showConfirm ? "pointer-events-none opacity-40" : ""
+          }`}
+        >
           <div className="mx-auto group-data-[expanded=true]/panel:max-w-3xl">
             {cart.currency && (
               <div className="flex items-baseline justify-between">
@@ -148,15 +299,141 @@ export default function BagPanel({
             </p>
             <button
               type="button"
-              disabled={!checkoutUrl || busy}
+              disabled={!checkoutUrl || busy || showConfirm}
               onClick={() => checkoutUrl && onCheckout(checkoutUrl)}
               className="mt-3 flex h-10 w-full cursor-pointer items-center justify-center rounded-full bg-rdx-red text-sm font-semibold text-white transition hover:bg-rdx-red-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {busy ? "Updating bag…" : "Checkout"}
+              {isClearing ? "Emptying bag…" : busy ? "Updating bag…" : "Checkout"}
             </button>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Shown after checkout opens in another tab, because that tab never reports whether the shopper paid. */
+export function CheckoutFollowUp({
+  itemCount,
+  isClearing,
+  onKeep,
+  onEmpty,
+}: {
+  itemCount: number;
+  isClearing: boolean;
+  onKeep: () => void;
+  onEmpty: () => Promise<unknown>;
+}) {
+  const itemLabel = `${itemCount} ${itemCount === 1 ? "item" : "items"}`;
+  const titleId = useId();
+  const descId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const keepRef = useRef<HTMLButtonElement>(null);
+  const clearingRef = useRef(isClearing);
+  const emptyingRef = useRef(false);
+  clearingRef.current = isClearing;
+
+  useEffect(() => {
+    const node = dialogRef.current;
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    keepRef.current?.focus();
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        if (clearingRef.current) return;
+        onKeep();
+        return;
+      }
+      if (event.key !== "Tab" || !node) return;
+      const focusable = [...node.querySelectorAll<HTMLElement>("button:not(:disabled)")];
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKey, true);
+    return () => {
+      document.removeEventListener("keydown", onKey, true);
+      previouslyFocused?.focus();
+    };
+  }, [onKeep]);
+
+  const requestEmpty = () => {
+    if (isClearing || emptyingRef.current) return;
+    emptyingRef.current = true;
+    void onEmpty().finally(() => {
+      emptyingRef.current = false;
+    });
+  };
+
+  return (
+    <div
+      className="absolute inset-0 z-40 flex items-center justify-center bg-neutral-900/45 px-5 backdrop-blur-[2px]"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !isClearing) onKeep();
+      }}
+    >
+      <div
+        ref={dialogRef}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descId}
+        className="w-full max-w-sm animate-rdx-rise rounded-2xl bg-white p-4 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.55)] ring-1 ring-black/5"
+      >
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-700">
+            <ExternalIcon className="h-4 w-4" />
+          </span>
+          <p id={titleId} className="text-sm font-semibold text-neutral-900">
+            Finished on the store?
+          </p>
+        </div>
+        <p id={descId} className="mt-3 text-xs leading-relaxed text-neutral-500">
+          Checkout opened in another tab. This chat can't see whether you paid, so your bag still has {itemLabel}. Empty
+          it if you're done, or keep {itemCount === 1 ? "it" : "them"} if you left checkout.
+        </p>
+        {isClearing && (
+          <p role="status" className="mt-3 text-xs font-medium text-neutral-600">
+            Removing {itemLabel}…
+          </p>
+        )}
+        <div className="mt-4 flex gap-2">
+          <button
+            ref={keepRef}
+            type="button"
+            disabled={isClearing}
+            onClick={onKeep}
+            className="h-9 flex-1 cursor-pointer rounded-full border border-neutral-200 bg-white text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Keep items
+          </button>
+          <button
+            type="button"
+            disabled={isClearing}
+            onClick={requestEmpty}
+            className="inline-flex h-9 flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-rdx-red text-xs font-semibold text-white transition hover:bg-rdx-red-hover disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isClearing ? (
+              <>
+                <Spinner />
+                Emptying…
+              </>
+            ) : (
+              "Empty bag"
+            )}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
