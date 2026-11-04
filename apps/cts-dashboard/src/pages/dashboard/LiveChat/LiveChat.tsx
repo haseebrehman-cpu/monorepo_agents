@@ -314,26 +314,45 @@ export default function LiveChatPage() {
     });
   };
 
-  const typingState = useRef(new Map<string, { active: boolean; sentAt: number; timer: number | null }>());
+  const typingState = useRef(
+    new Map<
+      string,
+      {
+        active: boolean;
+        canResend: boolean;
+        idleTimer: number | null;
+        cooldownTimer: number | null;
+      }
+    >(),
+  );
   const reportTyping = (id: string, active: boolean) => {
-    const current = typingState.current.get(id) ?? { active: false, sentAt: 0, timer: null };
+    const current = typingState.current.get(id) ?? {
+      active: false,
+      canResend: true,
+      idleTimer: null,
+      cooldownTimer: null,
+    };
     if (active) {
-      const now = Date.now();
-      if (!current.active || now - current.sentAt > 10_000) {
+      if (!current.active || current.canResend) {
         current.active = true;
-        current.sentAt = now;
+        current.canResend = false;
+        if (current.cooldownTimer !== null) window.clearTimeout(current.cooldownTimer);
+        current.cooldownTimer = window.setTimeout(() => {
+          current.canResend = true;
+          current.cooldownTimer = null;
+        }, 10_000);
         setDeskTyping(id, true);
       }
-      if (current.timer !== null) window.clearTimeout(current.timer);
-      current.timer = window.setTimeout(() => {
+      if (current.idleTimer !== null) window.clearTimeout(current.idleTimer);
+      current.idleTimer = window.setTimeout(() => {
         current.active = false;
-        current.timer = null;
+        current.idleTimer = null;
         setDeskTyping(id, false);
       }, 3_000);
     } else if (current.active) {
-      if (current.timer !== null) window.clearTimeout(current.timer);
+      if (current.idleTimer !== null) window.clearTimeout(current.idleTimer);
       current.active = false;
-      current.timer = null;
+      current.idleTimer = null;
       setDeskTyping(id, false);
     }
     typingState.current.set(id, current);
