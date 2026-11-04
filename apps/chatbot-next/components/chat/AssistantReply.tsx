@@ -22,11 +22,10 @@ function HandoffNotice({ reference }: { reference?: string | null }) {
   );
 }
 
-/** The bubble body for one reply, rendered by `reply.type`. */
 export function ReplyBody({ reply, isLatest }: AssistantReplyProps) {
   const { store, isTyping, send } = useChatActions();
   const interactive = isLatest && !isTyping;
-  const isHandoff = reply.intent?.label === "human_handoff";
+  const isHandoff = reply.input?.kind ? reply.input.kind === "handoff_contact" : reply?.intent?.label === "human_handoff";
   const showInput =
     Boolean(reply.input) &&
     isLatest &&

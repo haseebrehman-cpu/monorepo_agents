@@ -1,6 +1,7 @@
 /** Shared chat/API contracts for the widget and dashboard (FastAPI). */
 
 export * from "./support";
+export * from "./live-chat";
 
 export type ChatRole = "user" | "assistant";
 

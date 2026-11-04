@@ -3,12 +3,10 @@ import type { ComponentType, SVGProps } from "react";
 import {
   CHATBOT_ICON_SRC,
   MENU_OPTIONS,
-  POPULAR_QUESTIONS,
   STORE_NAME,
   storeOption,
   type MenuOption,
   type MenuOptionId,
-  type QuickQuestion,
 } from "@/lib/chat/constants";
 import type { SupportStoreCode } from "@rdx/chat-contract";
 import {
@@ -18,7 +16,6 @@ import {
   ReturnIcon,
   SearchIcon,
   ShieldAlertIcon,
-  SparkIcon,
 } from "./icons";
 
 const MENU_ICONS: Record<MenuOptionId, ComponentType<SVGProps<SVGSVGElement>>> = {
@@ -34,7 +31,6 @@ interface WelcomeViewProps {
   disabled: boolean;
   compact?: boolean;
   onSelect: (option: MenuOption) => void;
-  onQuestion: (question: QuickQuestion) => void;
 }
 
 export default function WelcomeView({
@@ -42,7 +38,6 @@ export default function WelcomeView({
   disabled,
   compact = false,
   onSelect,
-  onQuestion,
 }: WelcomeViewProps) {
   const regionLabel = storeOption(store).label;
 
@@ -110,26 +105,6 @@ export default function WelcomeView({
           })}
         </div>
       </section>
-
-      {/* <section aria-label="Popular questions">
-        <p className="mb-2 flex items-center gap-1.5 px-1 text-[11px] font-semibold tracking-[0.14em] text-neutral-500 uppercase">
-          <SparkIcon className="h-3.5 w-3.5 text-rdx-red" />
-          Popular right now
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {POPULAR_QUESTIONS.map((question) => (
-            <button
-              key={question.id}
-              type="button"
-              disabled={disabled}
-              onClick={() => onQuestion(question)}
-              className="cursor-pointer rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:border-rdx-red hover:bg-rdx-red hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {question.label}
-            </button>
-          ))}
-        </div>
-      </section> */}
     </div>
   );
 }

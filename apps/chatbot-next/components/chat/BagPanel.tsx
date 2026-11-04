@@ -33,6 +33,7 @@ export default function BagPanel({
   const checkoutUrl = isSafeHref(cart.checkout_url) ? cart.checkout_url : null;
   const busy = pendingVariantId !== null || isClearing;
   const [confirming, setConfirming] = useState(false);
+  if (empty && confirming) setConfirming(false);
   const confirmTitleId = useId();
   const confirmDescId = useId();
   const dialogId = useId();
@@ -40,13 +41,12 @@ export default function BagPanel({
   const keepRef = useRef<HTMLButtonElement>(null);
   const emptyingRef = useRef(false);
   const clearingRef = useRef(isClearing);
-  clearingRef.current = isClearing;
   const showConfirm = confirming && !empty;
   const itemLabel = `${cart.item_count} ${cart.item_count === 1 ? "item" : "items"}`;
 
   useEffect(() => {
-    if (empty) setConfirming(false);
-  }, [empty]);
+    clearingRef.current = isClearing;
+  }, [isClearing]);
 
   useEffect(() => {
     if (!showConfirm) return;
@@ -331,7 +331,10 @@ export function CheckoutFollowUp({
   const keepRef = useRef<HTMLButtonElement>(null);
   const clearingRef = useRef(isClearing);
   const emptyingRef = useRef(false);
-  clearingRef.current = isClearing;
+
+  useEffect(() => {
+    clearingRef.current = isClearing;
+  }, [isClearing]);
 
   useEffect(() => {
     const node = dialogRef.current;
@@ -399,8 +402,8 @@ export function CheckoutFollowUp({
           </p>
         </div>
         <p id={descId} className="mt-3 text-xs leading-relaxed text-neutral-500">
-          Checkout opened in another tab. This chat can't see whether you paid, so your bag still has {itemLabel}. Empty
-          it if you're done, or keep {itemCount === 1 ? "it" : "them"} if you left checkout.
+          Checkout opened in another tab. This chat cannot tell whether you paid, so your bag still has {itemLabel}. Empty
+          it if you are done, or keep {itemCount === 1 ? "it" : "them"} if you left checkout.
         </p>
         {isClearing && (
           <p role="status" className="mt-3 text-xs font-medium text-neutral-600">

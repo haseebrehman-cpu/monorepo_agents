@@ -15,6 +15,8 @@ interface ChatHeaderProps {
   onToggleCart: () => void;
   onNewChat: () => void;
   onClose: () => void;
+  /** Replaces the assistant's health status, e.g. during a live chat. */
+  statusOverride?: { dot: string; text: string };
 }
 
 const STATUS_COPY = {
@@ -61,9 +63,10 @@ export default function ChatHeader({
   onToggleCart,
   onNewChat,
   onClose,
+  statusOverride,
 }: ChatHeaderProps) {
   const health = useHealth();
-  const status = STATUS_COPY[health];
+  const status = statusOverride ?? STATUS_COPY[health];
   const regionOption = storeOption(store);
 
   return (

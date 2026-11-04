@@ -278,10 +278,51 @@ Not called by the dashboard.
 
 Create `waiting` with the customer, reason, AI summary, order, channel, location, and tags. The page, visit count, browser, referrer, and transcript are not part of this request. Run placement and push the result to connected desks. The transcript will arrive through a separate streaming API.
 
-Also accept, on an existing conversation:
+The response is `{ success: true, data: { id, conversationId, status, queuedFor, handedOffAt, customerToken } }`. Repeating an open handoff returns the same conversation with a fresh `customerToken`.
 
-- a new customer message (increments `unread` for agents who are not viewing it, sets `typing` false, bumps `updatedAt`)
-- customer typing start and stop
+The AI service must pass these through on the reply that confirms the handoff, so the chatbot can switch to the live chat:
+
+```json
+"handoff": {
+  "reference": "<data.id>",
+  "channel": "LiveChat",
+  "handoff_id": "<data.id>",
+  "customer_token": "<data.customerToken>"
+}
+```
+
+### Customer (chatbot widget)
+
+The handoff-to-customer path, and why the code is shaped that way, is in [LIVE_CHAT_CUSTOMER_FLOW.md](./LIVE_CHAT_CUSTOMER_FLOW.md). Not called by the dashboard. Every request sends `Authorization: Bearer <customerToken>`. The token is a JWT for one conversation, valid 24 hours, signed with a key derived from `JWT_SECRET`, so it can never pass as a staff session. The chatbot origin must be in `CORS_ORIGIN`.
+
+`GET /live-chat/customer/events`
+
+Server-Sent Events. Send `Last-Event-ID` with the last message id to resume; without it the stream replays the latest 500 messages. After the replay comes one `status` event, then live changes as they commit. The server ends each stream after 30 minutes and the client reconnects with its cursor.
+
+```text
+id: 812
+event: message
+data: {"id":"812","author":"agent","authorName":"Sarah","body":"Hi!","at":"…","clientId":null}
+
+event: status
+data: {"status":"active","agentName":"Sarah"}
+```
+
+The customer sees their own messages, agent replies, and system lines that have a customer wording (`Sarah joined the chat.`, `You're now chatting with Ali.`, `This chat has ended.`, `Sarah reopened the chat.`). Private notes, AI turns, the handoff reason, and desk-only system lines are never sent. Agents appear by first name.
+
+`POST /live-chat/customer/messages`
+
+Body: `{ "body": "text", "clientId": "live_…" }`. Allowed while `waiting` or `active`; `409 CONVERSATION_CLOSED` once resolved. A retry with the same `clientId` returns the stored message instead of a duplicate. The message appears in the desk as `author = customer` and counts toward `unread`.
+
+Errors: `401 INVALID_TOKEN` (expired or wrong token), `404 CONVERSATION_NOT_FOUND`, `429 TOO_MANY_STREAMS` (5 open streams per conversation) or `TOO_MANY_REQUESTS`.
+
+`POST /live-chat/customer/typing`
+
+Body: `{ "typing": true }`. `204` with no body. The widget sends `true` once when the draft becomes non-empty and `false` when it is cleared or after a few seconds of no typing. The agent's open stream receives `event: typing`.
+
+Delivery uses Postgres `LISTEN/NOTIFY` on `live_chat_customer_events`. A new message is loaded once per API process and written onto the streams that are already open. Typing is a flag on that same channel and is not stored. Every writer locks the conversation row before inserting a message, so ids commit in order and a resumed stream never skips one.
+
+The agent sees a typing line while the customer is composing, and the customer sees "{first name} is typing…" while the agent is composing.
 
 ### Realtime
 

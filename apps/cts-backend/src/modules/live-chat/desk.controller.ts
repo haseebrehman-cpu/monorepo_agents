@@ -7,6 +7,7 @@ import {
   memberParamsSchema,
   sendMessageSchema,
   transferSchema,
+  typingSchema,
   updateMemberSchema,
   updatePresenceSchema,
 } from "./desk.schema.js";
@@ -117,7 +118,12 @@ export const deskController = {
     201
   ),
 
-  /** Server-Sent Events. Carries conversation ids only, never customer data. */
+  typing: handle("typing", async (req, viewer) => {
+    const { typing } = parse(typingSchema, req.body);
+    await deskService.setTyping(viewer, conversationId(req), typing);
+  }),
+
+  /** Server-Sent Events. Message bodies are pushed as `message` events. */
   events(req: Request, res: Response) {
     if (!req.user) return res.status(401).json({ success: false, error: "UNAUTHENTICATED" });
     const userId = req.user.userId;
@@ -145,7 +151,11 @@ export const deskController = {
     };
     const unsubscribe = deskEventHub.subscribe({
       userId,
-      send: (event) => res.write(`event: desk\ndata: ${JSON.stringify(event)}\n\n`),
+      isAdmin: req.user.roles.includes(ROLE.ADMIN),
+      departmentId: req.user.departmentId,
+      send: (frame) => {
+        if (!closed) res.write(frame);
+      },
       close,
     });
     const heartbeat = setInterval(() => res.write(": ping\n\n"), EVENTS_HEARTBEAT_MS);

@@ -5,6 +5,7 @@ import type { SupportStoreCode } from "@rdx/chat-contract";
 import { friendlyError, reportError } from "@/lib/api/errors";
 import { useConversationControls } from "@/lib/api/use-conversation";
 import { useSendMessage } from "@/lib/api/use-send-message";
+import { liveChatHandoffFromReply, type LiveChatSession } from "@/lib/live-chat/session";
 import { createId } from "./format";
 import { isMainMenuRequest } from "./intents";
 import { readJson, removeItem, writeJson } from "./storage";
@@ -29,7 +30,12 @@ export interface SendOptions {
   menuChoice?: string;
 }
 
-export function useSupportChat(store: SupportStoreCode) {
+export interface SupportChatOptions {
+  /** Called when a reply hands the chat to a person who can be reached live. */
+  onHandoff?: (session: LiveChatSession) => void;
+}
+
+export function useSupportChat(store: SupportStoreCode, { onHandoff }: SupportChatOptions = {}) {
   const [messages, dispatch] = useReducer(transcriptReducer, store, loadTranscript);
   const inFlight = useRef<AbortController | null>(null);
   const { forget } = useConversationControls(store);
@@ -62,6 +68,8 @@ export function useSupportChat(store: SupportStoreCode) {
           onSuccess: (reply) => {
             if (controller.signal.aborted) return;
             dispatch({ type: "reply", id: createId(), reply, at: Date.now() });
+            const session = liveChatHandoffFromReply(reply);
+            if (session) onHandoff?.(session);
           },
           onError: (error) => {
             if (controller.signal.aborted) return;
@@ -81,7 +89,7 @@ export function useSupportChat(store: SupportStoreCode) {
         },
       );
     },
-    [isPending, mutate],
+    [isPending, mutate, onHandoff],
   );
 
   const reset = useCallback(() => {

@@ -35,5 +35,7 @@ export const sendMessageSchema = z.object({
     ),
 });
 
+export const typingSchema = z.object({ typing: z.boolean() });
+
 export type UpdatePresenceInput = z.infer<typeof updatePresenceSchema>;
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;

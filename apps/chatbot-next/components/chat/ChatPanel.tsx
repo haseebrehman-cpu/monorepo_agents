@@ -9,10 +9,13 @@ import { usePageEvent } from "@/lib/api/use-page-event";
 import { STORE_NAME } from "@/lib/chat/constants";
 import { isHome } from "@/lib/chat/transcript";
 import { useSupportChat } from "@/lib/chat/use-support-chat";
+import { liveChatHandoffFromReply, useLiveChatSession } from "@/lib/live-chat/session";
+import { useLiveChat, type LiveChat } from "@/lib/live-chat/use-live-chat";
 import BagPanel, { CheckoutFollowUp } from "./BagPanel";
 import { ChatActionsProvider, type ChatActions } from "./chat-context";
 import ChatComposer from "./ChatComposer";
 import ChatHeader from "./ChatHeader";
+import LiveChatView from "./LiveChatView";
 import MessageList from "./MessageList";
 
 interface ChatPanelProps {
@@ -29,8 +32,20 @@ function productEventData(product: Pick<SupportProduct, "product_id" | "title">)
   return { product_id: product.product_id, title: product.title };
 }
 
+function liveStatus(chat: LiveChat) {
+  if (chat.ended) return { dot: "bg-neutral-400", text: "Chat ended" };
+  if (chat.connection === "reconnecting") return { dot: "bg-amber-400 animate-pulse", text: "Reconnecting…" };
+  if (chat.status === "active" && chat.agentName) {
+    return { dot: "bg-emerald-400", text: `Chatting with ${chat.agentName}` };
+  }
+  if (chat.status === "active") return { dot: "bg-emerald-400", text: "Chatting with our team" };
+  return { dot: "bg-amber-400 animate-pulse", text: "Waiting for a team member" };
+}
+
 export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose }: ChatPanelProps) {
-  const chat = useSupportChat(store);
+  const live = useLiveChatSession(store);
+  const chat = useSupportChat(store, { onHandoff: live.open });
+  const liveChat = useLiveChat(live.session);
   const bag = useSupportCart(store);
   const { track } = usePageEvent(store, chat.pendingInput !== null);
   const [input, setInput] = useState("");
@@ -43,7 +58,20 @@ export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const { messages, isTyping, send, reset } = chat;
+  const { session: liveSession, open: openLiveChat } = live;
   const home = isHome(messages);
+
+  useEffect(() => {
+    if (liveSession) return;
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const message = messages[index];
+      if (message.role !== "assistant" || message.kind !== "reply") continue;
+      const handoff = liveChatHandoffFromReply(message.reply);
+      if (!handoff) continue;
+      openLiveChat(handoff);
+      return;
+    }
+  }, [liveSession, messages, openLiveChat]);
 
   useEffect(() => {
     const node = scrollRef.current;
@@ -67,17 +95,17 @@ export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose
   }, [notice]);
 
   const { cart, addItem, updateItem, clearCart, isClearing } = bag;
-  itemCountRef.current = cart.item_count;
+  if (cart.item_count === 0 && !isClearing && checkoutPrompt) setCheckoutPrompt(false);
+
+  useEffect(() => {
+    itemCountRef.current = cart.item_count;
+  }, [cart.item_count]);
 
   useEffect(() => {
     return () => {
       if (checkoutTimer.current !== null) window.clearTimeout(checkoutTimer.current);
     };
   }, []);
-
-  useEffect(() => {
-    if (cart.item_count === 0 && !isClearing) setCheckoutPrompt(false);
-  }, [cart.item_count, isClearing]);
 
   const actions = useMemo<ChatActions>(
     () => ({
@@ -144,11 +172,13 @@ export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose
     setInput("");
   }, [input, isTyping, send]);
 
+  const { end: endLiveChat } = live;
   const handleNewChat = useCallback(() => {
+    endLiveChat();
     reset();
     setInput("");
     setBagOpen(false);
-  }, [reset]);
+  }, [endLiveChat, reset]);
 
   return (
     <div
@@ -174,6 +204,7 @@ export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose
         onToggleCart={() => setBagOpen((open) => !open)}
         onNewChat={handleNewChat}
         onClose={onClose}
+        statusOverride={live.session ? liveStatus(liveChat) : undefined}
       />
 
       <ChatActionsProvider value={actions}>
@@ -200,6 +231,15 @@ export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose
               onEmpty={handleEmpty}
               onCheckout={handleCheckout}
               onClose={() => setBagOpen(false)}
+            />
+          ) : live.session ? (
+            <LiveChatView
+              chat={liveChat}
+              reference={live.session.reference}
+              canSend={Boolean(live.session.token)}
+              joinError={live.joinError}
+              onRetryJoin={live.retry}
+              onStartNewChat={handleNewChat}
             />
           ) : (
             <>

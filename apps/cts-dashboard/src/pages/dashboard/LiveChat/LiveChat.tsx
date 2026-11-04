@@ -18,6 +18,7 @@ import {
   useUpdatePresence,
 } from "../../../lib/use-live-chat";
 import type { DeskAction } from "../../../lib/live-chat-api";
+import { setDeskTyping } from "../../../lib/live-chat-api";
 import {
   assigneeId,
   canSeeConversation,
@@ -119,6 +120,7 @@ export default function LiveChatPage() {
   const transcripts = useDeskConversationDetails(storedSession.openIds);
   const details = transcripts.byId;
   const pendingAction = action.isPending ? action.variables : null;
+  const actionsLocked = Boolean(pendingAction && pendingAction.type !== "message");
   const conversations = useMemo(() => mergeConversations(rows, details), [rows, details]);
   const byId = useMemo(() => new Map(conversations.map((conv) => [conv.id, conv])), [conversations]);
 
@@ -190,7 +192,7 @@ export default function LiveChatPage() {
 
   const chatActivity = (conversation: LiveConversation): ChatActivity => ({
     pending: pendingAction?.id === conversation.id ? pendingAction : null,
-    actionsLocked: action.isPending,
+    actionsLocked,
     transcriptStatus: conversation.messagesLoaded
       ? "ready"
       : transcripts.failedIds.has(conversation.id)
@@ -262,8 +264,12 @@ export default function LiveChatPage() {
   };
 
   const run = (deskAction: DeskAction, onDone: (conv: LiveConversation | null) => void) => {
-    if (action.isPending) return;
-    action.mutate(deskAction, { onSuccess: onDone });
+    if (actionsLocked) return;
+    action.mutate(deskAction, {
+      onSuccess: (result) => {
+        if (result.type === "conversation") onDone(result.conversation);
+      },
+    });
   };
 
   const takeChat = (id: string) => {
@@ -308,18 +314,46 @@ export default function LiveChatPage() {
     });
   };
 
+  const typingState = useRef(new Map<string, { active: boolean; sentAt: number; timer: number | null }>());
+  const reportTyping = (id: string, active: boolean) => {
+    const current = typingState.current.get(id) ?? { active: false, sentAt: 0, timer: null };
+    if (active) {
+      const now = Date.now();
+      if (!current.active || now - current.sentAt > 10_000) {
+        current.active = true;
+        current.sentAt = now;
+        setDeskTyping(id, true);
+      }
+      if (current.timer !== null) window.clearTimeout(current.timer);
+      current.timer = window.setTimeout(() => {
+        current.active = false;
+        current.timer = null;
+        setDeskTyping(id, false);
+      }, 3_000);
+    } else if (current.active) {
+      if (current.timer !== null) window.clearTimeout(current.timer);
+      current.active = false;
+      current.timer = null;
+      setDeskTyping(id, false);
+    }
+    typingState.current.set(id, current);
+  };
+
   const sendReply = (id: string, mode: ComposerMode) => {
     const conv = byId.get(id);
     if (!conv || !canReply || conv.status === "resolved") return;
     if (mode === "reply" && (conv.status !== "active" || conv.ownerId !== viewerId)) return;
     const body = (drafts[id] ?? "").trim();
     if (!body || body.startsWith("/")) return;
-    run({ type: "message", id, kind: mode, body }, () => {
-      setDrafts((current) => ({ ...current, [id]: "" }));
-      confirm(
-        mode === "note" ? `Private note saved on ${conv.customerName}.` : `Reply sent to ${conv.customerName}.`,
-      );
-    });
+    const localId = `local-${crypto.randomUUID()}`;
+    reportTyping(id, false);
+    setDrafts((current) => ({ ...current, [id]: "" }));
+    action.mutate(
+      { type: "message", id, kind: mode, body, localId, authorName: deskMe.data?.name ?? "You" },
+      {
+        onError: () => setDrafts((current) => ({ ...current, [id]: body })),
+      },
+    );
   };
 
   const scheduleLimit = (key: string, save: () => void) => {
@@ -562,6 +596,7 @@ export default function LiveChatPage() {
             onDraft={(value) => {
               if (!visibleSelected) return;
               setDrafts((current) => ({ ...current, [visibleSelected.id]: value }));
+              reportTyping(visibleSelected.id, value.trim().length > 0 && !value.trim().startsWith("/"));
             }}
             onSend={(mode) => {
               if (visibleSelected) sendReply(visibleSelected.id, mode);
@@ -588,7 +623,7 @@ export default function LiveChatPage() {
                 ? () => closeChat(visibleSelected.id)
                 : undefined
             }
-            activity={visibleSelected ? chatActivity(visibleSelected) : { ...idleActivity, actionsLocked: action.isPending }}
+            activity={visibleSelected ? chatActivity(visibleSelected) : { ...idleActivity, actionsLocked }}
           />
         )}
       </div>
@@ -661,7 +696,10 @@ export default function LiveChatPage() {
                 assigneeName={memberName(members, assigneeId(conv))}
                 minimized={item.minimized}
                 compactOnly={narrowDesk}
-                onDraft={(value) => setDrafts((current) => ({ ...current, [conv.id]: value }))}
+                onDraft={(value) => {
+                  setDrafts((current) => ({ ...current, [conv.id]: value }));
+                  reportTyping(conv.id, value.trim().length > 0 && !value.trim().startsWith("/"));
+                }}
                 onSend={(mode) => sendReply(conv.id, mode)}
                 onTake={() => takeChat(conv.id)}
                 onResolve={() => resolveChat(conv.id)}

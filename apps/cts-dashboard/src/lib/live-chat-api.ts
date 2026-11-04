@@ -33,6 +33,8 @@ export type DeskEvent = {
   assignedToYou: string[];
   queued: string[];
   members: boolean;
+  /** Messages for these chats arrive on the `message` event. Do not reload the thread. */
+  live: boolean;
 };
 
 const BASE = "/api/live-chat";
@@ -113,22 +115,33 @@ export type DeskAction =
   | { type: "resolve"; id: string }
   | { type: "reopen"; id: string }
   | { type: "transfer"; id: string; memberId: string }
-  | { type: "message"; id: string; kind: ComposerMode; body: string };
+  | { type: "message"; id: string; kind: ComposerMode; body: string; localId: string; authorName: string };
 
-/** Returns the updated conversation, or null when the viewer can no longer see it. */
-export async function runDeskAction(action: DeskAction): Promise<LiveConversation | null> {
+export type DeskActionResult =
+  | { type: "conversation"; conversation: LiveConversation | null }
+  | { type: "message"; message: ChatMessage };
+
+/** Returns the updated conversation, or the stored message when the action was a send. */
+export async function runDeskAction(action: DeskAction): Promise<DeskActionResult> {
+  if (action.type === "message") {
+    const { data } = await post<DeskMessageDto>(conversationPath(action.id, "/messages"), {
+      kind: action.kind,
+      body: action.body,
+    });
+    return { type: "message", message: data };
+  }
   const { data } =
     action.type === "transfer"
       ? await post<DeskConversationDto | null>(conversationPath(action.id, "/transfer"), {
           memberId: Number(action.memberId),
         })
-      : action.type === "message"
-        ? await post<DeskConversationDto | null>(conversationPath(action.id, "/messages"), {
-            kind: action.kind,
-            body: action.body,
-          })
-        : await post<DeskConversationDto | null>(conversationPath(action.id, `/${action.type}`));
-  return data ? toConversation(data) : null;
+      : await post<DeskConversationDto | null>(conversationPath(action.id, `/${action.type}`));
+  return { type: "conversation", conversation: data ? toConversation(data) : null };
+}
+
+/** Fire-and-forget. The desk shows the draft locally and does not wait on this. */
+export function setDeskTyping(id: string, typing: boolean) {
+  void post<undefined>(conversationPath(id, "/typing"), { typing }).catch(() => undefined);
 }
 
 export function deskEventsUrl(baseUrl: string) {

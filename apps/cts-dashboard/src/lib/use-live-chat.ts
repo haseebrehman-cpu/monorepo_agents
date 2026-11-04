@@ -24,7 +24,7 @@ import {
   type DeskEvent,
   type DeskMe,
 } from "./live-chat-api";
-import type { LiveConversation } from "../pages/dashboard/LiveChat/types";
+import type { ChatMessage, LiveConversation } from "../pages/dashboard/LiveChat/types";
 
 export const liveChatKeys = {
   all: ["live-chat"] as const,
@@ -61,7 +61,6 @@ export function useDeskMembers(enabled: boolean) {
   return useQuery({ queryKey: liveChatKeys.members, queryFn: listDeskMembers, enabled, staleTime: 60_000 });
 }
 
-/** Kept fresh by the event stream. The slow poll covers a dropped stream. */
 export function useDeskConversations(enabled: boolean) {
   return useQuery({
     queryKey: liveChatKeys.conversations,
@@ -75,7 +74,6 @@ export function useDeskConversations(enabled: boolean) {
 
 export type DeskTranscripts = {
   byId: Map<string, LiveConversation>;
-  /** Open chats whose transcript has not arrived yet. */
   loadingIds: Set<string>;
   failedIds: Set<string>;
 };
@@ -119,11 +117,119 @@ function replaceRow(client: QueryClient, conversation: LiveConversation) {
   });
 }
 
+function absorbMessage(messages: ChatMessage[], localId: string, message: ChatMessage): ChatMessage[] {
+  if (messages.some((item) => item.id === message.id)) {
+    return messages.filter((item) => item.id !== localId);
+  }
+  const localIndex = messages.findIndex((item) => item.id === localId);
+  if (localIndex >= 0) {
+    const next = messages.slice();
+    next[localIndex] = message;
+    return next;
+  }
+  const sameBody = messages.findIndex(
+    (item) => item.id.startsWith("local-") && item.author === message.author && item.body === message.body,
+  );
+  if (sameBody >= 0) {
+    const next = messages.slice();
+    next[sameBody] = message;
+    return next;
+  }
+  return [...messages, message];
+}
+
+function patchConversation(
+  client: QueryClient,
+  conversationId: string,
+  update: (conversation: LiveConversation) => LiveConversation,
+) {
+  client.setQueryData<LiveConversation>(liveChatKeys.conversation(conversationId), (current) =>
+    current ? update(current) : current,
+  );
+  client.setQueryData<DeskConversationList>(liveChatKeys.conversations, (current) => {
+    if (!current) return current;
+    return {
+      ...current,
+      items: current.items.map((item) => (item.id === conversationId ? update(item) : item)),
+    };
+  });
+}
+
+export function showDeskMessage(
+  client: QueryClient,
+  conversationId: string,
+  message: ChatMessage,
+  localId?: string,
+) {
+  patchConversation(client, conversationId, (conversation) => {
+    const messages = conversation.messagesLoaded
+      ? absorbMessage(conversation.messages, localId ?? "", message)
+      : conversation.messages;
+    const lastMessage = message.author === "system" ? conversation.lastMessage : message;
+    const known =
+      conversation.messages.some((item) => item.id === message.id) || conversation.lastMessage?.id === message.id;
+    const unread =
+      message.author === "customer" && !known && !message.id.startsWith("local-")
+        ? conversation.unread + 1
+        : conversation.unread;
+    return {
+      ...conversation,
+      messages,
+      lastMessage,
+      updatedAt: message.at,
+      typing: false,
+      unread,
+    };
+  });
+}
+
+const typingTimers = new Map<string, number>();
+
+export function showDeskTyping(client: QueryClient, conversationId: string, typing: boolean) {
+  const pending = typingTimers.get(conversationId);
+  if (pending) window.clearTimeout(pending);
+  typingTimers.delete(conversationId);
+  const apply = (value: boolean) =>
+    patchConversation(client, conversationId, (conversation) =>
+      conversation.typing === value ? conversation : { ...conversation, typing: value },
+    );
+  apply(typing);
+  if (typing) {
+    typingTimers.set(
+      conversationId,
+      window.setTimeout(() => {
+        typingTimers.delete(conversationId);
+        apply(false);
+      }, 15_000),
+    );
+  }
+}
+
 export function useDeskAction() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: runDeskAction,
-    onSuccess: (conversation, action) => {
+    onMutate: (action: DeskAction) => {
+      if (action.type !== "message") return;
+      showDeskMessage(
+        client,
+        action.id,
+        {
+          id: action.localId,
+          author: action.kind === "note" ? "note" : "agent",
+          authorName: action.authorName,
+          body: action.body,
+          at: new Date().toISOString(),
+        },
+        action.localId,
+      );
+    },
+    onSuccess: (result, action) => {
+      if (result.type === "message") {
+        showDeskMessage(client, action.id, result.message, action.type === "message" ? action.localId : undefined);
+        return;
+      }
+      const conversation = result.conversation;
       if (conversation) {
         client.setQueryData(liveChatKeys.conversation(conversation.id), conversation);
         replaceRow(client, conversation);
@@ -134,9 +240,16 @@ export function useDeskAction() {
       if (action.type !== "message") void client.invalidateQueries({ queryKey: liveChatKeys.members });
     },
     onError: (error, action: DeskAction) => {
+      if (action.type === "message") {
+        patchConversation(client, action.id, (conversation) => ({
+          ...conversation,
+          messages: conversation.messages.filter((item) => item.id !== action.localId),
+        }));
+      } else {
+        void client.invalidateQueries({ queryKey: liveChatKeys.conversations });
+        void client.invalidateQueries({ queryKey: liveChatKeys.conversation(action.id) });
+      }
       toast.error(liveChatErrorMessage(error, "That did not work. Try again."));
-      void client.invalidateQueries({ queryKey: liveChatKeys.conversations });
-      void client.invalidateQueries({ queryKey: liveChatKeys.conversation(action.id) });
     },
   });
 }
@@ -224,6 +337,26 @@ export function useLiveChatEvents(enabled: boolean, onEvent: (event: DeskEvent) 
         if (connectedBefore) refreshAll();
         connectedBefore = true;
       };
+      source.addEventListener("message", (raw) => {
+        let payload: { conversationId?: string; message?: ChatMessage };
+        try {
+          payload = JSON.parse((raw as MessageEvent<string>).data) as { conversationId?: string; message?: ChatMessage };
+        } catch {
+          return;
+        }
+        if (!payload.conversationId || !payload.message?.id) return;
+        showDeskMessage(client, payload.conversationId, payload.message);
+      });
+      source.addEventListener("typing", (raw) => {
+        let payload: { conversationId?: string; typing?: boolean };
+        try {
+          payload = JSON.parse((raw as MessageEvent<string>).data) as { conversationId?: string; typing?: boolean };
+        } catch {
+          return;
+        }
+        if (!payload.conversationId || typeof payload.typing !== "boolean") return;
+        showDeskTyping(client, payload.conversationId, payload.typing);
+      });
       source.addEventListener("desk", (message) => {
         let event: DeskEvent;
         try {
@@ -233,7 +366,7 @@ export function useLiveChatEvents(enabled: boolean, onEvent: (event: DeskEvent) 
         }
         if (event.ids === null) {
           refreshAll();
-        } else {
+        } else if (!event.live) {
           void client.invalidateQueries({ queryKey: liveChatKeys.conversations });
           for (const id of event.ids) {
             void client.invalidateQueries({ queryKey: liveChatKeys.conversation(id) });

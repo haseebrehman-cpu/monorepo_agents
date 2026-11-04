@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { createHandoffSchema } from "./handoffs.schema.js";
 import { handoffsService } from "./handoffs.service.js";
+import { issueCustomerToken } from "./customer-token.js";
 
 export const handoffsController = {
   async create(req: Request, res: Response) {
@@ -18,7 +19,10 @@ export const handoffsController = {
 
     try {
       const { created, handoff } = await handoffsService.create(parsed.data);
-      return res.status(created ? 201 : 200).json({ success: true, data: handoff });
+      return res.status(created ? 201 : 200).json({
+        success: true,
+        data: { ...handoff, customerToken: issueCustomerToken(handoff.id) },
+      });
     } catch (error) {
       console.error("[liveChat.handoffs.create] failed:", error);
       return res.status(500).json({ success: false, error: "INTERNAL_SERVER_ERROR" });

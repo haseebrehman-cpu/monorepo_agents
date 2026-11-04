@@ -76,6 +76,10 @@ export interface SupportSource {
 export interface SupportHandoff {
   reference?: string | null;
   channel?: string | null;
+  /** The live chat desk conversation id. */
+  handoff_id?: string | null;
+  /** Bearer token for the live chat customer API, scoped to `handoff_id`. */
+  customer_token?: string | null;
 }
 
 export interface SupportAction {

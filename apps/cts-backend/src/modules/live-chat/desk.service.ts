@@ -5,11 +5,12 @@ import {
   DEFAULT_QUEUE_LIMIT,
   LIVE_CHAT_STATUS,
   RECENT_RESOLVED_LIMIT,
+  customerSystemMessages,
   SYSTEM_AUTHOR_NAME,
   systemMessages,
   type LiveChatStatus,
 } from "./live-chat.constants.js";
-import { publishDeskEvent } from "./live-chat.events.js";
+import { publishCustomerEvent, publishDeskEvent, notifyCustomerTyping, type CustomerNotice } from "./live-chat.events.js";
 import {
   assignedFrom,
   ELIGIBLE_MEMBERS_FROM,
@@ -127,6 +128,14 @@ function toMessage(row: Record<string, unknown>): DeskMessage {
   };
 }
 
+async function messageById(id: string): Promise<DeskMessage | null> {
+  const { rows } = await pool.query(
+    `SELECT id, author, author_name, body, sent_at FROM live_chat_messages WHERE id = $1`,
+    [id]
+  );
+  return rows[0] ? toMessage(rows[0]) : null;
+}
+
 function toConversation(row: Record<string, unknown>): DeskConversation {
   return {
     id: row.id as string,
@@ -161,30 +170,61 @@ async function actorName(client: PoolClient, userId: number) {
   return (rows[0]?.name as string | undefined) ?? "An agent";
 }
 
+/** Returns the new message id. */
 async function insertMessage(
   client: PoolClient,
   conversationId: string,
-  message: { author: DeskMessage["author"]; authorName: string; body: string; userId?: number }
-) {
-  await client.query(
+  message: {
+    author: DeskMessage["author"];
+    authorName: string;
+    body: string;
+    userId?: number;
+    customerBody?: string;
+  }
+): Promise<string> {
+  const { rows } = await client.query(
     `WITH inserted AS (
-       INSERT INTO live_chat_messages (conversation_id, author, author_name, author_user_id, body, sent_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
-       RETURNING sent_at
+       INSERT INTO live_chat_messages
+         (conversation_id, author, author_name, author_user_id, body, customer_body, sent_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       RETURNING id, sent_at
+     ), touched AS (
+       UPDATE live_chat_conversations
+       SET updated_at = (SELECT sent_at FROM inserted)
+       WHERE id = $1
      )
-     UPDATE live_chat_conversations
-     SET updated_at = (SELECT sent_at FROM inserted)
-     WHERE id = $1`,
-    [conversationId, message.author, message.authorName, message.userId ?? null, message.body]
+     SELECT id FROM inserted`,
+    [
+      conversationId,
+      message.author,
+      message.authorName,
+      message.userId ?? null,
+      message.body,
+      message.customerBody ?? null,
+    ]
   );
+  return String(rows[0].id);
 }
 
-function systemMessage(client: PoolClient, conversationId: string, body: string) {
+/** Without `customerBody` the line stays desk-only. */
+function systemMessage(client: PoolClient, conversationId: string, body: string, customerBody?: string) {
   return insertMessage(client, conversationId, {
     author: "system",
     authorName: SYSTEM_AUTHOR_NAME,
     body,
+    customerBody,
   });
+}
+
+/** A status change the customer sees, with its system line. */
+async function customerStatusChange(
+  client: PoolClient,
+  conversationId: string,
+  body: string,
+  customerBody: string
+): Promise<CustomerNotice> {
+  const messageId = await systemMessage(client, conversationId, body, customerBody);
+  return { conversationId, messageIds: [messageId], status: true };
 }
 
 type LockedConversation = {
@@ -204,7 +244,7 @@ async function withConversation(
   viewer: Viewer,
   conversationId: string,
   options: { queue: boolean },
-  action: (client: PoolClient, conversation: LockedConversation) => Promise<void>
+  action: (client: PoolClient, conversation: LockedConversation) => Promise<CustomerNotice | void>
 ) {
   const client = await pool.connect();
   try {
@@ -220,21 +260,31 @@ async function withConversation(
     const row = rows[0];
     if (!row) throw notFound();
 
-    await action(client, {
+    const customerNotice = await action(client, {
       id: row.id as string,
       externalId: row.external_conversation_id as string,
       status: row.status as LiveChatStatus,
       queuedForId: (row.queued_for_id as number | null) ?? null,
       ownerId: (row.owner_id as number | null) ?? null,
     });
+    if (customerNotice) await publishCustomerEvent(client, customerNotice);
 
     const changes = options.queue ? await rebalance(client) : new Map<string, number | null>();
-    await publishDeskEvent(client, {
-      ids: [...new Set([conversationId, ...changes.keys()])],
-      assigned: assignedFrom(changes),
-      queued: [],
-    });
+    const live = customerNotice?.live === true && customerNotice.messageIds.length > 0 && changes.size === 0;
+    await publishDeskEvent(client, live
+      ? {
+          ids: [conversationId],
+          assigned: [],
+          queued: [],
+          liveMessages: [{ conversationId, messageIds: customerNotice.messageIds }],
+        }
+      : {
+          ids: [...new Set([conversationId, ...changes.keys()])],
+          assigned: assignedFrom(changes),
+          queued: [],
+        });
     await client.query("COMMIT");
+    if (live) return messageById(customerNotice.messageIds[0]);
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
@@ -444,8 +494,12 @@ export const deskService = {
            WHERE id = $1`,
           [chat.id, viewer.userId]
         );
-        await systemMessage(client, chat.id, systemMessages.took(name));
-        return;
+        return customerStatusChange(
+          client,
+          chat.id,
+          systemMessages.took(name),
+          customerSystemMessages.joined(name)
+        );
       }
       if (chat.ownerId === viewer.userId) throw conflict("ALREADY_YOURS");
       if (!viewer.isAdmin) throw conflict("ALREADY_TAKEN");
@@ -454,7 +508,12 @@ export const deskService = {
         chat.id,
         viewer.userId,
       ]);
-      await systemMessage(client, chat.id, systemMessages.tookOver(name, previous));
+      return customerStatusChange(
+        client,
+        chat.id,
+        systemMessages.tookOver(name, previous),
+        customerSystemMessages.joined(name)
+      );
     });
   },
 
@@ -472,7 +531,12 @@ export const deskService = {
         chat.id,
         memberId,
       ]);
-      await systemMessage(client, chat.id, systemMessages.transferred(name, target));
+      return customerStatusChange(
+        client,
+        chat.id,
+        systemMessages.transferred(name, target),
+        customerSystemMessages.transferred(target)
+      );
     });
   },
 
@@ -485,7 +549,12 @@ export const deskService = {
         `UPDATE live_chat_conversations SET status = 'resolved', resolved_at = NOW() WHERE id = $1`,
         [chat.id]
       );
-      await systemMessage(client, chat.id, systemMessages.closed(await actorName(client, viewer.userId)));
+      return customerStatusChange(
+        client,
+        chat.id,
+        systemMessages.closed(await actorName(client, viewer.userId)),
+        customerSystemMessages.closed
+      );
     });
   },
 
@@ -504,7 +573,13 @@ export const deskService = {
         `UPDATE live_chat_conversations SET status = 'active', resolved_at = NULL WHERE id = $1`,
         [chat.id]
       );
-      await systemMessage(client, chat.id, systemMessages.reopened(await actorName(client, viewer.userId)));
+      const name = await actorName(client, viewer.userId);
+      return customerStatusChange(
+        client,
+        chat.id,
+        systemMessages.reopened(name),
+        customerSystemMessages.reopened(name)
+      );
     });
   },
 
@@ -514,12 +589,28 @@ export const deskService = {
       if (input.kind === "reply" && (chat.status !== LIVE_CHAT_STATUS.ACTIVE || chat.ownerId !== viewer.userId)) {
         throw conflict("NOT_OWNER");
       }
-      await insertMessage(client, chat.id, {
+      const messageId = await insertMessage(client, chat.id, {
         author: input.kind === "note" ? "note" : "agent",
         authorName: await actorName(client, viewer.userId),
         body: input.body,
         userId: viewer.userId,
       });
+      return {
+        conversationId: chat.id,
+        messageIds: [messageId],
+        status: false,
+        live: true,
+        customerVisible: input.kind !== "note",
+      };
     });
+  },
+
+  async setTyping(viewer: Viewer, conversationId: string, typing: boolean) {
+    const { rows } = await pool.query(
+      `SELECT 1 FROM live_chat_conversations c WHERE c.id = $4 AND ${VISIBLE}`,
+      [...viewerParams(viewer), conversationId]
+    );
+    if (!rows[0]) throw notFound();
+    await notifyCustomerTyping(conversationId, typing);
   },
 };

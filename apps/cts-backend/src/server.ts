@@ -2,6 +2,7 @@ import app from "./app.js";
 import { env } from "./config/env.js";
 import { pool } from "./core/db.js";
 import { CTS_SCHEMA } from "./core/postgres-config.js";
+import { customerEventHub } from "./modules/live-chat/customer-events.js";
 import { deskEventHub } from "./modules/live-chat/live-chat.events.js";
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -42,6 +43,7 @@ async function start() {
         process.exit(0);
       });
       deskEventHub.closeAll();
+      customerEventHub.closeAll();
       server.closeIdleConnections();
     };
 

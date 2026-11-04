@@ -139,7 +139,6 @@ export default function MessageList({ messages, scrollRef }: MessageListProps) {
                 disabled={isTyping}
                 compact={hasUserMessages}
                 onSelect={(option) => send(option.message, { displayText: option.label })}
-                onQuestion={(question) => send(question.message, { displayText: question.label })}
               />
             );
           }
