@@ -9,7 +9,7 @@ import { usePageEvent } from "@/lib/api/use-page-event";
 import { STORE_NAME } from "@/lib/chat/constants";
 import { isHome } from "@/lib/chat/transcript";
 import { useSupportChat } from "@/lib/chat/use-support-chat";
-import BagPanel from "./BagPanel";
+import BagPanel, { CheckoutFollowUp } from "./BagPanel";
 import { ChatActionsProvider, type ChatActions } from "./chat-context";
 import ChatComposer from "./ChatComposer";
 import ChatHeader from "./ChatHeader";
@@ -23,6 +23,8 @@ interface ChatPanelProps {
   onClose: () => void;
 }
 
+const CHECKOUT_BAG_PROMPT_MS = 2500;
+
 function productEventData(product: Pick<SupportProduct, "product_id" | "title">) {
   return { product_id: product.product_id, title: product.title };
 }
@@ -34,6 +36,9 @@ export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose
   const [input, setInput] = useState("");
   const [bagOpen, setBagOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [checkoutPrompt, setCheckoutPrompt] = useState(false);
+  const checkoutTimer = useRef<number | null>(null);
+  const itemCountRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -61,7 +66,18 @@ export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose
     return () => clearTimeout(timer);
   }, [notice]);
 
-  const { cart, addItem, updateItem } = bag;
+  const { cart, addItem, updateItem, clearCart, isClearing } = bag;
+  itemCountRef.current = cart.item_count;
+
+  useEffect(() => {
+    return () => {
+      if (checkoutTimer.current !== null) window.clearTimeout(checkoutTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (cart.item_count === 0 && !isClearing) setCheckoutPrompt(false);
+  }, [cart.item_count, isClearing]);
 
   const actions = useMemo<ChatActions>(
     () => ({
@@ -98,8 +114,28 @@ export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose
     [updateItem],
   );
 
+  const handleEmpty = useCallback(() => {
+    return clearCart()
+      .then((next) => {
+        setNotice(
+          next.items.length === 0
+            ? "Your bag is empty."
+            : "Some items are still in your bag. Please try again.",
+        );
+      })
+      .catch((error: unknown) => setNotice(friendlyError(error, "cart")));
+  }, [clearCart]);
+
+  const dismissCheckoutPrompt = useCallback(() => setCheckoutPrompt(false), []);
+
   const handleCheckout = useCallback((checkoutUrl: string) => {
     window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+    if (checkoutTimer.current !== null) window.clearTimeout(checkoutTimer.current);
+    setCheckoutPrompt(false);
+    checkoutTimer.current = window.setTimeout(() => {
+      checkoutTimer.current = null;
+      if (itemCountRef.current > 0) setCheckoutPrompt(true);
+    }, CHECKOUT_BAG_PROMPT_MS);
   }, []);
 
   const handleSubmit = useCallback(() => {
@@ -143,7 +179,7 @@ export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose
       <ChatActionsProvider value={actions}>
         <div className="relative flex min-h-0 flex-1 flex-col">
           {notice && (
-            <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center px-4">
+            <div className="pointer-events-none absolute inset-x-0 top-3 z-[60] flex justify-center px-4">
               <p
                 role="status"
                 className="animate-rdx-rise rounded-full bg-neutral-900 px-4 py-2 text-xs font-medium text-white shadow-lg"
@@ -157,9 +193,11 @@ export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose
             <BagPanel
               cart={bag.cart}
               isLoading={bag.isLoading}
+              isClearing={isClearing}
               pendingVariantId={bag.pendingVariantId}
               onQuantityChange={handleQuantity}
               onRemove={handleRemove}
+              onEmpty={handleEmpty}
               onCheckout={handleCheckout}
               onClose={() => setBagOpen(false)}
             />
@@ -178,6 +216,15 @@ export default function ChatPanel({ id, store, expanded, onToggleExpand, onClose
           )}
         </div>
       </ChatActionsProvider>
+
+      {checkoutPrompt && cart.item_count > 0 && (
+        <CheckoutFollowUp
+          itemCount={cart.item_count}
+          isClearing={isClearing}
+          onKeep={dismissCheckoutPrompt}
+          onEmpty={handleEmpty}
+        />
+      )}
     </div>
   );
 }
