@@ -53,6 +53,9 @@ export const usersController = {
       if (e.message === "SUPER_ADMIN_LOCKED") {
         return res.status(400).json({ success: false, error: "SUPER_ADMIN_LOCKED" });
       }
+      if (e.message === "SERVICE_ACCOUNT_LOCKED") {
+        return res.status(400).json({ success: false, error: "SERVICE_ACCOUNT_LOCKED" });
+      }
       return res.status(500).json({ success: false, error: "INTERNAL_SERVER_ERROR" });
     }
   },

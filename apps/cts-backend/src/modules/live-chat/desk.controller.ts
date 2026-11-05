@@ -107,8 +107,6 @@ export const deskController = {
 
   resolve: handle("resolve", (req, viewer) => deskService.resolve(viewer, conversationId(req))),
 
-  reopen: handle("reopen", (req, viewer) => deskService.reopen(viewer, conversationId(req))),
-
   sendMessage: handle(
     "sendMessage",
     (req, viewer) => {

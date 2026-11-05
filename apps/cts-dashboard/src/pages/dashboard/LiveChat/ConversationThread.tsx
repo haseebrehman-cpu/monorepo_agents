@@ -7,7 +7,6 @@ import {
   BotIcon,
   MessageSquareIcon,
   PanelRightIcon,
-  RotateCcwIcon,
   SendIcon,
   StickyNoteIcon,
   XIcon,
@@ -38,7 +37,6 @@ export default function ConversationThread({
   onSend,
   onTake,
   onResolve,
-  onReopen,
   onOpenTransfer,
   onBack,
   onOpenDetails,
@@ -51,7 +49,6 @@ export default function ConversationThread({
   canReply: boolean;
   canAssign: boolean;
   canResolve: boolean;
-  /** Whether the viewer may take this chat from where it was opened. */
   allowTake?: boolean;
   viewerId: string;
   assigneeName: string | null;
@@ -61,11 +58,9 @@ export default function ConversationThread({
   onSend: (mode: ComposerMode) => void;
   onTake: () => void;
   onResolve: () => void;
-  onReopen: () => void;
   onOpenTransfer: () => void;
   onBack: () => void;
   onOpenDetails: () => void;
-  /** Close this chat from the open slots (main + floating). */
   onCloseChat?: () => void;
   activity: ChatActivity;
 }) {
@@ -100,7 +95,6 @@ export default function ConversationThread({
       onSend={onSend}
       onTake={onTake}
       onResolve={onResolve}
-      onReopen={onReopen}
       onOpenTransfer={onOpenTransfer}
       onBack={onBack}
       onOpenDetails={onOpenDetails}
@@ -126,7 +120,6 @@ function ThreadView({
   onSend,
   onTake,
   onResolve,
-  onReopen,
   onOpenTransfer,
   onBack,
   onOpenDetails,
@@ -139,7 +132,6 @@ function ThreadView({
   canReply: boolean;
   canAssign: boolean;
   canResolve: boolean;
-  /** Take over is offered only for waiting chats opened from Active. */
   allowTake?: boolean;
   viewerId: string;
   assigneeName: string | null;
@@ -149,7 +141,6 @@ function ThreadView({
   onSend: (mode: ComposerMode) => void;
   onTake: () => void;
   onResolve: () => void;
-  onReopen: () => void;
   onOpenTransfer: () => void;
   onBack: () => void;
   onOpenDetails: () => void;
@@ -175,7 +166,6 @@ function ThreadView({
   const canTake = allowTake && canAssign;
   const canTransfer = ownsChat && canAssign;
   const canClose = ownsChat && canResolve;
-  const canReopen = conversation.status === "resolved" && conversation.ownerId === viewerId && canAssign;
   const waited = formatQueueTime(conversation.handedOffAt);
   const noteMode = mode === "note";
   const canCompose =
@@ -187,7 +177,6 @@ function ThreadView({
   const taking = pending?.type === "take";
   const transferring = pending?.type === "transfer";
   const closing = pending?.type === "resolve";
-  const reopening = pending?.type === "reopen";
   const sending = pending?.type === "message";
 
   useEffect(() => {
@@ -287,19 +276,6 @@ function ThreadView({
               Close
             </ActionButton>
           ) : null}
-          {canReopen ? (
-            <ActionButton
-              size="sm"
-              variant="outline"
-              pending={reopening}
-              pendingLabel="Reopening…"
-              disabled={actionsLocked}
-              onClick={onReopen}
-            >
-              <RotateCcwIcon className="h-3.5 w-3.5" aria-hidden="true" />
-              Reopen
-            </ActionButton>
-          ) : null}
           {onCloseChat ? (
             <button
               type="button"
@@ -328,19 +304,7 @@ function ThreadView({
       <footer className="border-t border-slate-200 bg-white p-3">
         {conversation.status === "resolved" ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5 ring-1 ring-slate-200">
-            <p className="text-sm text-slate-600">This chat is closed. Reopen it if the customer comes back.</p>
-            {canReopen ? (
-              <ActionButton
-                size="sm"
-                variant="outline"
-                pending={reopening}
-                pendingLabel="Reopening…"
-                disabled={actionsLocked}
-                onClick={onReopen}
-              >
-                Reopen
-              </ActionButton>
-            ) : null}
+            <p className="text-sm text-slate-600">This chat is closed.</p>
           </div>
         ) : (
           <div className="space-y-2">

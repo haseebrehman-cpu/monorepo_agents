@@ -305,15 +305,6 @@ export default function LiveChatPage() {
     });
   };
 
-  const reopenChat = (id: string) => {
-    const conv = byId.get(id);
-    if (!conv || !canAssign || conv.status !== "resolved" || conv.ownerId !== viewerId) return;
-    run({ type: "reopen", id }, () => {
-      setFilter("active");
-      confirm(`Reopened the chat with ${conv.customerName}.`);
-    });
-  };
-
   const typingState = useRef(
     new Map<
       string,
@@ -626,9 +617,6 @@ export default function LiveChatPage() {
             onResolve={() => {
               if (visibleSelected) resolveChat(visibleSelected.id);
             }}
-            onReopen={() => {
-              if (visibleSelected) reopenChat(visibleSelected.id);
-            }}
             onOpenTransfer={() => {
               if (visibleSelected) {
                 setTransferTargetId(visibleSelected.id);
@@ -722,7 +710,6 @@ export default function LiveChatPage() {
                 onSend={(mode) => sendReply(conv.id, mode)}
                 onTake={() => takeChat(conv.id)}
                 onResolve={() => resolveChat(conv.id)}
-                onReopen={() => reopenChat(conv.id)}
                 onOpenTransfer={() => {
                   setTransferTargetId(conv.id);
                   setTransferOpen(true);

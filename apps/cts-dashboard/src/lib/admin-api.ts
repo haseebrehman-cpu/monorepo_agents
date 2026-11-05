@@ -27,6 +27,12 @@ export type FeatureGroup = {
   features: FeatureRef[];
 };
 
+export const CHATBOT_SERVICE_EMAIL = "csagent@cts.com";
+
+export function isChatbotServiceAccount(user: { email: string }) {
+  return user.email.trim().toLowerCase() === CHATBOT_SERVICE_EMAIL;
+}
+
 export type AdminUser = {
   id: number;
   email: string;

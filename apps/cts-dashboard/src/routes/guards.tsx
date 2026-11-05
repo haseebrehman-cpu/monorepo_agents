@@ -7,13 +7,14 @@ import {
 } from "../lib/auth";
 import { hasPermission } from "../lib/permissions";
 import { useMe } from "../lib/use-me";
+import { LoaderCircleIcon } from "lucide-react";
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const location = useLocation();
   const me = useMe();
 
   if (me.isPending) {
-    return <div className="p-6 text-sm text-slate-500">Checking session...</div>;
+    return <div className="p-6 text-sm text-slate-500 flex items-center gap-2"><LoaderCircleIcon className="h-4 w-4 animate-spin" /> Checking session...</div>;
   }
 
   if (me.isError) {
@@ -26,7 +27,7 @@ export function GuestOnly({ children }: { children: ReactNode }) {
   const me = useMe();
 
   if (me.isPending) {
-    return <div className="p-6 text-sm text-slate-500">Checking session...</div>;
+    return <div className="p-6 text-sm text-slate-500 flex items-center gap-2"><LoaderCircleIcon className="h-4 w-4 animate-spin" /> Checking session...</div>;
   }
 
   if (me.data?.user) {
@@ -64,7 +65,7 @@ export function RequireSuperAdmin({ children }: { children: ReactNode }) {
   if (me.isLoading && !allowed) {
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-500">
-        Checking access...
+        <LoaderCircleIcon className="h-4 w-4 animate-spin" /> Checking access...
       </div>
     );
   }
@@ -84,7 +85,7 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
   if (me.isLoading) {
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-500">
-        Checking access...
+        <LoaderCircleIcon className="h-4 w-4 animate-spin" /> Checking access...
       </div>
     );
   }
@@ -111,7 +112,7 @@ export function RequirePermission({
   if (me.isLoading && !user?.permissions?.length && !isAdminUser(user)) {
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-500">
-        Checking access...
+        <LoaderCircleIcon className="h-4 w-4 animate-spin" /> Checking access...
       </div>
     );
   }

@@ -33,6 +33,7 @@ function adminErrorMessage(error: unknown, fallback: string) {
     if (error.message === "USER_ALREADY_EXISTS") return "A user with that email already exists.";
     if (error.message === "USER_NOT_FOUND") return "That user no longer exists.";
     if (error.message === "SUPER_ADMIN_LOCKED") return "The super admin account cannot be changed or removed.";
+    if (error.message === "SERVICE_ACCOUNT_LOCKED") return "The CS Agent account cannot be deleted.";
     if (error.message === "SUPER_ADMIN_ONLY") return "Only the super admin can manage access.";
     if (error.message === "ADMIN_ONLY") return "Only the super admin can manage access.";
     if (error.message === "DEPARTMENT_NOT_FOUND") return "Select a valid department.";

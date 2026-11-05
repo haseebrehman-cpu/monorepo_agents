@@ -32,7 +32,6 @@ export default function FloatingChatWindow({
   onSend,
   onTake,
   onResolve,
-  onReopen,
   onOpenTransfer,
   onFocus,
   onToggleMinimized,
@@ -56,7 +55,6 @@ export default function FloatingChatWindow({
   onSend: (mode: ComposerMode) => void;
   onTake: () => void;
   onResolve: () => void;
-  onReopen: () => void;
   onOpenTransfer: () => void;
   onFocus: () => void;
   onToggleMinimized: () => void;
@@ -83,7 +81,6 @@ export default function FloatingChatWindow({
   const canTake = allowTake && canAssign;
   const canTransfer = ownsChat && canAssign;
   const canClose = ownsChat && canResolve;
-  const canReopen = conversation.status === "resolved" && conversation.ownerId === viewerId && canAssign;
   const noteMode = mode === "note";
   const canCompose = canReply && conversation.status !== "resolved" && (noteMode || ownsChat);
   const canSend = canCompose && draft.trim().length > 0 && !draft.trim().startsWith("/");
@@ -91,7 +88,6 @@ export default function FloatingChatWindow({
   const taking = pending?.type === "take";
   const transferring = pending?.type === "transfer";
   const closing = pending?.type === "resolve";
-  const reopening = pending?.type === "reopen";
   const sending = pending?.type === "message";
   const waited = formatQueueTime(conversation.handedOffAt);
 
@@ -244,20 +240,6 @@ export default function FloatingChatWindow({
             {conversation.status === "resolved" ? (
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[11px] text-slate-600">This chat is closed.</p>
-                {canReopen ? (
-                  <ActionButton
-                    size="sm"
-                    variant="outline"
-                    className="h-7 px-2 text-xs"
-                    spinnerClassName="h-3 w-3"
-                    pending={reopening}
-                    pendingLabel="Reopening…"
-                    disabled={actionsLocked}
-                    onClick={onReopen}
-                  >
-                    Reopen
-                  </ActionButton>
-                ) : null}
               </div>
             ) : conversation.status === "waiting" ? (
               <div className="flex items-center justify-between gap-2">

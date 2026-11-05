@@ -83,7 +83,6 @@ export const systemMessages = {
   transferred: (agent: string, target: string) =>
     `${agent} transferred this chat to ${target}.`,
   closed: (agent: string) => `Conversation closed by ${agent}.`,
-  reopened: (agent: string) => `${agent} reopened the conversation.`,
 };
 
 export function customerFacingName(name: string) {
@@ -94,5 +93,4 @@ export const customerSystemMessages = {
   joined: (agent: string) => `${customerFacingName(agent)} joined the chat.`,
   transferred: (target: string) => `You're now chatting with ${customerFacingName(target)}.`,
   closed: "This chat has ended.",
-  reopened: (agent: string) => `${customerFacingName(agent)} reopened the chat.`,
 };

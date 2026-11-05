@@ -1,6 +1,7 @@
 import { ASSIGNABLE_ROLE_CODES, ROLE } from "../../config/features.js";
 import { pool } from "../../core/db.js";
 import { hashPassword } from "../../core/password.js";
+import { isChatbotServiceEmail } from "../../core/service-account.js";
 import { filterCodesForRole } from "../../core/access.js";
 import type {
   CreateUserInput,
@@ -98,6 +99,9 @@ export const usersService = {
     if (!current) throw new Error("USER_NOT_FOUND");
 
     await guardSuperAdmin(id);
+    if (isChatbotServiceEmail(String(current.email ?? ""))) {
+      throw new Error("SERVICE_ACCOUNT_LOCKED");
+    }
 
     const client = await pool.connect();
     try {

@@ -113,7 +113,6 @@ export async function markDeskConversationRead(id: string) {
 export type DeskAction =
   | { type: "take"; id: string }
   | { type: "resolve"; id: string }
-  | { type: "reopen"; id: string }
   | { type: "transfer"; id: string; memberId: string }
   | { type: "message"; id: string; kind: ComposerMode; body: string; localId: string; authorName: string };
 

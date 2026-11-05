@@ -19,7 +19,6 @@ const safeMethods = new Set(["GET", "HEAD", "OPTIONS"]);
 
 app.use(
   helmet({
-    // The dashboard is a separate origin; same-origin CORP blocks those fetches.
     crossOriginResourcePolicy: { policy: "cross-origin" },
   }),
 );

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { SupportReply, SupportStoreCode } from "@rdx/chat-contract";
+import { toolMutatedCart } from "./cart-tool";
 import { api } from "./client";
 import { errorCode, retryAfterMs } from "./errors";
 import { supportKeys } from "./query-keys";
@@ -34,19 +35,39 @@ function wait(ms: number, signal: AbortSignal): Promise<void> {
  * for Retry-After).
  */
 export function useSendMessage(store: SupportStoreCode) {
+  const queryClient = useQueryClient();
   const { withConversation } = useConversationControls(store);
+
+  const refreshCart = () => {
+    void queryClient.invalidateQueries({
+      queryKey: supportKeys.conversation(store),
+      predicate: (query) => query.queryKey.at(-1) === "cart",
+    });
+  };
 
   return useMutation<SupportReply, unknown, SendMessageInput>({
     mutationKey: [...supportKeys.conversation(store), "send"],
     mutationFn: async ({ message, menuChoice = null, signal }) => {
       const send = () =>
-        withConversation((conversationId) =>
-          api.support.sendMessage(
-            conversationId,
-            { store, message, menu_choice: menuChoice },
-            signal,
-          ),
-        );
+        withConversation(async (conversationId) => {
+          let mutated = false;
+          try {
+            return await api.support.streamMessage(
+              conversationId,
+              { store, message, menu_choice: menuChoice },
+              {
+                signal,
+                onEvent: (event) => {
+                  if (event.event === "tool" && toolMutatedCart(event.data.tool, event.data.outcome)) {
+                    mutated = true;
+                  }
+                },
+              },
+            );
+          } finally {
+            if (mutated) refreshCart();
+          }
+        });
 
       try {
         return await send();

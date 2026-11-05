@@ -111,7 +111,6 @@ desk.post("/conversations/:conversationId/read", deskController.read);
 desk.post("/conversations/:conversationId/take", canAssign, actionRateLimit, deskController.take);
 desk.post("/conversations/:conversationId/transfer", canAssign, actionRateLimit, deskController.transfer);
 desk.post("/conversations/:conversationId/resolve", canResolve, actionRateLimit, deskController.resolve);
-desk.post("/conversations/:conversationId/reopen", canAssign, actionRateLimit, deskController.reopen);
 desk.post("/conversations/:conversationId/messages", canReply, actionRateLimit, deskController.sendMessage);
 desk.post("/conversations/:conversationId/typing", canReply, deskTypingRateLimit, deskController.typing);
 

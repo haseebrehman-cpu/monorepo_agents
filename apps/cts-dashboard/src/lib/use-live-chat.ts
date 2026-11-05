@@ -42,7 +42,6 @@ const ERROR_MESSAGES: Record<string, string> = {
   ALREADY_YOURS: "You already own that chat.",
   NOT_OWNER: "Only the person who owns this chat can do that.",
   INVALID_TRANSFER_TARGET: "Pick another support member to transfer to.",
-  CUSTOMER_HAS_OPEN_CHAT: "This customer already has an open chat. Reply there instead.",
   MEMBER_NOT_FOUND: "That person can no longer take live chats.",
   FORBIDDEN: "You do not have permission to do that.",
   TOO_MANY_REQUESTS: "Too many actions. Wait a moment and try again.",

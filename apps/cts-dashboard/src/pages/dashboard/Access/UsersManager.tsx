@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Button, DropDown, Input } from "@rdx/ui";
 import { LoaderCircleIcon } from "lucide-react";
 import { ROLE } from "../../../lib/permissions";
-import type { AdminUser } from "../../../lib/admin-api";
+import { isChatbotServiceAccount, type AdminUser } from "../../../lib/admin-api";
 import { useMe } from "../../../lib/use-me";
 import {
   useAdminDepartments,
@@ -50,7 +50,7 @@ export default function UsersManager() {
   };
 
   const onDelete = (user: AdminUser) => {
-    if (user.id === currentUserId) return;
+    if (user.id === currentUserId || isChatbotServiceAccount(user)) return;
     setUserToDelete(user);
   };
 
@@ -179,6 +179,7 @@ export default function UsersManager() {
                   const isDeleting = deleteUser.isPending && deleteUser.variables === user.id;
                   const currentRole = user.roles[0];
                   const isLockedSuperAdmin = currentRole?.code === ROLE.SUPER_ADMIN;
+                  const isServiceAccount = isChatbotServiceAccount(user);
                   return (
                     <tr key={user.id} className="border-t border-slate-100">
                       <td className="px-4 py-3 font-medium text-slate-900">{user.name}</td>
@@ -251,13 +252,17 @@ export default function UsersManager() {
                           size="sm"
                           variant="outline"
                           className="text-red-600 hover:bg-red-50"
-                          disabled={isSelf || isLockedSuperAdmin || deleteUser.isPending}
+                          disabled={
+                            isSelf || isLockedSuperAdmin || isServiceAccount || deleteUser.isPending
+                          }
                           title={
                             isLockedSuperAdmin
                               ? "The super admin account cannot be deleted"
-                              : isSelf
-                                ? "You cannot delete your own account"
-                                : "Delete user"
+                              : isServiceAccount
+                                ? "The CS Agent account cannot be deleted"
+                                : isSelf
+                                  ? "You cannot delete your own account"
+                                  : "Delete user"
                           }
                           onClick={() => onDelete(user)}
                         >

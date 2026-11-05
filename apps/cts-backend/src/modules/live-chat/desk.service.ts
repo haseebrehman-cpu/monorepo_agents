@@ -317,10 +317,10 @@ async function updatePresenceAndRebalance(
     await lockQueue(client);
     await client.query(
       `INSERT INTO live_chat_members (user_id, queue_limit, accepting)
-       VALUES ($1, COALESCE($2, $4), COALESCE($3, TRUE))
+       VALUES ($1, COALESCE($2::smallint, $4::smallint), COALESCE($3::boolean, TRUE))
        ON CONFLICT (user_id) DO UPDATE
-       SET queue_limit = COALESCE($2, live_chat_members.queue_limit),
-           accepting = COALESCE($3, live_chat_members.accepting),
+       SET queue_limit = COALESCE($2::smallint, live_chat_members.queue_limit),
+           accepting = COALESCE($3::boolean, live_chat_members.accepting),
            updated_at = NOW()`,
       [userId, input.limit ?? null, input.accepting ?? null, DEFAULT_QUEUE_LIMIT]
     );
@@ -554,31 +554,6 @@ export const deskService = {
         chat.id,
         systemMessages.closed(await actorName(client, viewer.userId)),
         customerSystemMessages.closed
-      );
-    });
-  },
-
-  reopen(viewer: Viewer, conversationId: string) {
-    return withConversation(viewer, conversationId, { queue: true }, async (client, chat) => {
-      if (chat.status !== LIVE_CHAT_STATUS.RESOLVED || chat.ownerId !== viewer.userId) {
-        throw conflict("NOT_OWNER");
-      }
-      const { rows } = await client.query(
-        `SELECT 1 FROM live_chat_conversations
-         WHERE external_conversation_id = $1 AND status <> 'resolved'`,
-        [chat.externalId]
-      );
-      if (rows.length > 0) throw conflict("CUSTOMER_HAS_OPEN_CHAT");
-      await client.query(
-        `UPDATE live_chat_conversations SET status = 'active', resolved_at = NULL WHERE id = $1`,
-        [chat.id]
-      );
-      const name = await actorName(client, viewer.userId);
-      return customerStatusChange(
-        client,
-        chat.id,
-        systemMessages.reopened(name),
-        customerSystemMessages.reopened(name)
       );
     });
   },
