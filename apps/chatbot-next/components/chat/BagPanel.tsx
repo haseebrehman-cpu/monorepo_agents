@@ -95,7 +95,7 @@ export default function BagPanel({
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-neutral-100/70">
       <div className="flex items-center gap-2 border-b border-neutral-200 bg-white px-3 py-2.5">
-        <button
+        <button              
           type="button"
           onClick={onClose}
           aria-label="Back to chat"

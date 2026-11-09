@@ -6,7 +6,7 @@ import { createId } from "@/lib/chat/format";
 import { LiveChatApiError, readLiveChatStream, sendLiveChatMessage, setLiveChatTyping } from "./api";
 import type { LiveChatSession } from "./session";
 import type { SseMessage } from "./sse";
-import { compareMessageIds, INITIAL_LIVE_CHAT_STATE, liveChatReducer } from "./state";
+import { compareMessageIds, customerMayReply, INITIAL_LIVE_CHAT_STATE, liveChatReducer } from "./state";
 
 /** The first delay follows a clean close (the server ends streams every 30 minutes). */
 const RECONNECT_DELAYS_MS = [500, 2_000, 5_000, 10_000, 20_000];
@@ -162,16 +162,18 @@ export function useLiveChat(session: LiveChatSession | null) {
     [token],
   );
 
+  const mayReply = customerMayReply(state);
+
   const send = useCallback(
     (text: string) => {
       const body = text.trim();
-      if (!body || !token) return;
+      if (!body || !token || !mayReply) return;
       const clientId = createId("live");
       dispatch({ type: "pending", clientId, body, at: Date.now() });
       notifyTyping(false);
       void deliver(clientId, body);
     },
-    [deliver, notifyTyping, token],
+    [deliver, mayReply, notifyTyping, token],
   );
 
   /** Resends with the same client id, so a send that did land is not stored twice. */
@@ -187,7 +189,7 @@ export function useLiveChat(session: LiveChatSession | null) {
 
   const ended = state.expired || state.status === "resolved";
 
-  return { ...state, ended, send, retry, notifyTyping };
+  return { ...state, ended, mayReply, send, retry, notifyTyping };
 }
 
 export type LiveChat = ReturnType<typeof useLiveChat>;

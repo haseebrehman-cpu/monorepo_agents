@@ -27,4 +27,15 @@ describe("cart variants", () => {
     expect(variantLabel({ variant_id: "222", size: "12oz", colour: "Red" })).toBe("12oz / Red");
     expect(variantLabel({ variant_id: "222" })).toBe("One size");
   });
+
+  it("keeps fill and height from the title when size is empty", () => {
+    expect(
+      variantLabel({
+        variant_id: "47326850646326",
+        title: "Black / Filled / 5 FT",
+        size: "",
+        colour: "Black",
+      }),
+    ).toBe("Black / Filled / 5 FT");
+  });
 });

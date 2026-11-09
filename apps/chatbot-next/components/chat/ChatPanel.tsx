@@ -36,6 +36,12 @@ function productEventData(product: Pick<SupportProduct, "product_id" | "title">)
 function liveStatus(chat: LiveChat) {
   if (chat.ended) return { dot: "bg-neutral-400", text: "Chat ended" };
   if (chat.connection === "reconnecting") return { dot: "bg-amber-400 animate-pulse", text: "Reconnecting…" };
+  if (chat.status === "active" && !chat.mayReply) {
+    return {
+      dot: "bg-emerald-400",
+      text: chat.agentName ? `Waiting for ${chat.agentName}` : "Waiting for the first message",
+    };
+  }
   if (chat.status === "active" && chat.agentName) {
     return { dot: "bg-emerald-400", text: `Chatting with ${chat.agentName}` };
   }

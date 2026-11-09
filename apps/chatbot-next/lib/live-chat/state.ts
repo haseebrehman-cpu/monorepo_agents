@@ -52,6 +52,12 @@ export function compareMessageIds(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
+/** The customer stays quiet until an agent has accepted and sent the first message. */
+export function customerMayReply(state: Pick<LiveChatState, "status" | "messages" | "expired">): boolean {
+  if (state.expired || state.status !== "active") return false;
+  return state.messages.some((message) => message.author === "agent");
+}
+
 function insertMessage(messages: LiveChatMessage[], message: LiveChatMessage): LiveChatMessage[] {
   let index = messages.length;
   while (index > 0) {

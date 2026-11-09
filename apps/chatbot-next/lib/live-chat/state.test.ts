@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { LiveChatMessage } from "@rdx/chat-contract";
-import { compareMessageIds, INITIAL_LIVE_CHAT_STATE, liveChatReducer, type LiveChatAction } from "./state";
+import {
+  compareMessageIds,
+  customerMayReply,
+  INITIAL_LIVE_CHAT_STATE,
+  liveChatReducer,
+  type LiveChatAction,
+} from "./state";
 
 const message = (id: string, fields: Partial<LiveChatMessage> = {}): LiveChatMessage => ({
   id,
@@ -44,6 +50,29 @@ describe("liveChatReducer", () => {
     );
     expect(failed.pending[0].failed).toBe(true);
     expect(liveChatReducer(failed, { type: "pending_retry", clientId: "c1-abcdef" }).pending[0].failed).toBe(false);
+  });
+});
+
+describe("customerMayReply", () => {
+  it("stays closed until an agent has accepted and sent a message", () => {
+    const waiting = run({ type: "status", snapshot: { status: "waiting", agentName: null } });
+    expect(customerMayReply(waiting)).toBe(false);
+
+    const accepted = liveChatReducer(waiting, {
+      type: "status",
+      snapshot: { status: "active", agentName: "Sarah" },
+    });
+    expect(customerMayReply(accepted)).toBe(false);
+
+    const greeted = liveChatReducer(accepted, {
+      type: "message",
+      message: message("1", { author: "system", authorName: "System", body: "Sarah joined" }),
+    });
+    expect(customerMayReply(greeted)).toBe(false);
+
+    const open = liveChatReducer(greeted, { type: "message", message: message("2") });
+    expect(customerMayReply(open)).toBe(true);
+    expect(customerMayReply({ ...open, expired: true })).toBe(false);
   });
 });
 

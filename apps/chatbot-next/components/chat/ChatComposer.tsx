@@ -9,6 +9,8 @@ interface ChatComposerProps {
   onChange: (value: string) => void;
   onSubmit: () => void;
   placeholder?: string;
+  /** Blocks typing and sending, e.g. until a live agent speaks first. */
+  disabled?: boolean;
 }
 
 const MAX_HEIGHT_PX = 120;
@@ -20,6 +22,7 @@ export default function ChatComposer({
   onChange,
   onSubmit,
   placeholder = "Ask about products, orders, sizes…",
+  disabled = false,
 }: ChatComposerProps) {
   useLayoutEffect(() => {
     const node = inputRef.current;
@@ -35,7 +38,7 @@ export default function ChatComposer({
     }
   };
 
-  const canSend = !isTyping && value.trim().length > 0;
+  const canSend = !disabled && !isTyping && value.trim().length > 0;
 
   return (
     <form
@@ -55,10 +58,11 @@ export default function ChatComposer({
           rows={1}
           value={value}
           maxLength={MAX_INPUT_CHARS}
+          disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="max-h-[120px] min-h-[36px] flex-1 resize-none bg-transparent py-2 text-[13px] leading-5 text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
+          className="max-h-[120px] min-h-[36px] flex-1 resize-none bg-transparent py-2 text-[13px] leading-5 text-neutral-900 placeholder:text-neutral-400 focus:outline-none disabled:cursor-not-allowed"
         />
         <button
           type="submit"

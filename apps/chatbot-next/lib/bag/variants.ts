@@ -7,11 +7,25 @@ export function cartVariants(product: SupportProduct): SupportVariant[] {
   return (product.variants ?? []).filter((variant) => VARIANT_ID.test(variant.variant_id));
 }
 
+function optionParts(value: string | null | undefined): string[] {
+  return (value ?? "")
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Size and colour when they already name the variant. The Shopify title is used
+ * when it carries options those fields omit, such as fill and height.
+ */
 export function variantLabel(variant: SupportVariant): string {
-  const parts = [variant.size, variant.colour].filter((part): part is string => Boolean(part));
-  if (parts.length > 0) return parts.join(" / ");
-  const title = variant.title?.trim();
-  return title || "One size";
+  const title = variant.title?.trim() ?? "";
+  const named = [...optionParts(variant.size), ...optionParts(variant.colour)];
+  const namedKeys = new Set(named.map((part) => part.toLowerCase()));
+  const titleAddsDetail = optionParts(title).some((part) => !namedKeys.has(part.toLowerCase()));
+  if (title && (named.length === 0 || titleAddsDetail)) return title;
+  if (named.length > 0) return named.join(" / ");
+  return "One size";
 }
 
 /** The variant a card should add, preferring one that is still for sale. */

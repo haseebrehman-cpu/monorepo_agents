@@ -102,7 +102,24 @@ function QueueNotice() {
       <div>
         <p className="text-[13px] font-semibold text-neutral-900">You&apos;re in the queue</p>
         <p className="mt-0.5 text-xs leading-relaxed text-neutral-500">
-          A member of our support team will join shortly. You can add details below while you wait.
+          A member of our support team will join shortly. You can reply once they send the first message.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function WaitingForGreeting({ agentName }: { agentName: string | null }) {
+  const name = agentName ?? "A team member";
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
+      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+        <HeadsetIcon className="h-4 w-4" />
+      </span>
+      <div>
+        <p className="text-[13px] font-semibold text-neutral-900">{name} has joined</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-neutral-500">
+          You can reply once they send the first message.
         </p>
       </div>
     </div>
@@ -139,7 +156,8 @@ export default function LiveChatView({
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const { messages, pending, status, connection, ended, expired, send, retry } = chat;
+  const { messages, pending, status, connection, ended, expired, mayReply, send, retry } = chat;
+  const canReply = canSend && mayReply && !joinError;
 
   useEffect(() => {
     const node = scrollRef.current;
@@ -147,14 +165,14 @@ export default function LiveChatView({
   }, [messages, pending, status]);
 
   useEffect(() => {
-    if (!ended) inputRef.current?.focus();
-  }, [ended]);
+    if (canReply) inputRef.current?.focus();
+  }, [canReply]);
 
   const handleSubmit = useCallback(() => {
-    if (!input.trim() || ended || !canSend) return;
+    if (!input.trim() || ended || !canReply) return;
     send(input);
     setInput("");
-  }, [canSend, ended, input, send]);
+  }, [canReply, ended, input, send]);
 
   return (
     <>
@@ -173,6 +191,7 @@ export default function LiveChatView({
             </div>
           )}
           {status === "waiting" && <QueueNotice />}
+          {status === "active" && !mayReply && !expired && <WaitingForGreeting agentName={chat.agentName} />}
 
           {messages.map((message) => (
             <ServerMessage key={message.id} message={message} />
@@ -206,21 +225,29 @@ export default function LiveChatView({
               </button>
             </div>
           )}
-          {chat.agentTyping && canSend && (
+          {chat.agentTyping && canReply && (
             <p role="status" className="bg-white px-4 pt-2 text-center text-[11px] font-medium text-neutral-500">
               {chat.agentName ?? "Support"} is typing…
             </p>
           )}
           <ChatComposer
             value={input}
-            isTyping={!canSend || joinError}
+            isTyping={false}
+            disabled={!canReply}
             inputRef={inputRef}
             onChange={(value) => {
+              if (!canReply) return;
               setInput(value);
               chat.notifyTyping(value.trim().length > 0);
             }}
             onSubmit={handleSubmit}
-            placeholder={canSend ? "Message our support team…" : "Connecting you to our team…"}
+            placeholder={
+              canReply
+                ? "Message our support team…"
+                : status === "active"
+                  ? "Waiting for the first message…"
+                  : "Waiting for a team member…"
+            }
           />
         </>
       )}
